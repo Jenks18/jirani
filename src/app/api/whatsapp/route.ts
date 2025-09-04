@@ -63,20 +63,37 @@ export async function POST(req: NextRequest) {
 
     // Forward to LLM API
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
-    const llmResponse = await fetch(`${baseUrl}/api/process-llm`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        prompt: message,
-        provider: process.env.LLM_PROVIDER || 'openai'
-      })
-    });
+    
+    let llmData;
+    try {
+      const llmResponse = await fetch(`${baseUrl}/api/process-llm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: message,
+          provider: process.env.LLM_PROVIDER || 'openai'
+        })
+      });
 
-    if (!llmResponse.ok) {
-      throw new Error(`LLM API error: ${llmResponse.status}`);
+      if (!llmResponse.ok) {
+        // Handle rate limiting gracefully
+        if (llmResponse.status === 500) {
+          console.log('LLM API rate limited, sending fallback response');
+          llmData = { 
+            result: "Thank you for your message. I'm currently experiencing high traffic. Please try again in a few minutes." 
+          };
+        } else {
+          throw new Error(`LLM API error: ${llmResponse.status}`);
+        }
+      } else {
+        llmData = await llmResponse.json();
+      }
+    } catch (error) {
+      console.log('LLM processing failed, sending fallback:', error);
+      llmData = { 
+        result: "Thank you for your message. I'm currently experiencing technical difficulties. Please try again later." 
+      };
     }
-
-    const llmData = await llmResponse.json();
     console.log('LLM Response:', llmData);
 
     // Send response back to WhatsApp user
