@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
 
 // WhatsApp Cloud API webhook handler
 export async function GET(req: NextRequest) {
@@ -49,8 +47,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const messagesPath = path.join(process.cwd(), 'data', 'messages.json');
-    const eventsPath = path.join(process.cwd(), 'data', 'events.json');
 
     // WhatsApp Cloud API payload structure
     const entry = body.entry?.[0];
@@ -58,26 +54,12 @@ export async function POST(req: NextRequest) {
     const messageObj = changes?.value?.messages?.[0];
     const message = messageObj?.text?.body;
     const from = messageObj?.from;
-    const timestamp = messageObj?.timestamp || Date.now().toString();
 
     if (!message) {
       return NextResponse.json({ status: 'No message to process' });
     }
 
     console.log(`Received message from ${from}: ${message}`);
-
-    // Log message to messages.json
-    let messages = [];
-    try {
-      const data = await fs.readFile(messagesPath, 'utf8');
-      messages = JSON.parse(data);
-    } catch (error) {
-      // File doesn't exist or is empty, start with empty array
-      console.log('Creating new messages.json file:', error);
-    }
-    
-    messages.push({ from, message, timestamp, receivedAt: new Date().toISOString() });
-    await fs.writeFile(messagesPath, JSON.stringify(messages, null, 2));
 
     // Forward to LLM API
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
@@ -96,27 +78,6 @@ export async function POST(req: NextRequest) {
 
     const llmData = await llmResponse.json();
     console.log('LLM Response:', llmData);
-
-    // Extract event data from LLM result and store in events.json
-    if (llmData.result && typeof llmData.result === 'object' && llmData.result.event) {
-      let events = [];
-      try {
-        const eventsData = await fs.readFile(eventsPath, 'utf8');
-        events = JSON.parse(eventsData);
-      } catch (error) {
-        console.log('Creating new events.json file:', error);
-      }
-      
-      events.push({ 
-        ...llmData.result.event, 
-        from, 
-        timestamp,
-        createdAt: new Date().toISOString()
-      });
-      await fs.writeFile(eventsPath, JSON.stringify(events, null, 2));
-      
-      console.log('Event stored:', llmData.result.event);
-    }
 
     // Send response back to WhatsApp user
     const replyMessage = typeof llmData.result === 'object' && llmData.result.reply 
