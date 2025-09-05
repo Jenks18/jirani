@@ -151,9 +151,23 @@ export async function POST(req: NextRequest) {
     try {
       parsedResult = JSON.parse(result);
     } catch (error) {
-      // If not JSON, return as plain text
+      // If not JSON, check if it's a JSON string that needs cleaning
       console.log('Could not parse LLM response as JSON:', error);
-      parsedResult = { reply: result };
+      
+      // Check if the result looks like JSON but has extra formatting
+      const cleanedResult = result.trim();
+      if (cleanedResult.startsWith('{') && cleanedResult.endsWith('}')) {
+        try {
+          // Try to parse the cleaned version
+          parsedResult = JSON.parse(cleanedResult);
+        } catch (secondError) {
+          // Still not JSON, treat as plain text
+          parsedResult = { reply: cleanedResult };
+        }
+      } else {
+        // Definitely not JSON, treat as plain text
+        parsedResult = { reply: cleanedResult };
+      }
     }
 
     console.log(`${selectedProvider} response:`, parsedResult);

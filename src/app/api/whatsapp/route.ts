@@ -181,14 +181,17 @@ export async function POST(req: NextRequest) {
 
       if (llmResponse.ok) {
         const llmData = await llmResponse.json();
+        console.log('LLM Raw Response:', JSON.stringify(llmData, null, 2));
         
         // Check if LLM returned structured event data
         if (llmData.result && typeof llmData.result === 'object') {
           if (llmData.result.confirmation) {
             // LLM wants to confirm an incident before storing
+            console.log('Setting pending confirmation:', llmData.result.confirmation);
             setPendingConfirmation(from, llmData.result.confirmation);
             if (llmData.result.reply) {
               replyMessage = llmData.result.reply;
+              console.log('Using confirmation reply:', replyMessage);
               addMessageToConversation(from, 'assistant', replyMessage);
             }
           } else if (llmData.result.event) {
