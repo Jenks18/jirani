@@ -4,32 +4,45 @@ import { NextRequest, NextResponse } from 'next/server';
 function generateSimpleResponse(message: string): string {
   const lowerMessage = message.toLowerCase();
   
-  // Safety/emergency keywords
-  if (lowerMessage.includes('emergency') || lowerMessage.includes('help') || lowerMessage.includes('urgent')) {
-    return "I understand this is urgent. If you're in immediate danger, please contact emergency services at 999. For safety reports, please provide the location and what happened.";
+  // Emergency/help keywords - immediate action
+  if (lowerMessage.includes('emergency') || lowerMessage.includes('help') || lowerMessage.includes('urgent') || 
+      lowerMessage.includes('danger') || lowerMessage.includes('911') || lowerMessage.includes('999')) {
+    return "🚨 I understand this is urgent! If you're in immediate danger, please contact emergency services at 999 or 911 right away. Once you're safe, I'm here to help you report what happened. Please share your location and what's happening.";
   }
   
-  // Crime-related keywords
-  if (lowerMessage.includes('theft') || lowerMessage.includes('robbery') || lowerMessage.includes('stolen')) {
-    return "Thank you for reporting this incident. Can you please provide more details about the location and what was stolen?";
+  // Crime-related keywords - helpful but not pushy
+  if (lowerMessage.includes('theft') || lowerMessage.includes('robbery') || lowerMessage.includes('stolen') || 
+      lowerMessage.includes('mugged') || lowerMessage.includes('pickpocket')) {
+    return "I'm sorry this happened to you. If you'd like to report this incident, I can help. Could you tell me where this occurred and any other details you're comfortable sharing?";
   }
   
-  if (lowerMessage.includes('violence') || lowerMessage.includes('fight') || lowerMessage.includes('attack')) {
-    return "I'm sorry to hear about this incident. Please provide the location and any other details that might help us understand what happened.";
+  if (lowerMessage.includes('violence') || lowerMessage.includes('fight') || lowerMessage.includes('attack') || 
+      lowerMessage.includes('assault') || lowerMessage.includes('beaten')) {
+    return "I'm really sorry to hear about this. Your safety is the priority. If you need medical attention, please get help first. When you're ready, I can help you report what happened.";
   }
   
-  // Location queries
-  if (lowerMessage.includes('where') || lowerMessage.includes('location')) {
-    return "Please share the specific location or nearest landmark where the incident occurred.";
-  }
-  
-  // Greetings
+  // Greetings - warm and friendly
   if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey') || lowerMessage.includes('hola')) {
-    return "Hello! I'm Jirani, your safety reporting assistant for Kenya. You can report incidents, ask about safety in your area, or get help with emergency information. How can I assist you today?";
+    return "Hello! 👋 I'm Jirani, your friendly safety assistant for Kenya. I'm here to chat and help with anything safety-related. How are you doing today?";
   }
   
-  // Default response
-  return "Thank you for contacting Jirani. I'm here to help with safety reporting in Kenya. Please describe any incident you'd like to report or ask me about safety in your area.";
+  // Casual conversation starters
+  if (lowerMessage.includes('how are you') || lowerMessage.includes('whats up') || lowerMessage.includes('what\'s up')) {
+    return "I'm doing well, thank you! I'm here to help keep our communities safer. Is everything okay with you today?";
+  }
+  
+  // Location/area safety queries
+  if (lowerMessage.includes('safe') && (lowerMessage.includes('area') || lowerMessage.includes('neighborhood') || lowerMessage.includes('place'))) {
+    return "I can help you with safety information for your area! Which location or neighborhood are you asking about?";
+  }
+  
+  // General questions
+  if (lowerMessage.includes('what') && lowerMessage.includes('do')) {
+    return "I help people in Kenya report safety incidents and get information about their communities. You can ask me about safety in your area, report incidents, or just chat! What would you like to know?";
+  }
+  
+  // Default response - friendly and open
+  return "Thanks for reaching out! 😊 I'm here to help with safety-related questions or if you need to report anything. Feel free to tell me what's on your mind - we can just chat or I can help with something specific.";
 }
 
 // WhatsApp Cloud API webhook handler
