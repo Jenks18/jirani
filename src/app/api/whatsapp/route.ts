@@ -236,13 +236,33 @@ export async function POST(req: NextRequest) {
           // Check if the string contains JSON that we need to parse
           if (replyText.includes('```json') || (replyText.includes('"confirmation"') && replyText.includes('"reply"'))) {
             try {
-              // Clean up markdown formatting
+              // Clean up markdown formatting and extract JSON more robustly
               let cleanedText = replyText.trim();
-              if (cleanedText.startsWith('```json')) {
-                cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-              } else if (cleanedText.startsWith('```')) {
-                cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+              
+              // Remove markdown code blocks
+              if (cleanedText.includes('```json')) {
+                const jsonMatch = cleanedText.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                  cleanedText = jsonMatch[1];
+                }
+              } else if (cleanedText.includes('```')) {
+                const codeMatch = cleanedText.match(/```\s*([\s\S]*?)\s*```/);
+                if (codeMatch) {
+                  cleanedText = codeMatch[1];
+                }
               }
+              
+              // Find JSON object boundaries more carefully
+              const jsonStart = cleanedText.indexOf('{');
+              const jsonEnd = cleanedText.lastIndexOf('}') + 1;
+              if (jsonStart !== -1 && jsonEnd > jsonStart) {
+                cleanedText = cleanedText.substring(jsonStart, jsonEnd);
+              }
+              
+              // Remove any trailing commas or comments
+              cleanedText = cleanedText.replace(/,(\s*[}\]])/g, '$1').replace(/\/\/.*$/gm, '');
+              
+              console.log('Cleaned text for parsing:', cleanedText);
               
               // Try to parse as JSON
               const parsedData = JSON.parse(cleanedText);
@@ -273,15 +293,24 @@ export async function POST(req: NextRequest) {
                 addMessageToConversation(from, 'assistant', replyMessage);
               } else {
                 // Just a regular reply
-                replyMessage = parsedData.reply || replyText;
+                replyMessage = parsedData.reply || 'I understand. How can I help you with safety-related questions or reporting?';
                 console.log('Enhanced response with Gemini AI');
                 addMessageToConversation(from, 'assistant', replyMessage);
               }
             } catch (parseError) {
-              // If JSON parsing fails, treat as regular text
-              console.log('Failed to parse JSON from string response, treating as text:', parseError);
-              replyMessage = replyText;
-              console.log('Enhanced response with Gemini AI');
+              // If JSON parsing fails, try to extract reply from the text manually
+              console.log('Failed to parse JSON from string response, trying manual extraction:', parseError);
+              
+              // Try to extract just the reply field from the malformed JSON
+              const replyMatch = replyText.match(/"reply"\s*:\s*"([^"]+)"/);
+              if (replyMatch) {
+                replyMessage = replyMatch[1];
+                console.log('Extracted reply manually:', replyMessage);
+              } else {
+                // Last resort - use a safe fallback message
+                replyMessage = 'I understand. How can I help you with safety-related questions or reporting?';
+                console.log('Using fallback message due to parsing failure');
+              }
               addMessageToConversation(from, 'assistant', replyMessage);
             }
           } else {

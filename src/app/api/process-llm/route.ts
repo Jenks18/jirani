@@ -195,6 +195,7 @@ export async function POST(req: NextRequest) {
     console.log(`${selectedProvider} response:`, parsedResult);
 
     return NextResponse.json({ 
+      success: true,
       result: parsedResult,
       provider: selectedProvider 
     });
@@ -202,7 +203,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('LLM processing error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      },
       { status: 500 }
     );
   }
