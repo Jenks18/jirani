@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { storeEvent } from '../../../lib/eventStorage';
 import { extractCoordinates } from '../../../lib/locationUtils';
+import { 
+  getConversationHistory, 
+  addMessageToConversation 
+} from '../../../lib/conversationMemory';
 
 // Simple response generator for immediate replies
 function generateSimpleResponse(message: string): string {
@@ -25,7 +29,7 @@ function generateSimpleResponse(message: string): string {
   
   // Greetings - warm and friendly
   if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey') || lowerMessage.includes('hola')) {
-    return "Hello! 👋 I'm Jirani, your friendly safety assistant for Kenya. I'm here to chat and help with anything safety-related. How are you doing today?";
+    return "Hello! 👋 I'm Jirani. How are you doing today?";
   }
   
   // Casual conversation starters
@@ -117,6 +121,9 @@ export async function POST(req: NextRequest) {
     const messageText = message || '[Image shared]';
     console.log(`Received from ${from}: ${messageText}${images.length > 0 ? ` (with ${images.length} image(s))` : ''}`);
 
+    // Add message to conversation history
+    addMessageToConversation(from, 'user', messageText);
+
     // Create a simple AI response without external API calls for now
     let replyMessage = generateSimpleResponse(messageText);
     let storedEvent = null;
@@ -127,11 +134,15 @@ export async function POST(req: NextRequest) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
+      // Get conversation history for context
+      const conversationHistory = getConversationHistory(from);
+      const promptWithContext = `CONVERSATION HISTORY:\n${conversationHistory}\n\nCURRENT MESSAGE: ${messageText}`;
+      
       const llmResponse = await fetch(`${baseUrl}/api/process-llm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          prompt: messageText,
+          prompt: promptWithContext,
           provider: 'gemini'
         }),
         signal: controller.signal
@@ -163,16 +174,25 @@ export async function POST(req: NextRequest) {
           if (llmData.result.reply) {
             replyMessage = llmData.result.reply;
             console.log('Enhanced response with Gemini AI');
+            // Add AI response to conversation history
+            addMessageToConversation(from, 'assistant', replyMessage);
           }
         } else if (typeof llmData.result === 'string' && llmData.result.length > 0) {
+          // Handle cases where LLM returns just a string
           replyMessage = llmData.result;
           console.log('Enhanced response with Gemini AI');
+          // Add AI response to conversation history
+          addMessageToConversation(from, 'assistant', replyMessage);
         }
       } else {
         console.log('LLM API unavailable, using simple response');
+        // Add simple response to conversation history as fallback
+        addMessageToConversation(from, 'assistant', replyMessage);
       }
     } catch (error) {
       console.log('LLM enhancement failed, using simple response:', error instanceof Error ? error.message : 'Unknown error');
+      // Add simple response to conversation history on error
+      addMessageToConversation(from, 'assistant', replyMessage);
     }
 
     // Send response back to WhatsApp user

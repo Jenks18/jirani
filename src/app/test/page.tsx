@@ -4,9 +4,11 @@ import { useState } from 'react';
 
 export default function TestAPIPage() {
   const [message, setMessage] = useState('');
-  const [provider, setProvider] = useState('openai');
+  const [location, setLocation] = useState('');
+  const [provider, setProvider] = useState('gemini');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
+  const [testType, setTestType] = useState('llm'); // 'llm' or 'message'
 
   const testLLM = async () => {
     setLoading(true);
@@ -17,6 +19,27 @@ export default function TestAPIPage() {
         body: JSON.stringify({ 
           prompt: message,
           provider: provider
+        })
+      });
+      
+      const data = await res.json();
+      setResponse(JSON.stringify(data, null, 2));
+    } catch (error) {
+      setResponse(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testMessage = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/test-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: message,
+          location: location
         })
       });
       
@@ -80,6 +103,47 @@ export default function TestAPIPage() {
 
         <div>
           <label className="block text-sm font-medium mb-2">
+            Location (optional):
+          </label>
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="e.g., Westlands, Nairobi, Kisumu..."
+            className="w-full p-3 border border-gray-300 rounded-md"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Test Type:
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                value="llm"
+                checked={testType === 'llm'}
+                onChange={(e) => setTestType(e.target.value)}
+                className="mr-2"
+              />
+              LLM Only
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                value="message"
+                checked={testType === 'message'}
+                onChange={(e) => setTestType(e.target.value)}
+                className="mr-2"
+              />
+              Full Message Flow
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">
             LLM Provider:
           </label>
           <select
@@ -87,27 +151,39 @@ export default function TestAPIPage() {
             onChange={(e) => setProvider(e.target.value)}
             className="p-2 border border-gray-300 rounded-md"
           >
-            <option value="openai">OpenAI</option>
             <option value="gemini">Google Gemini</option>
+            <option value="openai">OpenAI</option>
             <option value="ollama">Ollama (Local)</option>
           </select>
         </div>
 
         <div className="flex gap-4">
-          <button
-            onClick={testLLM}
-            disabled={loading || !message}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Testing...' : 'Test LLM Only'}
-          </button>
+          {testType === 'llm' && (
+            <button
+              onClick={testLLM}
+              disabled={loading || !message}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? 'Testing...' : 'Test LLM Only'}
+            </button>
+          )}
+          
+          {testType === 'message' && (
+            <button
+              onClick={testMessage}
+              disabled={loading || !message}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+            >
+              {loading ? 'Testing...' : 'Test Full Message Flow'}
+            </button>
+          )}
           
           <button
             onClick={simulateWhatsApp}
             disabled={loading || !message}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
           >
-            {loading ? 'Testing...' : 'Simulate WhatsApp Message'}
+            {loading ? 'Testing...' : 'Simulate WhatsApp'}
           </button>
         </div>
 
@@ -136,19 +212,37 @@ export default function TestAPIPage() {
           <h3 className="font-semibold mb-2">Sample Test Messages:</h3>
           <div className="space-y-2 text-sm">
             <button 
-              onClick={() => setMessage("Someone stole my phone at the bus stop in Westlands around 3 PM today")}
+              onClick={() => {
+                setMessage("Someone stole my phone at the bus stop around 3 PM today");
+                setLocation("Westlands");
+              }}
               className="block text-left text-blue-600 hover:underline"
             >
-              &quot;Someone stole my phone at the bus stop in Westlands around 3 PM today&quot;
+              &quot;Someone stole my phone at the bus stop around 3 PM today&quot; in Westlands
             </button>
             <button 
-              onClick={() => setMessage("I witnessed a car accident on Uhuru Highway near the roundabout")}
+              onClick={() => {
+                setMessage("I witnessed a car accident near the roundabout");
+                setLocation("Uhuru Highway");
+              }}
               className="block text-left text-blue-600 hover:underline"
             >
-              &quot;I witnessed a car accident on Uhuru Highway near the roundabout&quot;
+              &quot;I witnessed a car accident near the roundabout&quot; on Uhuru Highway
             </button>
             <button 
-              onClick={() => setMessage("Hello, how are you doing today?")}
+              onClick={() => {
+                setMessage("There was a house break-in yesterday night");
+                setLocation("Karen");
+              }}
+              className="block text-left text-blue-600 hover:underline"
+            >
+              &quot;There was a house break-in yesterday night&quot; in Karen
+            </button>
+            <button 
+              onClick={() => {
+                setMessage("Hello, how are you doing today?");
+                setLocation("");
+              }}
               className="block text-left text-blue-600 hover:underline"
             >
               &quot;Hello, how are you doing today?&quot; (non-safety message)
