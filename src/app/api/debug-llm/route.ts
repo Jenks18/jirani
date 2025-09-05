@@ -64,25 +64,27 @@ export async function GET() {
         fullData: data
       });
       
-    } catch (fetchError: any) {
+    } catch (fetchError: unknown) {
       clearTimeout(timeoutId);
-      console.log('Fetch error:', fetchError.message);
+      const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown fetch error';
+      console.log('Fetch error:', errorMessage);
       
       return NextResponse.json({
         success: false,
         error: 'Fetch failed',
-        details: fetchError.message,
+        details: errorMessage,
         hasApiKey: hasKey
       });
     }
     
-  } catch (error: any) {
-    console.log('General error:', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.log('General error:', errorMessage);
     
     return NextResponse.json({
       success: false,
       error: 'General error',
-      details: error.message
+      details: errorMessage
     });
   }
 }
