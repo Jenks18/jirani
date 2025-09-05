@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { getEvents } from '../../../lib/eventStorage';
 
 // This would be replaced by a DB call in production
 const mockReports = [
@@ -58,7 +59,32 @@ const mockReports = [
   }
 ];
 
-export async function GET(req: NextRequest) {
-  // In production, fetch from DB here
-  return NextResponse.json({ reports: mockReports, reportCount: mockReports.length, areaCount: 346 });
+export async function GET() {
+  // Get real events from WhatsApp/in-memory storage
+  const realEvents = getEvents();
+  
+  // Transform real events to match the expected format
+  const formattedRealEvents = realEvents.map(event => ({
+    _id: event.id,
+    dateTime: event.createdAt,
+    coordinates: event.coordinates ? { 
+      type: "Point", 
+      coordinates: [event.coordinates[1], event.coordinates[0]] // Convert [lat, lng] to [lng, lat] for GeoJSON
+    } : null,
+    type: event.type,
+    severity: event.severity,
+    summary: event.description,
+    sourceType: "WHATSAPP"
+  }));
+
+  // Combine real events with mock data (keeping mock data for now)
+  const allReports = [...formattedRealEvents, ...mockReports];
+  
+  // Return both real and mock events  
+  return NextResponse.json({ 
+    events: realEvents, // For the ReportsPanel (new format)
+    reports: allReports, // For backward compatibility (old format)
+    reportCount: allReports.length, 
+    areaCount: 346 
+  });
 }
