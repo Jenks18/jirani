@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { storeEvent } from '../../../lib/eventStorage';
+import { extractCoordinates } from '../../../lib/locationUtils';
 
 // Simple response generator for immediate replies
 function generateSimpleResponse(message: string): string {
@@ -100,16 +102,26 @@ export async function POST(req: NextRequest) {
     const message = messageObj?.text?.body;
     const from = messageObj?.from;
 
-    if (!message) {
-      return NextResponse.json({ status: 'No message to process' });
+    // Check for images/media
+    const images: string[] = [];
+    if (messageObj?.image) {
+      images.push(messageObj.image.id);
+      console.log(`Received image from ${from}: ${messageObj.image.id}`);
     }
 
-    console.log(`Received message from ${from}: ${message}`);
+    // Handle media-only messages (images without text)
+    if (!message && images.length === 0) {
+      return NextResponse.json({ status: 'No message or media to process' });
+    }
+
+    const messageText = message || '[Image shared]';
+    console.log(`Received from ${from}: ${messageText}${images.length > 0 ? ` (with ${images.length} image(s))` : ''}`);
 
     // Create a simple AI response without external API calls for now
-    let replyMessage = generateSimpleResponse(message);
+    let replyMessage = generateSimpleResponse(messageText);
+    let storedEvent = null;
 
-    // Try to enhance with LLM if available
+    // Try to enhance with LLM if available and extract events
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
       const controller = new AbortController();
@@ -119,7 +131,7 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          prompt: message,
+          prompt: messageText,
           provider: 'gemini'
         }),
         signal: controller.signal
@@ -129,12 +141,31 @@ export async function POST(req: NextRequest) {
 
       if (llmResponse.ok) {
         const llmData = await llmResponse.json();
-        const llmReply = typeof llmData.result === 'object' && llmData.result.reply 
-          ? llmData.result.reply 
-          : llmData.result;
         
-        if (llmReply && typeof llmReply === 'string' && llmReply.length > 0) {
-          replyMessage = llmReply;
+        // Check if LLM returned structured event data
+        if (llmData.result && typeof llmData.result === 'object') {
+          if (llmData.result.event) {
+            // Enhance event with location coordinates
+            const eventData = { ...llmData.result.event };
+            if (eventData.location) {
+              const coordinates = extractCoordinates(eventData.location);
+              if (coordinates) {
+                eventData.coordinates = coordinates;
+                console.log(`Added coordinates ${coordinates} for location: ${eventData.location}`);
+              }
+            }
+            
+            // Store the event with location coordinates if available
+            storedEvent = storeEvent(eventData, from, images);
+            console.log('Event stored with ID:', storedEvent.id);
+          }
+          
+          if (llmData.result.reply) {
+            replyMessage = llmData.result.reply;
+            console.log('Enhanced response with Gemini AI');
+          }
+        } else if (typeof llmData.result === 'string' && llmData.result.length > 0) {
+          replyMessage = llmData.result;
           console.log('Enhanced response with Gemini AI');
         }
       } else {
@@ -176,7 +207,10 @@ export async function POST(req: NextRequest) {
       status: 'success',
       reply: replyMessage, 
       to: from,
-      messageSent: !!process.env.WHATSAPP_ACCESS_TOKEN
+      messageSent: !!process.env.WHATSAPP_ACCESS_TOKEN,
+      eventStored: !!storedEvent,
+      eventId: storedEvent?.id || null,
+      imagesReceived: images.length
     });
 
   } catch (error) {
