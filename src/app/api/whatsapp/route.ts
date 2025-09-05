@@ -24,7 +24,7 @@ function generateSimpleResponse(message: string): string {
   }
   
   // Greetings
-  if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+  if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey') || lowerMessage.includes('hola')) {
     return "Hello! I'm Jirani, your safety reporting assistant for Kenya. You can report incidents, ask about safety in your area, or get help with emergency information. How can I assist you today?";
   }
   
