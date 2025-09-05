@@ -154,14 +154,36 @@ export async function POST(req: NextRequest) {
       // If not JSON, check if it's a JSON string that needs cleaning
       console.log('Could not parse LLM response as JSON:', error);
       
-      // Check if the result looks like JSON but has extra formatting
-      const cleanedResult = result.trim();
+      // Clean up the result - handle markdown code blocks and extra whitespace
+      let cleanedResult = result.trim();
+      
+      // Remove markdown code block formatting if present
+      if (cleanedResult.startsWith('```json')) {
+        cleanedResult = cleanedResult.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedResult.startsWith('```')) {
+        cleanedResult = cleanedResult.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      // Remove JSON comments (// comments)
+      cleanedResult = cleanedResult.replace(/\/\/.*$/gm, '');
+      
+      // Remove multi-line comments (/* comments */)
+      cleanedResult = cleanedResult.replace(/\/\*[\s\S]*?\*\//g, '');
+      
+      // Clean up extra whitespace and trailing commas
+      cleanedResult = cleanedResult.replace(/,(\s*[}\]])/g, '$1');
+      
+      // Trim again after removing comments
+      cleanedResult = cleanedResult.trim();
+      
+      // Try to parse the cleaned version
       if (cleanedResult.startsWith('{') && cleanedResult.endsWith('}')) {
         try {
-          // Try to parse the cleaned version
           parsedResult = JSON.parse(cleanedResult);
+          console.log('Successfully parsed JSON after cleaning markdown formatting and comments');
         } catch (secondError) {
           // Still not JSON, treat as plain text
+          console.log('JSON parsing failed even after cleanup:', secondError);
           parsedResult = { reply: cleanedResult };
         }
       } else {

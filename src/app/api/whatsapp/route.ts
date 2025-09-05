@@ -26,8 +26,16 @@ function generateSimpleResponse(message: string): string {
   }
   
   if (lowerMessage.includes('violence') || lowerMessage.includes('fight') || lowerMessage.includes('attack') || 
-      lowerMessage.includes('assault') || lowerMessage.includes('beaten')) {
+      lowerMessage.includes('assault') || lowerMessage.includes('beaten') || lowerMessage.includes('shot') || 
+      lowerMessage.includes('shooting') || lowerMessage.includes('stabbed') || lowerMessage.includes('knife')) {
     return "I'm really sorry to hear about this. Your safety is the priority. If you need medical attention, please get help first. When you're ready, I can help you report what happened.";
+  }
+
+  // Serious crimes - carjacking, armed robbery, etc.
+  if (lowerMessage.includes('carjacking') || lowerMessage.includes('carjacked') || lowerMessage.includes('hijacked') ||
+      lowerMessage.includes('armed robbery') || lowerMessage.includes('gunpoint') || lowerMessage.includes('weapon') ||
+      lowerMessage.includes('gun') || lowerMessage.includes('pistol')) {
+    return "That sounds terrifying. Are you safe now? I can help you report this incident. Please tell me where and when this happened.";
   }
   
   // Greetings - warm and friendly
@@ -222,11 +230,66 @@ export async function POST(req: NextRequest) {
             addMessageToConversation(from, 'assistant', replyMessage);
           }
         } else if (typeof llmData.result === 'string' && llmData.result.length > 0) {
-          // Handle cases where LLM returns just a string
-          replyMessage = llmData.result;
-          console.log('Enhanced response with Gemini AI');
-          // Add AI response to conversation history
-          addMessageToConversation(from, 'assistant', replyMessage);
+          // Handle cases where LLM returns a string that might contain JSON
+          const replyText = llmData.result;
+          
+          // Check if the string contains JSON that we need to parse
+          if (replyText.includes('```json') || (replyText.includes('"confirmation"') && replyText.includes('"reply"'))) {
+            try {
+              // Clean up markdown formatting
+              let cleanedText = replyText.trim();
+              if (cleanedText.startsWith('```json')) {
+                cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+              } else if (cleanedText.startsWith('```')) {
+                cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+              }
+              
+              // Try to parse as JSON
+              const parsedData = JSON.parse(cleanedText);
+              
+              if (parsedData.confirmation) {
+                // Handle confirmation request
+                console.log('Parsed confirmation from string response:', parsedData.confirmation);
+                setPendingConfirmation(from, parsedData.confirmation);
+                replyMessage = parsedData.reply || 'Please confirm if this information is correct by saying "yes" or "no".';
+                console.log('Using parsed confirmation reply:', replyMessage);
+                addMessageToConversation(from, 'assistant', replyMessage);
+              } else if (parsedData.event) {
+                // Handle event creation
+                console.log('Parsed event from string response:', parsedData.event);
+                const eventData = { ...parsedData.event };
+                if (eventData.location) {
+                  const coordinates = extractCoordinates(eventData.location);
+                  if (coordinates) {
+                    eventData.coordinates = coordinates;
+                    console.log(`Added coordinates ${coordinates} for location: ${eventData.location}`);
+                  }
+                }
+                
+                // Store the confirmed event
+                storedEvent = storeEvent(eventData, from, images);
+                console.log('Event stored with ID:', storedEvent.id);
+                replyMessage = parsedData.reply || 'Thank you! I have recorded this incident.';
+                addMessageToConversation(from, 'assistant', replyMessage);
+              } else {
+                // Just a regular reply
+                replyMessage = parsedData.reply || replyText;
+                console.log('Enhanced response with Gemini AI');
+                addMessageToConversation(from, 'assistant', replyMessage);
+              }
+            } catch (parseError) {
+              // If JSON parsing fails, treat as regular text
+              console.log('Failed to parse JSON from string response, treating as text:', parseError);
+              replyMessage = replyText;
+              console.log('Enhanced response with Gemini AI');
+              addMessageToConversation(from, 'assistant', replyMessage);
+            }
+          } else {
+            // Regular string response
+            replyMessage = replyText;
+            console.log('Enhanced response with Gemini AI');
+            addMessageToConversation(from, 'assistant', replyMessage);
+          }
         }
       } else {
         console.log('LLM API unavailable, using simple response');
