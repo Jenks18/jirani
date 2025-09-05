@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     // Check if user is confirming a pending report
     const pendingConfirmation = getPendingConfirmation(from);
-    if (pendingConfirmation && (messageText.toLowerCase().includes('yes') || messageText.toLowerCase().includes('confirm'))) {
+    if (pendingConfirmation && (messageText.toLowerCase().includes('yes') || messageText.toLowerCase().includes('confirm') || messageText.toLowerCase().trim() === 'yes')) {
       // User confirmed - store the event
       const eventData = {
         type: pendingConfirmation.type,
@@ -150,14 +150,19 @@ export async function POST(req: NextRequest) {
       replyMessage = "Thank you for confirming! I've recorded this incident. Stay safe, and don't hesitate to reach out if you need anything else.";
       addMessageToConversation(from, 'assistant', replyMessage);
       
+      console.log('Confirmation processed, event stored:', storedEvent.id);
+      
     } else if (pendingConfirmation && (messageText.toLowerCase().includes('no') || messageText.toLowerCase().includes('cancel'))) {
       // User declined
       clearPendingConfirmation(from);
       replyMessage = "No problem! I won't record anything. Is there anything else I can help you with?";
       addMessageToConversation(from, 'assistant', replyMessage);
       
+      console.log('Confirmation declined');
+      
     } else {
       // Normal processing - try to enhance with LLM if available
+      console.log('Processing normal message (not a confirmation)');
       try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
       const controller = new AbortController();
@@ -233,7 +238,7 @@ export async function POST(req: NextRequest) {
       // Add simple response to conversation history on error
       addMessageToConversation(from, 'assistant', replyMessage);
     }
-    } // Close the else block for normal processing
+    } // End normal processing block
 
     // Send response back to WhatsApp user
     if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
