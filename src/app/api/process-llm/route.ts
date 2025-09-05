@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 // LLM provider configurations
-const LLM_PROVIDER = process.env.LLM_PROVIDER || 'openai';
+const LLM_PROVIDER = process.env.LLM_PROVIDER || 'gemini';
 const RULES_PATH = path.join(process.cwd(), 'rules', 'agent.txt');
 
 // Default rules if file doesn't exist
