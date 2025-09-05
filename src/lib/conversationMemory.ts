@@ -13,6 +13,12 @@ interface ConversationState {
     severity?: number;
     timestamp?: string;
   };
+  pendingConfirmation?: {
+    type: string;
+    location: string;
+    description: string;
+    timestamp: string;
+  };
   lastActivity: Date;
 }
 
@@ -80,6 +86,21 @@ export function updatePendingEvent(userId: string, eventData: Partial<Conversati
     conversation.pendingEvent = {};
   }
   Object.assign(conversation.pendingEvent, eventData);
+}
+
+export function setPendingConfirmation(userId: string, confirmationData: ConversationState['pendingConfirmation']) {
+  const conversation = getConversation(userId);
+  conversation.pendingConfirmation = confirmationData;
+}
+
+export function getPendingConfirmation(userId: string) {
+  const conversation = getConversation(userId);
+  return conversation.pendingConfirmation;
+}
+
+export function clearPendingConfirmation(userId: string) {
+  const conversation = getConversation(userId);
+  delete conversation.pendingConfirmation;
 }
 
 export function getPendingEvent(userId: string) {

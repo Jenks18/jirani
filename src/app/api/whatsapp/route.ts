@@ -3,7 +3,10 @@ import { storeEvent } from '../../../lib/eventStorage';
 import { extractCoordinates } from '../../../lib/locationUtils';
 import { 
   getConversationHistory, 
-  addMessageToConversation 
+  addMessageToConversation,
+  setPendingConfirmation,
+  getPendingConfirmation,
+  clearPendingConfirmation
 } from '../../../lib/conversationMemory';
 
 // Simple response generator for immediate replies
@@ -124,12 +127,38 @@ export async function POST(req: NextRequest) {
     // Add message to conversation history
     addMessageToConversation(from, 'user', messageText);
 
-    // Create a simple AI response without external API calls for now
+    // Initialize response variables
     let replyMessage = generateSimpleResponse(messageText);
     let storedEvent = null;
 
-    // Try to enhance with LLM if available and extract events
-    try {
+    // Check if user is confirming a pending report
+    const pendingConfirmation = getPendingConfirmation(from);
+    if (pendingConfirmation && (messageText.toLowerCase().includes('yes') || messageText.toLowerCase().includes('confirm'))) {
+      // User confirmed - store the event
+      const eventData = {
+        type: pendingConfirmation.type,
+        severity: 3, // Default severity
+        location: pendingConfirmation.location,
+        description: pendingConfirmation.description,
+        timestamp: pendingConfirmation.timestamp,
+        coordinates: extractCoordinates(pendingConfirmation.location)
+      };
+      
+      storedEvent = storeEvent(eventData, from, images);
+      clearPendingConfirmation(from);
+      
+      replyMessage = "Thank you for confirming! I've recorded this incident. Stay safe, and don't hesitate to reach out if you need anything else.";
+      addMessageToConversation(from, 'assistant', replyMessage);
+      
+    } else if (pendingConfirmation && (messageText.toLowerCase().includes('no') || messageText.toLowerCase().includes('cancel'))) {
+      // User declined
+      clearPendingConfirmation(from);
+      replyMessage = "No problem! I won't record anything. Is there anything else I can help you with?";
+      addMessageToConversation(from, 'assistant', replyMessage);
+      
+    } else {
+      // Normal processing - try to enhance with LLM if available
+      try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -155,7 +184,14 @@ export async function POST(req: NextRequest) {
         
         // Check if LLM returned structured event data
         if (llmData.result && typeof llmData.result === 'object') {
-          if (llmData.result.event) {
+          if (llmData.result.confirmation) {
+            // LLM wants to confirm an incident before storing
+            setPendingConfirmation(from, llmData.result.confirmation);
+            if (llmData.result.reply) {
+              replyMessage = llmData.result.reply;
+              addMessageToConversation(from, 'assistant', replyMessage);
+            }
+          } else if (llmData.result.event) {
             // Enhance event with location coordinates
             const eventData = { ...llmData.result.event };
             if (eventData.location) {
@@ -166,7 +202,7 @@ export async function POST(req: NextRequest) {
               }
             }
             
-            // Store the event with location coordinates if available
+            // Store the confirmed event
             storedEvent = storeEvent(eventData, from, images);
             console.log('Event stored with ID:', storedEvent.id);
           }
@@ -194,6 +230,7 @@ export async function POST(req: NextRequest) {
       // Add simple response to conversation history on error
       addMessageToConversation(from, 'assistant', replyMessage);
     }
+    } // Close the else block for normal processing
 
     // Send response back to WhatsApp user
     if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
