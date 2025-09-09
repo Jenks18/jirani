@@ -1,6 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { FaChevronLeft, FaMapMarkerAlt, FaClock } from "react-icons/fa";
 
+interface Report {
+  _id: string;
+  dateTime: string;
+  coordinates: {
+    type: string;
+    coordinates: [number, number];
+  };
+  type: string;
+  severity: number;
+  summary: string;
+  sourceType: string;
+  location?: string;
+  images?: string[];
+}
+
 type Event = {
   id: string;
   type: string;
@@ -105,10 +120,25 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed }: ReportsPane
       if (!response.ok) throw new Error('Failed to fetch events');
       
       const data = await response.json();
-      const newEvents = data.events || [];
+      const reports = data.reports || [];
+      
+      // Transform API data to match Event interface
+      const transformedEvents = reports.map((report: Report) => ({
+        id: report._id,
+        type: report.type,
+        severity: report.severity,
+        location: report.location || 'Unknown location',
+        description: report.summary,
+        timestamp: report.dateTime,
+        coordinates: report.coordinates?.coordinates ? 
+          [report.coordinates.coordinates[1], report.coordinates.coordinates[0]] : null,
+        from: report.sourceType,
+        createdAt: report.dateTime,
+        images: report.images || []
+      }));
       
       // Sort events by creation time (newest first)
-      const sortedEvents = newEvents.sort((a: Event, b: Event) => 
+      const sortedEvents = transformedEvents.sort((a: Event, b: Event) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       

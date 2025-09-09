@@ -3,6 +3,21 @@ import { useEffect, useRef, useState } from "react";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
 
+interface Report {
+  _id: string;
+  dateTime: string;
+  coordinates: {
+    type: string;
+    coordinates: [number, number];
+  };
+  type: string;
+  severity: number;
+  summary: string;
+  sourceType: string;
+  location?: string;
+  images?: string[];
+}
+
 interface Event {
   id: string;
   type: string;
@@ -31,7 +46,23 @@ export default function MapComponent() {
       if (!response.ok) throw new Error('Failed to fetch events');
       
       const data = await response.json();
-      const newEvents = data.events || [];
+      const reports = data.reports || [];
+      
+      // Transform API data to match Event interface
+      const newEvents = reports.map((report: Report) => ({
+        id: report._id,
+        type: report.type,
+        severity: report.severity,
+        location: report.location || 'Unknown location',
+        description: report.summary,
+        timestamp: report.dateTime,
+        coordinates: report.coordinates?.coordinates ? 
+          [report.coordinates.coordinates[1], report.coordinates.coordinates[0]] : null, // Convert [lng,lat] to [lat,lng]
+        from: report.sourceType,
+        createdAt: report.dateTime,
+        images: report.images || []
+      }));
+      
       setEvents(newEvents);
       
     } catch (err) {
@@ -52,8 +83,8 @@ export default function MapComponent() {
       if (event.coordinates) {
         const el = document.createElement("div");
         el.className = "marker";
-        el.style.width = "20px";
-        el.style.height = "20px";
+        el.style.width = "16px";  // Made smaller
+        el.style.height = "16px"; // Made smaller
         
         // Color based on severity
         const severityColors = {
@@ -66,9 +97,10 @@ export default function MapComponent() {
         
         el.style.background = severityColors[event.severity as keyof typeof severityColors] || "#6b7280";
         el.style.borderRadius = "50%";
-        el.style.border = "3px solid white";
-        el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+        el.style.border = "2px solid white"; // Made thinner
+        el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.4)"; // Adjusted for smaller size
         el.style.cursor = "pointer";
+        el.style.zIndex = "1000"; // Ensure it's on top
 
         // Create popup with event details
         const popup = new mapboxgl.Popup({
@@ -86,7 +118,7 @@ export default function MapComponent() {
         `);
 
         const marker = new mapboxgl.Marker(el)
-          .setLngLat([event.coordinates[1], event.coordinates[0]]) // [lng, lat]
+          .setLngLat([event.coordinates[1], event.coordinates[0]]) // Already converted: [lat,lng] -> [lng,lat] for mapbox
           .setPopup(popup)
           .addTo(mapRef.current!);
 
@@ -119,8 +151,8 @@ export default function MapComponent() {
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/light-v11",
-      center: [36.8219, -1.2921],
-      zoom: 15,
+      center: [36.0, -0.5], // Center of Kenya to show all cities
+      zoom: 7, // Wider zoom to see entire Kenya
       pitch: 0, // Start with flat Google Maps style view
       bearing: 0, // Start pointing north
       antialias: true,

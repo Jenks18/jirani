@@ -5,10 +5,46 @@ const mockReports = [
   {
     _id: "test-westlands-incident",
     dateTime: new Date().toISOString(),
-    coordinates: { type: "Point", coordinates: [36.8055, -1.2655] }, // Westlands coordinates [lng, lat]
+    coordinates: { type: "Point", coordinates: [36.8055, -1.2655] }, // Westlands, Nairobi
     type: "Phone theft",
     severity: 4,
     summary: "Phone theft at Westlands Shopping Centre - suspect on motorbike fled towards Parklands Road",
+    sourceType: "TEST"
+  },
+  {
+    _id: "test-mombasa-incident",
+    dateTime: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    coordinates: { type: "Point", coordinates: [39.6682, -4.0435] }, // Mombasa
+    type: "Robbery",
+    severity: 3,
+    summary: "Armed robbery reported near Mombasa Old Town - three suspects fled on foot",
+    sourceType: "TEST"
+  },
+  {
+    _id: "test-kisumu-incident", 
+    dateTime: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+    coordinates: { type: "Point", coordinates: [34.7617, -0.0917] }, // Kisumu
+    type: "Vandalism",
+    severity: 2,
+    summary: "Shop windows broken during late night incident near Kisumu city center",
+    sourceType: "TEST"
+  },
+  {
+    _id: "test-nakuru-incident",
+    dateTime: new Date(Date.now() - 10800000).toISOString(), // 3 hours ago
+    coordinates: { type: "Point", coordinates: [36.0667, -0.3031] }, // Nakuru
+    type: "Car theft",
+    severity: 5,
+    summary: "Vehicle hijacking reported on Nakuru-Nairobi highway - victim unharmed",
+    sourceType: "TEST"
+  },
+  {
+    _id: "test-eldoret-incident",
+    dateTime: new Date(Date.now() - 14400000).toISOString(), // 4 hours ago
+    coordinates: { type: "Point", coordinates: [35.2699, 0.5143] }, // Eldoret
+    type: "Burglary",
+    severity: 3,
+    summary: "Break-in at electronics shop in Eldoret town center - stock stolen",
     sourceType: "TEST"
   },
   {
