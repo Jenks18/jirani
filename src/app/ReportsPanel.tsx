@@ -70,6 +70,18 @@ function EventItem({ event, onEventClick, isHighlighted }: {
     return `${diffDays}d ago`;
   };
 
+  const formatFullDate = (timestamp: string) => {
+    const eventTime = new Date(timestamp);
+    return eventTime.toLocaleDateString('en-KE', {
+      weekday: 'short',
+      year: 'numeric', 
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <div 
       className={`bg-white border-b border-[#DEE2E6] px-4 py-4 transition-all duration-200 cursor-pointer ${
@@ -100,7 +112,10 @@ function EventItem({ event, onEventClick, isHighlighted }: {
         </div>
         <div className="flex items-center gap-1.5">
           <FaClock className="text-[#6C757D] flex-shrink-0" />
-          <span>{formatTimeAgo(event.createdAt)}</span>
+          <div className="flex flex-col">
+            <span>{formatTimeAgo(event.createdAt)}</span>
+            <span className="text-[10px] text-[#ADB5BD]">{formatFullDate(event.createdAt)}</span>
+          </div>
         </div>
         {event.images && event.images.length > 0 && (
           <div className="flex items-center gap-1.5">

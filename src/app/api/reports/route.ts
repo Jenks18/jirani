@@ -9,6 +9,7 @@ const mockReports = [
     type: "Phone theft",
     severity: 4,
     summary: "Phone theft at Westlands Shopping Centre - suspect on motorbike fled towards Parklands Road",
+    location: "Westlands, Nairobi, Kenya",
     sourceType: "TEST"
   },
   {
@@ -18,6 +19,7 @@ const mockReports = [
     type: "Robbery",
     severity: 3,
     summary: "Armed robbery reported near Mombasa Old Town - three suspects fled on foot",
+    location: "Old Town, Mombasa, Kenya",
     sourceType: "TEST"
   },
   {
@@ -27,6 +29,7 @@ const mockReports = [
     type: "Vandalism",
     severity: 2,
     summary: "Shop windows broken during late night incident near Kisumu city center",
+    location: "City Center, Kisumu, Kenya",
     sourceType: "TEST"
   },
   {
@@ -36,6 +39,7 @@ const mockReports = [
     type: "Car theft",
     severity: 5,
     summary: "Vehicle hijacking reported on Nakuru-Nairobi highway - victim unharmed",
+    location: "Nakuru-Nairobi Highway, Nakuru, Kenya",
     sourceType: "TEST"
   },
   {
@@ -45,6 +49,7 @@ const mockReports = [
     type: "Burglary",
     severity: 3,
     summary: "Break-in at electronics shop in Eldoret town center - stock stolen",
+    location: "Town Center, Eldoret, Kenya",
     sourceType: "TEST"
   },
   {
