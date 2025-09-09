@@ -114,7 +114,7 @@ export async function GET() {
   
   // Return both real and mock events  
   return NextResponse.json({ 
-    events: [], // Empty for now to avoid errors
+    events: mockReports, // Empty for now to avoid errors
     reports: mockReports, // Just use mock data for now
     reportCount: mockReports.length, 
     areaCount: 346 
