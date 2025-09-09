@@ -3,26 +3,115 @@ import { useEffect, useRef, useState } from "react";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
 
-const reports = [
-  {
-    id: "1",
-    title: "Robbery at Market",
-    location: { lat: -1.2921, lng: 36.8219 },
-    category: "violent",
-  },
-  {
-    id: "2",
-    title: "Suspicious Activity",
-    location: { lat: -1.293, lng: 36.822 },
-    category: "other",
-  },
-];
+interface Event {
+  id: string;
+  type: string;
+  severity: number;
+  location: string;
+  description: string;
+  timestamp: string;
+  coordinates: [number, number] | null;
+  from: string;
+  createdAt: string;
+  images?: string[];
+}
 
 export default function MapComponent() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [mapBearing, setMapBearing] = useState(0);
   const [mapPitch, setMapPitch] = useState(0);
+  const [events, setEvents] = useState<Event[]>([]);
+
+  // Function to fetch events from API
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('/api/reports');
+      if (!response.ok) throw new Error('Failed to fetch events');
+      
+      const data = await response.json();
+      const newEvents = data.events || [];
+      setEvents(newEvents);
+      
+    } catch (err) {
+      console.error('Error fetching events for map:', err);
+    }
+  };
+
+  // Function to update markers on the map
+  const updateMarkers = () => {
+    if (!mapRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current = [];
+
+    // Add new markers for events with coordinates
+    events.forEach((event) => {
+      if (event.coordinates) {
+        const el = document.createElement("div");
+        el.className = "marker";
+        el.style.width = "20px";
+        el.style.height = "20px";
+        
+        // Color based on severity
+        const severityColors = {
+          1: "#22c55e", // Green - Low
+          2: "#eab308", // Yellow - Medium  
+          3: "#f97316", // Orange - High
+          4: "#ef4444", // Red - Critical
+          5: "#dc2626"  // Dark Red - Emergency
+        };
+        
+        el.style.background = severityColors[event.severity as keyof typeof severityColors] || "#6b7280";
+        el.style.borderRadius = "50%";
+        el.style.border = "3px solid white";
+        el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+        el.style.cursor = "pointer";
+
+        // Create popup with event details
+        const popup = new mapboxgl.Popup({
+          offset: 25,
+          closeButton: true,
+          closeOnClick: false
+        }).setHTML(`
+          <div style="padding: 8px; min-width: 200px;">
+            <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #333;">${event.type}</h3>
+            <p style="margin: 0 0 6px 0; font-size: 14px; color: #666;"><strong>Location:</strong> ${event.location}</p>
+            <p style="margin: 0 0 6px 0; font-size: 14px; color: #666;"><strong>Severity:</strong> ${event.severity}/5</p>
+            <p style="margin: 0 0 6px 0; font-size: 14px; color: #666;">${event.description}</p>
+            <p style="margin: 0; font-size: 12px; color: #888;">${new Date(event.createdAt).toLocaleString()}</p>
+          </div>
+        `);
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([event.coordinates[1], event.coordinates[0]]) // [lng, lat]
+          .setPopup(popup)
+          .addTo(mapRef.current!);
+
+        markersRef.current.push(marker);
+      }
+    });
+  };
+
+  // Fetch events on component mount and set up polling
+  useEffect(() => {
+    fetchEvents();
+    
+    // Poll for new events every 15 seconds
+    const interval = setInterval(fetchEvents, 15000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update markers when events change
+  useEffect(() => {
+    if (mapRef.current) {
+      updateMarkers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events]);
 
   useEffect(() => {
     if (mapRef.current || !mapContainer.current) return;
@@ -148,23 +237,13 @@ export default function MapComponent() {
           "fill-extrusion-opacity": 0.8,
         },
       });
-      // Add report markers
-      reports.forEach((report) => {
-        const el = document.createElement("div");
-        el.className = "marker";
-        el.style.width = "16px";
-        el.style.height = "16px";
-        el.style.background = report.category === "violent" ? "#ef4444" : "#a3a3a3";
-        el.style.borderRadius = "50%";
-        el.style.border = "2px solid white";
-        el.style.boxShadow = "0 0 4px rgba(0,0,0,0.2)";
-        new mapboxgl.Marker(el)
-          .setLngLat([report.location.lng, report.location.lat])
-          .addTo(map);
-      });
     });
 
     return () => {
+      // Clean up markers
+      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current = [];
+      
       map.remove();
       mapRef.current = null;
     };

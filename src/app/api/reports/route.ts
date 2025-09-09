@@ -61,7 +61,7 @@ const mockReports = [
 
 export async function GET() {
   // Get real events from WhatsApp/in-memory storage
-  const realEvents = getEvents();
+  const realEvents = await getEvents();
   
   // Transform real events to match the expected format
   const formattedRealEvents = realEvents.map(event => ({

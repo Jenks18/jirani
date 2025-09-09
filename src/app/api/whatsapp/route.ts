@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
         coordinates: extractCoordinates(pendingConfirmation.location)
       };
       
-      storedEvent = storeEvent(eventData, from, images);
+      storedEvent = await storeEvent(eventData, from, images);
       clearPendingConfirmation(from);
       
       replyMessage = "Thank you for confirming! I've recorded this incident. Stay safe, and don't hesitate to reach out if you need anything else.";
@@ -219,7 +219,7 @@ export async function POST(req: NextRequest) {
             }
             
             // Store the confirmed event
-            storedEvent = storeEvent(eventData, from, images);
+            storedEvent = await storeEvent(eventData, from, images);
             console.log('Event stored with ID:', storedEvent.id);
           }
           
@@ -287,7 +287,7 @@ export async function POST(req: NextRequest) {
                 }
                 
                 // Store the confirmed event
-                storedEvent = storeEvent(eventData, from, images);
+                storedEvent = await storeEvent(eventData, from, images);
                 console.log('Event stored with ID:', storedEvent.id);
                 replyMessage = parsedData.reply || 'Thank you! I have recorded this incident.';
                 addMessageToConversation(from, 'assistant', replyMessage);
