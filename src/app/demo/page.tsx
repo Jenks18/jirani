@@ -3,9 +3,31 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
+interface ApiResponse {
+  success: boolean;
+  error?: string;
+  event?: {
+    id: string;
+  };
+  totalEvents?: number;
+}
+
+interface WhatsAppApiResponse {
+  success: boolean;
+  error?: string;
+  message?: string;
+  totalEvents?: number;
+  conversation?: unknown[]; // Array of conversation steps
+  processedEvent?: {
+    id: string;
+    type: string;
+    location: string;
+  };
+}
+
 export default function DemoPage() {
-  const [manualResult, setManualResult] = useState<unknown>(null)
-  const [whatsappResult, setWhatsappResult] = useState<unknown>(null)
+  const [manualResult, setManualResult] = useState<ApiResponse | null>(null)
+  const [whatsappResult, setWhatsappResult] = useState<WhatsAppApiResponse | null>(null)
   const [manualLoading, setManualLoading] = useState(false)
   const [whatsappLoading, setWhatsappLoading] = useState(false)
 
@@ -23,7 +45,7 @@ export default function DemoPage() {
       setManualResult(data)
       
     } catch (error) {
-      setManualResult({ error: error instanceof Error ? error.message : 'Unknown error' })
+      setManualResult({ success: false, error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setManualLoading(false)
     }
@@ -43,7 +65,7 @@ export default function DemoPage() {
       setWhatsappResult(data)
       
     } catch (error) {
-      setWhatsappResult({ error: error instanceof Error ? error.message : 'Unknown error' })
+      setWhatsappResult({ success: false, error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setWhatsappLoading(false)
     }
@@ -72,15 +94,15 @@ export default function DemoPage() {
           {manualResult && (
             <div className="bg-white p-4 rounded border">
               <h3 className="font-semibold mb-2">Results:</h3>
-              {(manualResult as any)?.success ? (
+              {manualResult.success ? (
                 <div className="text-green-700">
                   ✅ Incident created successfully!<br/>
-                  <strong>ID:</strong> {(manualResult as any)?.event?.id}<br/>
-                  <strong>Total Events:</strong> {(manualResult as any)?.totalEvents}
+                  <strong>ID:</strong> {manualResult.event?.id}<br/>
+                  <strong>Total Events:</strong> {manualResult.totalEvents}
                 </div>
               ) : (
                 <div className="text-red-700">
-                  ❌ Error: {(manualResult as any)?.error}
+                  ❌ Error: {manualResult.error}
                 </div>
               )}
             </div>
@@ -105,15 +127,15 @@ export default function DemoPage() {
           {whatsappResult && (
             <div className="bg-white p-4 rounded border">
               <h3 className="font-semibold mb-2">Results:</h3>
-              {(whatsappResult as any)?.success ? (
+              {whatsappResult.success ? (
                 <div className="text-green-700">
                   ✅ Conversation completed!<br/>
-                  <strong>Final Events:</strong> {(whatsappResult as any)?.totalEvents}<br/>
-                  <strong>Steps:</strong> {(whatsappResult as any)?.conversation?.length}
+                  <strong>Final Events:</strong> {whatsappResult.totalEvents}<br/>
+                  <strong>Steps:</strong> {whatsappResult.conversation?.length}
                 </div>
               ) : (
                 <div className="text-red-700">
-                  ❌ Error: {(whatsappResult as any)?.error}
+                  ❌ Error: {whatsappResult.error}
                 </div>
               )}
             </div>

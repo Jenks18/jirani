@@ -3,7 +3,7 @@ import { getEvents } from '../../../lib/eventStorage';
 
 export async function GET() {
   try {
-    const events = getEvents();
+    const events = await getEvents();
     
     // Transform events for map display
     const mapEvents = events.map(event => ({

@@ -3,8 +3,27 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
+interface Event {
+  id: string;
+  type: string;
+  location: string;
+  severity: number;
+  coordinates: [number, number] | null;
+  description: string;
+  createdAt: string;
+  from: string;
+}
+
+interface TestMapResult {
+  events: Event[];
+  success?: boolean;
+  error?: string;
+  event?: Event;
+  totalEvents?: number;
+}
+
 export default function CreateTestIncident() {
-  const [result, setResult] = useState<unknown>(null)
+  const [result, setResult] = useState<TestMapResult | null>(null)
   const [loading, setLoading] = useState(false)
 
   const createIncident = async () => {

@@ -2,8 +2,26 @@
 
 import { useState } from 'react'
 
+interface Event {
+  type: string;
+  location: string;
+  description: string;
+  coordinates: [number, number] | null;
+  from: string;
+  createdAt: string;
+}
+
+interface TestResult {
+  currentEvents: Event[];
+  eventsCount: number;
+  success?: boolean;
+  error?: string;
+  whatsappResponse?: unknown;
+  reportsData?: unknown;
+}
+
 export default function TestWhatsAppPage() {
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<TestResult | null>(null)
   const [loading, setLoading] = useState(false)
 
   const testWhatsApp = async () => {
@@ -49,7 +67,11 @@ export default function TestWhatsAppPage() {
       
     } catch (error) {
       console.error('Test failed:', error)
-      setResult({ error: error.message })
+      setResult({ 
+        currentEvents: [], 
+        eventsCount: 0, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      })
     } finally {
       setLoading(false)
     }
@@ -77,7 +99,7 @@ export default function TestWhatsAppPage() {
           {result.currentEvents && result.currentEvents.length > 0 && (
             <div className="mt-4">
               <h3 className="font-semibold text-green-600">✅ Events Found ({result.eventsCount}):</h3>
-              {result.currentEvents.map((event: any, index: number) => (
+              {result.currentEvents.map((event: Event, index: number) => (
                 <div key={index} className="border p-3 mt-2 rounded">
                   <div><strong>Type:</strong> {event.type}</div>
                   <div><strong>Location:</strong> {event.location}</div>
