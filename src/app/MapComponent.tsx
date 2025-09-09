@@ -31,10 +31,14 @@ interface Event {
   images?: string[];
 }
 
-export default function MapComponent() {
+interface MapComponentProps {
+  highlightedEventId?: string | null;
+}
+
+export default function MapComponent({ highlightedEventId }: MapComponentProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const markersRef = useRef<Record<string, mapboxgl.Marker>>({});
   const [mapBearing, setMapBearing] = useState(0);
   const [mapPitch, setMapPitch] = useState(0);
   const [events, setEvents] = useState<Event[]>([]);
@@ -75,16 +79,20 @@ export default function MapComponent() {
     if (!mapRef.current) return;
 
     // Clear existing markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
+    Object.values(markersRef.current).forEach(marker => marker.remove());
+    markersRef.current = {};
 
     // Add new markers for events with coordinates
     events.forEach((event) => {
       if (event.coordinates) {
         const el = document.createElement("div");
         el.className = "marker";
-        el.style.width = "16px";  // Made smaller
-        el.style.height = "16px"; // Made smaller
+        
+        // Check if this event is highlighted
+        const isHighlighted = highlightedEventId === event.id;
+        
+        el.style.width = isHighlighted ? "24px" : "16px";  // Larger when highlighted
+        el.style.height = isHighlighted ? "24px" : "16px"; // Larger when highlighted
         
         // Color based on severity
         const severityColors = {
@@ -97,10 +105,12 @@ export default function MapComponent() {
         
         el.style.background = severityColors[event.severity as keyof typeof severityColors] || "#6b7280";
         el.style.borderRadius = "50%";
-        el.style.border = "2px solid white"; // Made thinner
-        el.style.boxShadow = "0 2px 6px rgba(0,0,0,0.4)"; // Adjusted for smaller size
+        el.style.border = isHighlighted ? "4px solid #fff" : "2px solid white"; // Thicker border when highlighted
+        el.style.boxShadow = isHighlighted ? "0 4px 16px rgba(0,0,0,0.8)" : "0 2px 6px rgba(0,0,0,0.4)"; // Stronger shadow when highlighted
         el.style.cursor = "pointer";
-        el.style.zIndex = "1000"; // Ensure it's on top
+        el.style.zIndex = isHighlighted ? "2000" : "1000"; // Higher z-index when highlighted
+        el.style.transform = isHighlighted ? "scale(1.2)" : "scale(1)"; // Slightly bigger when highlighted
+        el.style.transition = "all 0.3s ease"; // Smooth transition
 
         // Create popup with event details
         const popup = new mapboxgl.Popup({
@@ -122,7 +132,8 @@ export default function MapComponent() {
           .setPopup(popup)
           .addTo(mapRef.current!);
 
-        markersRef.current.push(marker);
+        // Store marker by event ID for highlighting
+        markersRef.current[event.id] = marker;
       }
     });
   };
@@ -144,6 +155,14 @@ export default function MapComponent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
+
+  // Update markers when highlighted event changes
+  useEffect(() => {
+    if (mapRef.current) {
+      updateMarkers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightedEventId]);
 
   useEffect(() => {
     if (mapRef.current || !mapContainer.current) return;
@@ -273,8 +292,8 @@ export default function MapComponent() {
 
     return () => {
       // Clean up markers
-      markersRef.current.forEach(marker => marker.remove());
-      markersRef.current = [];
+      Object.values(markersRef.current).forEach(marker => marker.remove());
+      markersRef.current = {};
       
       map.remove();
       mapRef.current = null;

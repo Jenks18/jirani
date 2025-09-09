@@ -29,7 +29,11 @@ type Event = {
   images?: string[];
 };
 
-function EventItem({ event }: { event: Event }) {
+function EventItem({ event, onEventClick, isHighlighted }: { 
+  event: Event; 
+  onEventClick?: (eventId: string) => void;
+  isHighlighted?: boolean;
+}) {
   const getSeverityColor = (severity: number) => {
     switch (severity) {
       case 1: return 'bg-green-500';
@@ -67,7 +71,14 @@ function EventItem({ event }: { event: Event }) {
   };
 
   return (
-    <div className="bg-white border-b border-[#DEE2E6] px-4 py-4 transition-all duration-200 hover:bg-[#F8F9FA] animate-slideIn">
+    <div 
+      className={`bg-white border-b border-[#DEE2E6] px-4 py-4 transition-all duration-200 cursor-pointer ${
+        isHighlighted 
+          ? 'bg-blue-50 border-l-4 border-l-blue-500 shadow-lg' 
+          : 'hover:bg-[#F8F9FA]'
+      } animate-slideIn`} 
+      onClick={() => onEventClick?.(event.id)}
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className={`inline-block w-3 h-3 rounded-full ${getSeverityColor(event.severity)} border border-white shadow-sm flex-shrink-0 mt-0.5`} />
@@ -106,9 +117,11 @@ interface ReportsPanelProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
   sidebarCollapsed: boolean;
+  onEventClick?: (eventId: string) => void;
+  highlightedEventId?: string | null;
 }
 
-function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed }: ReportsPanelProps) {
+function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick, highlightedEventId }: ReportsPanelProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -256,7 +269,11 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed }: ReportsPane
         
         {events.map((event, index) => (
           <div key={event.id} style={{ animationDelay: `${index * 50}ms` }}>
-            <EventItem event={event} />
+            <EventItem 
+              event={event} 
+              onEventClick={onEventClick} 
+              isHighlighted={highlightedEventId === event.id}
+            />
           </div>
         ))}
       </div>
