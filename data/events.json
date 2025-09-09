@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "id": "mfd0r5eq9lqei17fayk",
+    "type": "Phone theft",
+    "severity": 3,
+    "location": "Near Aga Khan, Westlands",
+    "description": "Phone stolen by a person on a bike with a knife at 6:00 am.",
+    "timestamp": "6:00 am today",
+    "coordinates": [
+      36.8097,
+      -1.2676
+    ],
+    "from": "254712345678",
+    "createdAt": "2025-09-09T20:44:32.162Z",
+    "images": []
+  }
+]
