@@ -1,4 +1,18 @@
 ﻿import mapboxgl from "mapbox-gl";
+
+// Guarantee Mapbox CSS is present in the DOM (runtime fallback)
+if (typeof window !== "undefined") {
+  const MAPBOX_CSS_URL = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css";
+  const isMapboxCSSLoaded = Array.from(document.styleSheets).some(
+    (sheet) => sheet.href && sheet.href.includes("mapbox-gl-js")
+  );
+  if (!isMapboxCSSLoaded) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = MAPBOX_CSS_URL;
+    document.head.appendChild(link);
+  }
+}
 import { useEffect, useRef, useState } from "react";
 const MAPBOX_TOKEN = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
 
