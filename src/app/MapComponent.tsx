@@ -168,6 +168,13 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
 
   useEffect(() => {
     if (mapRef.current || !mapContainer.current) return;
+    // Disable Mapbox CSS detection to prevent warnings
+    if (typeof window !== "undefined") {
+      Object.defineProperty(mapboxgl.Map.prototype, "_detectMissingCSS", {
+        value: function() { return; },
+        writable: false
+      });
+    }
     mapboxgl.accessToken = MAPBOX_TOKEN;
     const map = new mapboxgl.Map({
       container: mapContainer.current,
