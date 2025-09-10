@@ -1,0 +1,52 @@
+/* Import Mapbox GL CSS directly to prevent warnings */
+@import url('https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css');
+
+/* Ensure mapbox canvas styles are applied */
+.mapboxgl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  display: block !important;
+}
+
+.mapboxgl-map {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+}
+
+/* Additional mapbox required styles */
+.mapboxgl-ctrl-group,
+.mapboxgl-ctrl {
+  background-color: #fff;
+  border-radius: 4px;
+}
+
+.mapboxgl-popup {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: #fff;
+}
+
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: #fff;
+}
+
+.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: #fff;
+}
+
+.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: #fff;
+}
