@@ -1,28 +1,49 @@
-﻿// Comprehensive Mapbox CSS detection override
+﻿// Comprehensive Mapbox CSS detection override - MUST be before any imports
 if (typeof window !== "undefined") {
-  // Override console.warn to suppress CSS warnings
+  // Create a more aggressive override that happens at module load time
+  const originalDefineProperty = Object.defineProperty;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Object.defineProperty = function(target: any, property: PropertyKey, descriptor: PropertyDescriptor): any {
+    // Intercept any attempts to define _detectMissingCSS
+    if (property === '_detectMissingCSS' || property === '_checkForMissingCSS') {
+      descriptor.value = function() { return; };
+      descriptor.writable = false;
+      descriptor.configurable = false;
+    }
+    return originalDefineProperty.call(this, target, property, descriptor);
+  };
+
+  // Override console methods to catch any warnings that slip through
   const originalWarn = console.warn; 
   console.warn = function(...args) { 
     const message = args.join(' '); 
     if (message.includes('CSS declarations for Mapbox GL JS') || 
-        message.includes('mapbox-gl.css')) { 
+        message.includes('mapbox-gl.css') ||
+        message.includes('missing CSS declarations')) { 
       return; 
     } 
     originalWarn.apply(console, args); 
   }; 
 
-  // Override console.error as well, in case it uses error instead
   const originalError = console.error;
   console.error = function(...args) {
     const message = args.join(' ');
     if (message.includes('CSS declarations for Mapbox GL JS') || 
-        message.includes('mapbox-gl.css')) {
+        message.includes('mapbox-gl.css') ||
+        message.includes('missing CSS declarations')) {
       return;
     }
     originalError.apply(console, args);
   };
-} 
- 
+
+  // Patch the global tf function (seems to be the one causing the warning based on stack trace)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const globalWindow = window as any;
+  if (typeof globalWindow.tf === 'undefined') {
+    globalWindow.tf = function() { return; };
+  }
+}
+
 import mapboxgl from "mapbox-gl"; 
 import "mapbox-gl/dist/mapbox-gl.css"; 
  
@@ -193,25 +214,62 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
   useEffect(() => {
     if (mapRef.current || !mapContainer.current) return;
     
-    // Comprehensive Mapbox CSS detection override
+    // Super comprehensive Mapbox CSS detection override
     if (typeof window !== "undefined") {
-      // Override the _detectMissingCSS method to prevent warnings
-      Object.defineProperty(mapboxgl.Map.prototype, "_detectMissingCSS", {
+      // Override at multiple levels to ensure we catch everything
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mapboxPrototype = mapboxgl.Map.prototype as any;
+      
+      // Method 1: Override _detectMissingCSS directly
+      if (mapboxPrototype._detectMissingCSS) {
+        mapboxPrototype._detectMissingCSS = function() { return; };
+      }
+      
+      // Method 2: Define it if it doesn't exist yet
+      Object.defineProperty(mapboxPrototype, "_detectMissingCSS", {
         value: function() { return; },
         writable: false,
         configurable: false
       });
 
-      // Also override any potential CSS detection methods
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapPrototype = mapboxgl.Map.prototype as any;
-      if (mapPrototype._checkForMissingCSS) {
-        Object.defineProperty(mapPrototype, "_checkForMissingCSS", {
-          value: function() { return; },
-          writable: false,
-          configurable: false
-        });
+      // Method 3: Override any other CSS detection methods
+      if (mapboxPrototype._checkForMissingCSS) {
+        mapboxPrototype._checkForMissingCSS = function() { return; };
       }
+
+      // Method 4: Override the tf function that appears in the stack trace
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const globalWindow = window as any;
+      if (globalWindow.tf && typeof globalWindow.tf === 'function') {
+        const originalTf = globalWindow.tf;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        globalWindow.tf = function(...args: any[]) {
+          const message = args.join(' ');
+          if (message.includes('CSS declarations for Mapbox GL JS') || 
+              message.includes('mapbox-gl.css')) {
+            return;
+          }
+          return originalTf.apply(this, args);
+        };
+      }
+
+      // Method 5: Override any console methods at the last moment
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const suppressMapboxWarning = (originalMethod: (...args: any[]) => void) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return function(...args: any[]) {
+          const message = args.join(' ');
+          if (message.includes('CSS declarations for Mapbox GL JS') || 
+              message.includes('mapbox-gl.css') ||
+              message.includes('missing CSS declarations')) {
+            return;
+          }
+          return originalMethod.apply(console, args);
+        };
+      };
+
+      console.warn = suppressMapboxWarning(console.warn);
+      console.error = suppressMapboxWarning(console.error);
     }
     
     mapboxgl.accessToken = MAPBOX_TOKEN;
