@@ -2,9 +2,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import ReportsPanel from "./ReportsPanel";
-import TestMapComponent from "./TestMapComponent";
-// import MapComponent from "./MapComponent";
-
+import MapComponent from "./MapComponent";
 
 export default function HomePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -19,10 +17,6 @@ export default function HomePage() {
   
   return (
     <div className="flex flex-col h-screen w-screen">
-      {/* EMERGENCY TEST - You should see this message if deployment worked */}
-      <div className="bg-red-500 text-white p-4 text-center font-bold">
-        🚨 DEPLOYMENT TEST - If you see this, the new code is live! 🚨
-      </div>
       <div className="flex flex-1 w-full h-full overflow-hidden">
         <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
         <div className="flex flex-1 h-full w-full overflow-hidden">
@@ -47,7 +41,7 @@ export default function HomePage() {
             />
           )}
           <div className="flex-1 h-full w-full overflow-hidden">
-            <TestMapComponent />
+            <MapComponent highlightedEventId={highlightedEventId} />
           </div>
         </div>
       </div>
