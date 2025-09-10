@@ -40,6 +40,26 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
 
     if (typeof window !== 'undefined') {
       loadMapbox();
+      
+      // Inject essential CSS to prevent detection warnings
+      const cssId = 'mapbox-gl-essential-css';
+      if (!document.getElementById(cssId)) {
+        const style = document.createElement('style');
+        style.id = cssId;
+        style.textContent = `
+          .mapboxgl-map { font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif; overflow: hidden; position: relative; }
+          .mapboxgl-canvas { position: absolute; left: 0; top: 0; }
+          .mapboxgl-canvas-container { overflow: hidden; }
+          .mapboxgl-ctrl { border-radius: 3px; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1); clear: both; pointer-events: auto; }
+          .mapboxgl-ctrl-group { border-radius: 4px; background: #fff; }
+          .mapboxgl-popup { position: absolute; top: 0; left: 0; display: flex; will-change: transform; pointer-events: none; }
+          .mapboxgl-popup-content { position: relative; background: #fff; border-radius: 3px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); padding: 10px 10px 15px; pointer-events: auto; }
+          .mapboxgl-popup-close-button { position: absolute; right: 0; top: 0; border: 0; border-radius: 0 3px 0 0; cursor: pointer; background-color: transparent; }
+          .mapboxgl-popup-tip { width: 0; height: 0; border: 10px solid transparent; z-index: 1; }
+          .mapboxgl-marker { position: absolute; top: 0; left: 0; will-change: transform; }
+        `;
+        document.head.appendChild(style);
+      }
     }
   }, []);
 
@@ -102,6 +122,18 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
       try {
         const mapboxgl = (await import('mapbox-gl')).default;
         mapboxgl.accessToken = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
+        
+        // Ensure CSS is loaded - inject it if not detected
+        const cssLink = document.querySelector('link[href*="mapbox-gl.css"]');
+        if (!cssLink) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css';
+          document.head.appendChild(link);
+          
+          // Wait a bit for CSS to load
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
         
         const map = new mapboxgl.Map({
           container: mapContainer.current!,
