@@ -1,13 +1,26 @@
-﻿// Override Mapbox CSS detection BEFORE importing mapbox-gl 
-if (typeof window !== "undefined") { 
+﻿// Comprehensive Mapbox CSS detection override
+if (typeof window !== "undefined") {
+  // Override console.warn to suppress CSS warnings
   const originalWarn = console.warn; 
   console.warn = function(...args) { 
     const message = args.join(' '); 
-    if (message.includes('CSS declarations for Mapbox GL JS')) { 
+    if (message.includes('CSS declarations for Mapbox GL JS') || 
+        message.includes('mapbox-gl.css')) { 
       return; 
     } 
     originalWarn.apply(console, args); 
   }; 
+
+  // Override console.error as well, in case it uses error instead
+  const originalError = console.error;
+  console.error = function(...args) {
+    const message = args.join(' ');
+    if (message.includes('CSS declarations for Mapbox GL JS') || 
+        message.includes('mapbox-gl.css')) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
 } 
  
 import mapboxgl from "mapbox-gl"; 
@@ -179,13 +192,28 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
 
   useEffect(() => {
     if (mapRef.current || !mapContainer.current) return;
-    // Disable Mapbox CSS detection to prevent warnings
+    
+    // Comprehensive Mapbox CSS detection override
     if (typeof window !== "undefined") {
+      // Override the _detectMissingCSS method to prevent warnings
       Object.defineProperty(mapboxgl.Map.prototype, "_detectMissingCSS", {
         value: function() { return; },
-        writable: false
+        writable: false,
+        configurable: false
       });
+
+      // Also override any potential CSS detection methods
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mapPrototype = mapboxgl.Map.prototype as any;
+      if (mapPrototype._checkForMissingCSS) {
+        Object.defineProperty(mapPrototype, "_checkForMissingCSS", {
+          value: function() { return; },
+          writable: false,
+          configurable: false
+        });
+      }
     }
+    
     mapboxgl.accessToken = MAPBOX_TOKEN;
     const map = new mapboxgl.Map({
       container: mapContainer.current,
