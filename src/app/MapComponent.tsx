@@ -1,4 +1,4 @@
-// Override Mapbox CSS detection BEFORE importing mapbox-gl 
+﻿// Override Mapbox CSS detection BEFORE importing mapbox-gl 
 if (typeof window !== "undefined") { 
   const originalWarn = console.warn; 
   console.warn = function(...args) { 
@@ -14,7 +14,6 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css"; 
  
 import { useEffect, useRef, useState } from "react"; 
-﻿
 const MAPBOX_TOKEN = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
 
 interface Report {
