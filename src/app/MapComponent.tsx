@@ -1,18 +1,19 @@
 ﻿import mapboxgl from "mapbox-gl";
 
-// Inject Mapbox CSS as a <style> tag at runtime (guaranteed detection)
-if (typeof window !== "undefined") {
-  const styleId = "mapbox-gl-js-v3.0.1-inline";
-  if (!document.getElementById(styleId)) {
-    fetch("/src/app/mapbox-gl-js-v3.0.1.css")
-      .then(res => res.text())
-      .then(css => {
-        const style = document.createElement("style");
-        style.id = styleId;
-        style.textContent = css;
-        document.head.appendChild(style);
-      });
-  }
+// Dynamically inject Mapbox CSS from CDN at runtime if not present
+function ensureMapboxCSS(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve();
+    const linkId = "mapbox-gl-js-v3.0.1-cdn";
+    if (document.getElementById(linkId)) return resolve();
+    const link = document.createElement("link");
+    link.id = linkId;
+    link.rel = "stylesheet";
+    link.href = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css";
+    link.onload = () => resolve();
+    link.onerror = () => resolve(); // resolve anyway to avoid blocking
+    document.head.appendChild(link);
+  });
 }
 import { useEffect, useRef, useState } from "react";
 const MAPBOX_TOKEN = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
@@ -179,198 +180,125 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
   }, [highlightedEventId]);
 
   useEffect(() => {
-    if (mapRef.current || !mapContainer.current) return;
-    
-    // Super comprehensive Mapbox CSS detection override
-    if (typeof window !== "undefined") {
-      // Override at multiple levels to ensure we catch everything
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapboxPrototype = mapboxgl.Map.prototype as any;
-      
-      // Method 1: Override _detectMissingCSS directly
-      if (mapboxPrototype._detectMissingCSS) {
-        mapboxPrototype._detectMissingCSS = function() { return; };
-      }
-      
-      // Method 2: Define it if it doesn't exist yet
-      Object.defineProperty(mapboxPrototype, "_detectMissingCSS", {
-        value: function() { return; },
-        writable: false,
-        configurable: false
+    let map: mapboxgl.Map | null = null;
+    let cleanup = () => {};
+    ensureMapboxCSS().then(() => {
+      if (mapRef.current || !mapContainer.current) return;
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      map = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [36.0, -0.5],
+        zoom: 7,
+        pitch: 0,
+        bearing: 0,
+        antialias: true,
       });
+      mapRef.current = map;
 
-      // Method 3: Override any other CSS detection methods
-      if (mapboxPrototype._checkForMissingCSS) {
-        mapboxPrototype._checkForMissingCSS = function() { return; };
-      }
-
-      // Method 4: Override the tf function that appears in the stack trace
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const globalWindow = window as any;
-      if (globalWindow.tf && typeof globalWindow.tf === 'function') {
-        const originalTf = globalWindow.tf;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        globalWindow.tf = function(...args: any[]) {
-          const message = args.join(' ');
-          if (message.includes('CSS declarations for Mapbox GL JS') || 
-              message.includes('mapbox-gl.css')) {
-            return;
-          }
-          return originalTf.apply(this, args);
-        };
-      }
-
-      // Method 5: Override any console methods at the last moment
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const suppressMapboxWarning = (originalMethod: (...args: any[]) => void) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return function(...args: any[]) {
-          const message = args.join(' ');
-          if (message.includes('CSS declarations for Mapbox GL JS') || 
-              message.includes('mapbox-gl.css') ||
-              message.includes('missing CSS declarations')) {
-            return;
-          }
-          return originalMethod.apply(console, args);
-        };
+      const updateMapOrientation = () => {
+        setMapBearing(map!.getBearing());
+        setMapPitch(map!.getPitch());
       };
+      map.on("rotate", updateMapOrientation);
+      map.on("pitch", updateMapOrientation);
 
-      console.warn = suppressMapboxWarning(console.warn);
-      console.error = suppressMapboxWarning(console.error);
-    }
-    
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: [36.0, -0.5], // Center of Kenya to show all cities
-      zoom: 7, // Wider zoom to see entire Kenya
-      pitch: 0, // Start with flat Google Maps style view
-      bearing: 0, // Start pointing north
-      antialias: true,
+      map.on("load", () => {
+        map!.addLayer({
+          id: "water-areas",
+          source: "composite",
+          "source-layer": "water",
+          type: "fill",
+          paint: {
+            "fill-color": "#4A90E2",
+            "fill-opacity": 0.8,
+          },
+        });
+        map!.addLayer({
+          id: "parks",
+          source: "composite",
+          "source-layer": "landuse",
+          type: "fill",
+          filter: ["in", "class", "park", "grass", "recreation_ground"],
+          paint: {
+            "fill-color": "#7CB342",
+            "fill-opacity": 0.6,
+          },
+        });
+        map!.addLayer({
+          id: "major-roads",
+          source: "composite",
+          "source-layer": "road",
+          type: "line",
+          filter: ["in", "class", "motorway", "trunk", "primary"],
+          paint: {
+            "line-color": "#424242",
+            "line-width": 4,
+          },
+        });
+        map!.addLayer({
+          id: "secondary-roads",
+          source: "composite",
+          "source-layer": "road",
+          type: "line",
+          filter: ["in", "class", "secondary", "tertiary"],
+          paint: {
+            "line-color": "#757575",
+            "line-width": 2,
+          },
+        });
+        map!.addLayer({
+          id: "residential",
+          source: "composite",
+          "source-layer": "landuse",
+          type: "fill",
+          filter: ["==", "class", "residential"],
+          paint: {
+            "fill-color": "#F5F5DC",
+            "fill-opacity": 0.4,
+          },
+        });
+        map!.addLayer({
+          id: "commercial",
+          source: "composite",
+          "source-layer": "landuse",
+          type: "fill",
+          filter: ["in", "class", "commercial", "industrial"],
+          paint: {
+            "fill-color": "#E1BEE7",
+            "fill-opacity": 0.5,
+          },
+        });
+        map!.addLayer({
+          id: "3d-buildings",
+          source: "composite",
+          "source-layer": "building",
+          filter: ["==", "extrude", "true"],
+          type: "fill-extrusion",
+          minzoom: 15,
+          paint: {
+            "fill-extrusion-color": [
+              "case",
+              ["==", ["get", "type"], "residential"], "#D2B48C",
+              ["==", ["get", "type"], "commercial"], "#B0C4DE",
+              ["==", ["get", "type"], "industrial"], "#A0A0A0",
+              "#C0C0C0"
+            ],
+            "fill-extrusion-height": ["get", "height"],
+            "fill-extrusion-base": ["get", "min_height"],
+            "fill-extrusion-opacity": 0.8,
+          },
+        });
+      });
+
+      cleanup = () => {
+        Object.values(markersRef.current).forEach(marker => marker.remove());
+        markersRef.current = {};
+        map!.remove();
+        mapRef.current = null;
+      };
     });
-    mapRef.current = map;
-
-    // Update bearing and pitch state when map rotates or pitches
-    const updateMapOrientation = () => {
-      setMapBearing(map.getBearing());
-      setMapPitch(map.getPitch());
-    };
-    
-    map.on("rotate", updateMapOrientation);
-    map.on("pitch", updateMapOrientation);
-
-    map.on("load", () => {
-      // Add realistic cityscape layers with proper colors
-      
-      // Water bodies - blue
-      map.addLayer({
-        id: "water-areas",
-        source: "composite",
-        "source-layer": "water",
-        type: "fill",
-        paint: {
-          "fill-color": "#4A90E2",
-          "fill-opacity": 0.8,
-        },
-      });
-
-      // Parks and green spaces - green
-      map.addLayer({
-        id: "parks",
-        source: "composite",
-        "source-layer": "landuse",
-        type: "fill",
-        filter: ["in", "class", "park", "grass", "recreation_ground"],
-        paint: {
-          "fill-color": "#7CB342",
-          "fill-opacity": 0.6,
-        },
-      });
-
-      // Major roads - darker gray
-      map.addLayer({
-        id: "major-roads",
-        source: "composite",
-        "source-layer": "road",
-        type: "line",
-        filter: ["in", "class", "motorway", "trunk", "primary"],
-        paint: {
-          "line-color": "#424242",
-          "line-width": 4,
-        },
-      });
-
-      // Secondary roads - lighter gray
-      map.addLayer({
-        id: "secondary-roads",
-        source: "composite",
-        "source-layer": "road",
-        type: "line",
-        filter: ["in", "class", "secondary", "tertiary"],
-        paint: {
-          "line-color": "#757575",
-          "line-width": 2,
-        },
-      });
-
-      // Residential areas - light beige
-      map.addLayer({
-        id: "residential",
-        source: "composite",
-        "source-layer": "landuse",
-        type: "fill",
-        filter: ["==", "class", "residential"],
-        paint: {
-          "fill-color": "#F5F5DC",
-          "fill-opacity": 0.4,
-        },
-      });
-
-      // Commercial/industrial areas - light purple
-      map.addLayer({
-        id: "commercial",
-        source: "composite",
-        "source-layer": "landuse",
-        type: "fill",
-        filter: ["in", "class", "commercial", "industrial"],
-        paint: {
-          "fill-color": "#E1BEE7",
-          "fill-opacity": 0.5,
-        },
-      });
-
-      // 3D buildings with realistic colors
-      map.addLayer({
-        id: "3d-buildings",
-        source: "composite",
-        "source-layer": "building",
-        filter: ["==", "extrude", "true"],
-        type: "fill-extrusion",
-        minzoom: 15,
-        paint: {
-          "fill-extrusion-color": [
-            "case",
-            ["==", ["get", "type"], "residential"], "#D2B48C", // Tan for residential
-            ["==", ["get", "type"], "commercial"], "#B0C4DE", // Light steel blue for commercial
-            ["==", ["get", "type"], "industrial"], "#A0A0A0", // Gray for industrial
-            "#C0C0C0" // Default silver
-          ],
-          "fill-extrusion-height": ["get", "height"],
-          "fill-extrusion-base": ["get", "min_height"],
-          "fill-extrusion-opacity": 0.8,
-        },
-      });
-    });
-
-    return () => {
-      // Clean up markers
-      Object.values(markersRef.current).forEach(marker => marker.remove());
-      markersRef.current = {};
-      
-      map.remove();
-      mapRef.current = null;
-    };
+    return () => cleanup();
   }, []);
 
   return (
