@@ -35,12 +35,15 @@ interface MapComponentProps {
 }
 
 export default function MapComponent({ highlightedEventId }: MapComponentProps) {
+  console.log('MapComponent: Component mounted/re-rendered');
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Record<string, mapboxgl.Marker>>({});
   const [mapBearing, setMapBearing] = useState(0);
   const [mapPitch, setMapPitch] = useState(0);
   const [events, setEvents] = useState<Event[]>([]);
+
+  console.log('MapComponent: Current events state:', events.length);
 
   // Function to fetch events from API
   const fetchEvents = async () => {
@@ -166,18 +169,29 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
 
   // Fetch events on component mount and set up polling
   useEffect(() => {
+    console.log('MapComponent: useEffect for fetchEvents triggered');
     fetchEvents();
     
     // Poll for new events every 15 seconds
-    const interval = setInterval(fetchEvents, 15000);
+    const interval = setInterval(() => {
+      console.log('MapComponent: Polling for events...');
+      fetchEvents();
+    }, 15000);
     
-    return () => clearInterval(interval);
+    return () => {
+      console.log('MapComponent: Cleaning up polling interval');
+      clearInterval(interval);
+    };
   }, []);
 
   // Update markers when events change
   useEffect(() => {
+    console.log('MapComponent: useEffect for updateMarkers triggered with events:', events.length);
     if (mapRef.current) {
+      console.log('MapComponent: Map ref exists, calling updateMarkers');
       updateMarkers();
+    } else {
+      console.log('MapComponent: Map ref does not exist yet');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
@@ -191,7 +205,13 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
   }, [highlightedEventId]);
 
   useEffect(() => {
-    if (mapRef.current || !mapContainer.current) return;
+    console.log('MapComponent: Map initialization useEffect triggered');
+    if (mapRef.current || !mapContainer.current) {
+      console.log('MapComponent: Map already exists or container not ready');
+      return;
+    }
+    
+    console.log('MapComponent: Initializing Mapbox map...');
     mapboxgl.accessToken = MAPBOX_TOKEN;
     const map = new mapboxgl.Map({
       container: mapContainer.current,
