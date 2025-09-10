@@ -2,7 +2,8 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import ReportsPanel from "./ReportsPanel";
-import MapComponent from "./MapComponent";
+import TestMapComponent from "./TestMapComponent";
+// import MapComponent from "./MapComponent";
 
 
 export default function HomePage() {
@@ -42,7 +43,7 @@ export default function HomePage() {
             />
           )}
           <div className="flex-1 h-full w-full overflow-hidden">
-            <MapComponent highlightedEventId={highlightedEventId} />
+            <TestMapComponent />
           </div>
         </div>
       </div>
