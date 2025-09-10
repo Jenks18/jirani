@@ -1,20 +1,4 @@
 ﻿import mapboxgl from "mapbox-gl";
-
-// Dynamically inject Mapbox CSS from CDN at runtime if not present
-function ensureMapboxCSS(): Promise<void> {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") return resolve();
-    const linkId = "mapbox-gl-js-v3.0.1-cdn";
-    if (document.getElementById(linkId)) return resolve();
-    const link = document.createElement("link");
-    link.id = linkId;
-    link.rel = "stylesheet";
-    link.href = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css";
-    link.onload = () => resolve();
-    link.onerror = () => resolve(); // resolve anyway to avoid blocking
-    document.head.appendChild(link);
-  });
-}
 import { useEffect, useRef, useState } from "react";
 const MAPBOX_TOKEN = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
 
@@ -180,125 +164,120 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
   }, [highlightedEventId]);
 
   useEffect(() => {
-    let map: mapboxgl.Map | null = null;
-    let cleanup = () => {};
-    ensureMapboxCSS().then(() => {
-      if (mapRef.current || !mapContainer.current) return;
-      mapboxgl.accessToken = MAPBOX_TOKEN;
-      map = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: "mapbox://styles/mapbox/light-v11",
-        center: [36.0, -0.5],
-        zoom: 7,
-        pitch: 0,
-        bearing: 0,
-        antialias: true,
-      });
-      mapRef.current = map;
-
-      const updateMapOrientation = () => {
-        setMapBearing(map!.getBearing());
-        setMapPitch(map!.getPitch());
-      };
-      map.on("rotate", updateMapOrientation);
-      map.on("pitch", updateMapOrientation);
-
-      map.on("load", () => {
-        map!.addLayer({
-          id: "water-areas",
-          source: "composite",
-          "source-layer": "water",
-          type: "fill",
-          paint: {
-            "fill-color": "#4A90E2",
-            "fill-opacity": 0.8,
-          },
-        });
-        map!.addLayer({
-          id: "parks",
-          source: "composite",
-          "source-layer": "landuse",
-          type: "fill",
-          filter: ["in", "class", "park", "grass", "recreation_ground"],
-          paint: {
-            "fill-color": "#7CB342",
-            "fill-opacity": 0.6,
-          },
-        });
-        map!.addLayer({
-          id: "major-roads",
-          source: "composite",
-          "source-layer": "road",
-          type: "line",
-          filter: ["in", "class", "motorway", "trunk", "primary"],
-          paint: {
-            "line-color": "#424242",
-            "line-width": 4,
-          },
-        });
-        map!.addLayer({
-          id: "secondary-roads",
-          source: "composite",
-          "source-layer": "road",
-          type: "line",
-          filter: ["in", "class", "secondary", "tertiary"],
-          paint: {
-            "line-color": "#757575",
-            "line-width": 2,
-          },
-        });
-        map!.addLayer({
-          id: "residential",
-          source: "composite",
-          "source-layer": "landuse",
-          type: "fill",
-          filter: ["==", "class", "residential"],
-          paint: {
-            "fill-color": "#F5F5DC",
-            "fill-opacity": 0.4,
-          },
-        });
-        map!.addLayer({
-          id: "commercial",
-          source: "composite",
-          "source-layer": "landuse",
-          type: "fill",
-          filter: ["in", "class", "commercial", "industrial"],
-          paint: {
-            "fill-color": "#E1BEE7",
-            "fill-opacity": 0.5,
-          },
-        });
-        map!.addLayer({
-          id: "3d-buildings",
-          source: "composite",
-          "source-layer": "building",
-          filter: ["==", "extrude", "true"],
-          type: "fill-extrusion",
-          minzoom: 15,
-          paint: {
-            "fill-extrusion-color": [
-              "case",
-              ["==", ["get", "type"], "residential"], "#D2B48C",
-              ["==", ["get", "type"], "commercial"], "#B0C4DE",
-              ["==", ["get", "type"], "industrial"], "#A0A0A0",
-              "#C0C0C0"
-            ],
-            "fill-extrusion-height": ["get", "height"],
-            "fill-extrusion-base": ["get", "min_height"],
-            "fill-extrusion-opacity": 0.8,
-          },
-        });
-      });
-
-      cleanup = () => {
-        Object.values(markersRef.current).forEach(marker => marker.remove());
-        markersRef.current = {};
-        map!.remove();
-        mapRef.current = null;
-      };
+    if (mapRef.current || !mapContainer.current) return;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    const map = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/light-v11",
+      center: [36.0, -0.5],
+      zoom: 7,
+      pitch: 0,
+      bearing: 0,
+      antialias: true,
     });
-    return () => cleanup();
+    mapRef.current = map;
+
+    const updateMapOrientation = () => {
+      setMapBearing(map.getBearing());
+      setMapPitch(map.getPitch());
+    };
+    map.on("rotate", updateMapOrientation);
+    map.on("pitch", updateMapOrientation);
+
+    map.on("load", () => {
+      map.addLayer({
+        id: "water-areas",
+        source: "composite",
+        "source-layer": "water",
+        type: "fill",
+        paint: {
+          "fill-color": "#4A90E2",
+          "fill-opacity": 0.8,
+        },
+      });
+      map.addLayer({
+        id: "parks",
+        source: "composite",
+        "source-layer": "landuse",
+        type: "fill",
+        filter: ["in", "class", "park", "grass", "recreation_ground"],
+        paint: {
+          "fill-color": "#7CB342",
+          "fill-opacity": 0.6,
+        },
+      });
+      map.addLayer({
+        id: "major-roads",
+        source: "composite",
+        "source-layer": "road",
+        type: "line",
+        filter: ["in", "class", "motorway", "trunk", "primary"],
+        paint: {
+          "line-color": "#424242",
+          "line-width": 4,
+        },
+      });
+      map.addLayer({
+        id: "secondary-roads",
+        source: "composite",
+        "source-layer": "road",
+        type: "line",
+        filter: ["in", "class", "secondary", "tertiary"],
+        paint: {
+          "line-color": "#757575",
+          "line-width": 2,
+        },
+      });
+      map.addLayer({
+        id: "residential",
+        source: "composite",
+        "source-layer": "landuse",
+        type: "fill",
+        filter: ["==", "class", "residential"],
+        paint: {
+          "fill-color": "#F5F5DC",
+          "fill-opacity": 0.4,
+        },
+      });
+      map.addLayer({
+        id: "commercial",
+        source: "composite",
+        "source-layer": "landuse",
+        type: "fill",
+        filter: ["in", "class", "commercial", "industrial"],
+        paint: {
+          "fill-color": "#E1BEE7",
+          "fill-opacity": 0.5,
+        },
+      });
+      map.addLayer({
+        id: "3d-buildings",
+        source: "composite",
+        "source-layer": "building",
+        filter: ["==", "extrude", "true"],
+        type: "fill-extrusion",
+        minzoom: 15,
+        paint: {
+          "fill-extrusion-color": [
+            "case",
+            ["==", ["get", "type"], "residential"], "#D2B48C",
+            ["==", ["get", "type"], "commercial"], "#B0C4DE",
+            ["==", ["get", "type"], "industrial"], "#A0A0A0",
+            "#C0C0C0"
+          ],
+          "fill-extrusion-height": ["get", "height"],
+          "fill-extrusion-base": ["get", "min_height"],
+          "fill-extrusion-opacity": 0.8,
+        },
+      });
+    });
+
+    return () => {
+      Object.values(markersRef.current).forEach(marker => marker.remove());
+      markersRef.current = {};
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
   return (
