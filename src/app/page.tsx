@@ -19,6 +19,10 @@ export default function HomePage() {
   
   return (
     <div className="flex flex-col h-screen w-screen">
+      {/* EMERGENCY TEST - You should see this message if deployment worked */}
+      <div className="bg-red-500 text-white p-4 text-center font-bold">
+        🚨 DEPLOYMENT TEST - If you see this, the new code is live! 🚨
+      </div>
       <div className="flex flex-1 w-full h-full overflow-hidden">
         <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
         <div className="flex flex-1 h-full w-full overflow-hidden">
