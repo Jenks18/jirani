@@ -1,8 +1,20 @@
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
-
-import { useEffect, useRef, useState } from "react";
-
+// Override Mapbox CSS detection BEFORE importing mapbox-gl 
+if (typeof window !== "undefined") { 
+  const originalWarn = console.warn; 
+  console.warn = function(...args) { 
+    const message = args.join(' '); 
+    if (message.includes('CSS declarations for Mapbox GL JS')) { 
+      return; 
+    } 
+    originalWarn.apply(console, args); 
+  }; 
+} 
+ 
+import mapboxgl from "mapbox-gl"; 
+import "mapbox-gl/dist/mapbox-gl.css"; 
+ 
+import { useEffect, useRef, useState } from "react"; 
+﻿
 const MAPBOX_TOKEN = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
 
 interface Report {
@@ -331,7 +343,7 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
           className="w-10 h-10 bg-white rounded shadow-lg border border-gray-200 flex items-center justify-center text-lg font-bold text-gray-700 hover:bg-gray-50 transition-colors"
           title="Zoom out"
         >
-          −
+          âˆ’
         </button>
         
         {/* Compass / Reset North with omnidirectional camera control */}
@@ -428,3 +440,4 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
     </div>
   );
 }
+
