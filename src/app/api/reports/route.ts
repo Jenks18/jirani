@@ -14,10 +14,23 @@ const mockReports = [
 ];
 
 export async function GET() {
-  return NextResponse.json({
-    events: mockReports,
-    reports: mockReports,
-    reportCount: mockReports.length,
-    areaCount: 346
-  });
+  try {
+    console.log('API /reports called, returning mock data...');
+    const response = {
+      events: mockReports,
+      reports: mockReports,
+      reportCount: mockReports.length,
+      areaCount: 346,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV
+    };
+    console.log('API /reports response:', response);
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error('Error in /api/reports:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch reports', details: error },
+      { status: 500 }
+    );
+  }
 }

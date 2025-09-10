@@ -45,11 +45,20 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
   // Function to fetch events from API
   const fetchEvents = async () => {
     try {
+      console.log('Fetching events from /api/reports...');
       const response = await fetch('/api/reports');
-      if (!response.ok) throw new Error('Failed to fetch events');
+      console.log('Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
+      }
       
       const data = await response.json();
+      console.log('API Response data:', data);
       const reports = data.reports || [];
+      console.log('Reports found:', reports.length);
       
       // Transform API data to match Event interface
       const newEvents = reports.map((report: Report) => ({
@@ -66,10 +75,28 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
         images: report.images || []
       }));
       
+      console.log('Transformed events:', newEvents);
       setEvents(newEvents);
       
     } catch (err) {
       console.error('Error fetching events for map:', err);
+      console.error('Error details:', err);
+      
+      // Fallback to mock data if API fails
+      console.log('Using fallback mock data...');
+      const fallbackEvents = [{
+        id: "fallback-test",
+        type: "Phone theft",
+        severity: 4,
+        location: "Westlands, Nairobi, Kenya",
+        description: "Phone theft at Westlands Shopping Centre (fallback data)",
+        timestamp: new Date().toISOString(),
+        coordinates: [-1.2655, 36.8055] as [number, number], // [lat, lng]
+        from: "FALLBACK",
+        createdAt: new Date().toISOString(),
+        images: []
+      }];
+      setEvents(fallbackEvents);
     }
   };
 
