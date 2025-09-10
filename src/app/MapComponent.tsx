@@ -1,16 +1,17 @@
 ﻿import mapboxgl from "mapbox-gl";
 
-// Guarantee Mapbox CSS is present in the DOM (runtime fallback)
+// Inject Mapbox CSS as a <style> tag at runtime (guaranteed detection)
 if (typeof window !== "undefined") {
-  const MAPBOX_CSS_URL = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css";
-  const isMapboxCSSLoaded = Array.from(document.styleSheets).some(
-    (sheet) => sheet.href && sheet.href.includes("mapbox-gl-js")
-  );
-  if (!isMapboxCSSLoaded) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = MAPBOX_CSS_URL;
-    document.head.appendChild(link);
+  const styleId = "mapbox-gl-js-v3.0.1-inline";
+  if (!document.getElementById(styleId)) {
+    fetch("/src/app/mapbox-gl-js-v3.0.1.css")
+      .then(res => res.text())
+      .then(css => {
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = css;
+        document.head.appendChild(style);
+      });
   }
 }
 import { useEffect, useRef, useState } from "react";

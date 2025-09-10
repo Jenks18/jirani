@@ -1,0 +1,9 @@
+/* Mapbox GL JS v3.0.1 CSS (minified, partial for demo) */
+.mapboxgl-canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+.mapboxgl-map{position:relative;width:100%;height:100%;}
+.mapboxgl-ctrl{box-sizing:border-box;}
+.mapboxgl-popup{position:absolute;top:0;left:0;will-change:transform;pointer-events:none;}
+.mapboxgl-popup-content{background:#fff;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.1);padding:10px;}
+.mapboxgl-ctrl-group{display:flex;flex-direction:column;}
+.mapboxgl-ctrl-icon{width:24px;height:24px;}
+/* ...add more as needed for your UI... */
