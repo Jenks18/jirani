@@ -1,5 +1,8 @@
 ﻿import mapboxgl from "mapbox-gl";
 import { useEffect, useRef, useState } from "react";
+
+console.log('MapComponent.tsx: File loaded successfully');
+
 const MAPBOX_TOKEN = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
 
 interface Report {
@@ -35,6 +38,16 @@ interface MapComponentProps {
 }
 
 export default function MapComponent({ highlightedEventId }: MapComponentProps) {
+  console.log('MapComponent: Component function called');
+  
+  // Add a simple backup render to test if component mounts at all
+  const [testRender, setTestRender] = useState(false);
+  
+  useEffect(() => {
+    console.log('MapComponent: Basic useEffect triggered');
+    setTestRender(true);
+  }, []);
+
   console.log('MapComponent: Component mounted/re-rendered');
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -329,6 +342,10 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
 
   return (
     <div className="relative w-full h-full">
+      {/* Debug indicator */}
+      <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs z-50">
+        MapComponent Loaded: {testRender ? 'YES' : 'NO'}
+      </div>
       <div ref={mapContainer} className="w-full h-full" />
       <div className="absolute top-4 right-4 bg-white rounded shadow px-3 py-1 text-sm font-bold">Jirani Users: 315</div>
       
