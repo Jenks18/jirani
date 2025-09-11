@@ -71,6 +71,7 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
       
       const data = await response.json();
       const reports = data.reports || [];
+  console.log('Fetched reports from API:', reports);
       
       const transformedEvents: Event[] = reports.map((report: {
         id: string;
@@ -95,6 +96,7 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
         createdAt: report.dateTime,
         images: report.images || []
       }));
+  console.log('Transformed events for map:', transformedEvents);
       
       setEvents(transformedEvents);
     } catch (error) {
@@ -166,8 +168,11 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
 
         // Add new markers
         events.forEach((event) => {
-          if (!event.coordinates) return;
-
+          if (!event.coordinates) {
+            console.log('Skipping event with no coordinates:', event);
+            return;
+          }
+          console.log('Adding marker for event:', event);
           const el = document.createElement("div");
           el.style.width = highlightedEventId === event.id ? "24px" : "16px";
           el.style.height = highlightedEventId === event.id ? "24px" : "16px";
@@ -175,12 +180,10 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
           el.style.border = "2px solid white";
           el.style.cursor = "pointer";
           el.style.boxShadow = highlightedEventId === event.id ? "0 4px 16px rgba(0,0,0,0.8)" : "0 2px 6px rgba(0,0,0,0.4)";
-          
           const colors = {
             1: "#22c55e", 2: "#eab308", 3: "#f97316", 4: "#ef4444", 5: "#dc2626"
           };
           el.style.backgroundColor = colors[event.severity as keyof typeof colors] || "#6b7280";
-
           // Create popup
           const popup = new mapboxgl.Popup({
             offset: 25,
@@ -195,12 +198,10 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
               <p style="margin: 0; font-size: 12px; color: #888;">${new Date(event.createdAt).toLocaleString()}</p>
             </div>
           `);
-
           const marker = new mapboxgl.Marker(el)
             .setLngLat([event.coordinates[1], event.coordinates[0]])
             .setPopup(popup)
             .addTo(mapRef.current!);
-
           markersRef.current[event.id] = marker;
         });
       } catch (error) {
