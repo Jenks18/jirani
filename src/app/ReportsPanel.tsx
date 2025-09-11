@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FaChevronLeft, FaMapMarkerAlt, FaClock } from "react-icons/fa";
 
 interface Report {
-  _id: string;
+  id: string;
   dateTime: string;
   coordinates: {
     type: string;
@@ -152,7 +152,7 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
       
       // Transform API data to match Event interface
       const transformedEvents = reports.map((report: Report) => ({
-        id: report._id,
+  id: report.id,
         type: report.type,
         severity: report.severity,
         location: report.location || 'Unknown location',
