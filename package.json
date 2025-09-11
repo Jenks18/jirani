@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
     "mapbox-gl": "^3.14.0",
     "next": "15.4.6",
     "react": "19.1.0",

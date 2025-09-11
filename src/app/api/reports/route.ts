@@ -1,35 +1,32 @@
-import { NextResponse } from 'next/server';
 
-const mockReports = [
-  {
-    _id: "test-westlands",
-    dateTime: new Date().toISOString(),
-    coordinates: { type: "Point", coordinates: [36.8055, -1.2655] },
-    type: "Phone theft",
-    severity: 4,
-    summary: "Phone theft at Westlands Shopping Centre",
-    location: "Westlands, Nairobi, Kenya",
-    sourceType: "TEST"
-  }
-];
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabaseClient';
 
 export async function GET() {
   try {
-    console.log('API /reports called, returning mock data...');
+    // Fetch all reports from Supabase
+    const { data: reports, error } = await supabase
+      .from('reports')
+      .select('*')
+      .order('dateTime', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
     const response = {
-      events: mockReports,
-      reports: mockReports,
-      reportCount: mockReports.length,
+      events: reports,
+      reports,
+      reportCount: reports.length,
       areaCount: 346,
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV
     };
-    console.log('API /reports response:', response);
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error in /api/reports:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch reports', details: error },
+      { error: 'Failed to fetch reports', details: error instanceof Error ? error.message : error },
       { status: 500 }
     );
   }
