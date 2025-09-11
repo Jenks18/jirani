@@ -149,6 +149,7 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
       
       const data = await response.json();
       const reports = data.reports || [];
+  console.log('ReportsPanel: fetched reports from API:', reports);
       
       // Transform API data to match Event interface
       const transformedEvents = reports.map((report: Report) => ({
@@ -164,11 +165,13 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
         createdAt: report.dateTime,
         images: report.images || []
       }));
+  console.log('ReportsPanel: transformed events:', transformedEvents);
       
       // Sort events by creation time (newest first)
       const sortedEvents = transformedEvents.sort((a: Event, b: Event) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
+  console.log('ReportsPanel: sorted events:', sortedEvents);
       
       setEvents(sortedEvents);
       setError(null);
