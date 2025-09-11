@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+
+console.log("ReportsPanel: mounted");
 import { FaChevronLeft, FaMapMarkerAlt, FaClock } from "react-icons/fa";
 
 interface Report {
