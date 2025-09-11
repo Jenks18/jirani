@@ -73,7 +73,7 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
       const reports = data.reports || [];
       
       const transformedEvents: Event[] = reports.map((report: {
-        _id: string;
+        id: string;
         type: string;
         severity: number;
         summary: string;
@@ -83,7 +83,7 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
         coordinates?: { coordinates: [number, number] };
         images?: string[];
       }) => ({
-        id: report._id,
+        id: report.id,
         type: report.type,
         severity: report.severity,
         location: report.location || 'Unknown',
