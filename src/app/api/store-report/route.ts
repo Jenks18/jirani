@@ -11,8 +11,12 @@ export async function POST(req: NextRequest) {
       .insert([{ ...reportData }])
       .select();
 
+
     if (error) {
-      throw error;
+      // Log the full error object
+      console.error('Supabase insert error:', error);
+      // Return the full error object as a string for debugging
+      return NextResponse.json({ error: JSON.stringify(error) }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -22,7 +26,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Store report error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: typeof error === 'object' ? JSON.stringify(error) : String(error) },
       { status: 500 }
     );
   }
