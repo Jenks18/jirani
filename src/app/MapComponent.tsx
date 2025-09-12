@@ -22,6 +22,8 @@ interface MapComponentProps {
 }
 
 export default function MapComponent({ highlightedEventId, sidebarCollapsed, reportsPanelCollapsed }: MapComponentProps) {
+  // Ref for custom control container
+  const customControlRef = useRef<HTMLDivElement>(null);
   // Resize map when sidebar is collapsed/expanded
   useEffect(() => {
     if (mapRef.current) {
@@ -134,7 +136,7 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
       try {
         const mapboxgl = (await import('mapbox-gl')).default;
         mapboxgl.accessToken = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
-        
+
         // Ensure CSS is loaded - inject it if not detected
         const cssLink = document.querySelector('link[href*="mapbox-gl.css"]');
         if (!cssLink) {
@@ -142,11 +144,9 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
           link.rel = 'stylesheet';
           link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css';
           document.head.appendChild(link);
-          
-          // Wait a bit for CSS to load
           await new Promise(resolve => setTimeout(resolve, 100));
         }
-        
+
         const map = new mapboxgl.Map({
           container: mapContainer.current!,
           style: "mapbox://styles/mapbox/light-v11",
@@ -154,8 +154,20 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
           zoom: 10
         });
 
-        // Add built-in navigation control (zoom + compass)
-        map.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }), 'top-right');
+        // Custom control container for vertical center right
+        if (customControlRef.current) {
+          customControlRef.current.innerHTML = '';
+        }
+        const navControl = new mapboxgl.NavigationControl({ showCompass: true, showZoom: true });
+        map.addControl(navControl, 'top-right');
+
+        // Move the control to our custom container after mount
+        setTimeout(() => {
+          const mapboxControls = mapContainer.current?.querySelector('.mapboxgl-ctrl-top-right');
+          if (mapboxControls && customControlRef.current) {
+            customControlRef.current.appendChild(mapboxControls);
+          }
+        }, 500);
 
         mapRef.current = map;
         setMapInitialized(true);
@@ -248,11 +260,22 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
       {/* Map container */}
       <div ref={mapContainer} className="w-full h-full" style={{ zIndex: 10 }} />
 
+      {/* Custom control container: vertical center right */}
+      <div
+        ref={customControlRef}
+        className="fixed z-[101]"
+        style={{
+          top: '50%',
+          right: '24px',
+          transform: 'translateY(-50%)',
+          pointerEvents: 'auto',
+        }}
+      />
+
       {/* Status indicator - always visible, above map and overlays */}
       <div className="fixed top-4 right-8 bg-white rounded shadow px-3 py-1 text-sm z-[100] pointer-events-auto">
         Events: {events.length} | Status: {mapInitialized ? 'Ready' : 'Loading'}
       </div>
-      {/* Mapbox controls are handled by NavigationControl, ensure they are not hidden by overlays */}
     </div>
   );
 }
