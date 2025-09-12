@@ -19,19 +19,12 @@ export default function HomePage() {
     <div className="flex flex-col h-screen w-screen">
       <div className="flex flex-1 w-full h-full overflow-hidden">
         <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-        <div className="flex flex-1 h-full w-full overflow-hidden">
-          {!reportsPanelCollapsed && (
-            <div className="flex flex-col flex-shrink-0 min-w-[320px] max-w-[480px] w-full md:w-[400px] h-full overflow-y-auto">
-              <ReportsPanel 
-                collapsed={reportsPanelCollapsed} 
-                setCollapsed={setReportsPanelCollapsed} 
-                sidebarCollapsed={sidebarCollapsed} 
-                onEventClick={handleEventClick}
-                highlightedEventId={highlightedEventId}
-              />
-            </div>
-          )}
-          {reportsPanelCollapsed && (
+        <div className="flex-1 h-full w-full overflow-hidden relative">
+          {/* Map always fills the space next to sidebar */}
+          <MapComponent highlightedEventId={highlightedEventId} sidebarCollapsed={sidebarCollapsed} reportsPanelCollapsed={reportsPanelCollapsed} />
+          {/* ReportsPanel overlays on top of map */}
+          <div className={`absolute top-0 left-0 h-full z-30 transition-transform duration-300 ${reportsPanelCollapsed ? "-translate-x-full pointer-events-none" : "translate-x-0"}`}
+            style={{ width: 'min(100vw, 400px)', maxWidth: 480, minWidth: 320 }}>
             <ReportsPanel 
               collapsed={reportsPanelCollapsed} 
               setCollapsed={setReportsPanelCollapsed} 
@@ -39,9 +32,6 @@ export default function HomePage() {
               onEventClick={handleEventClick}
               highlightedEventId={highlightedEventId}
             />
-          )}
-          <div className="flex-1 h-full w-full overflow-hidden">
-            <MapComponent highlightedEventId={highlightedEventId} sidebarCollapsed={sidebarCollapsed} reportsPanelCollapsed={reportsPanelCollapsed} />
           </div>
         </div>
       </div>
