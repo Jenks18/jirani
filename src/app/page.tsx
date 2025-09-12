@@ -23,15 +23,28 @@ export default function HomePage() {
           {/* Map always fills the space next to sidebar */}
           <MapComponent highlightedEventId={highlightedEventId} sidebarCollapsed={sidebarCollapsed} reportsPanelCollapsed={reportsPanelCollapsed} />
           {/* ReportsPanel overlays on top of map */}
-          <div className={`absolute top-0 left-0 h-full z-30 transition-transform duration-300 ${reportsPanelCollapsed ? "-translate-x-full pointer-events-none" : "translate-x-0"}`}
-            style={{ width: 'min(100vw, 400px)', maxWidth: 480, minWidth: 320 }}>
-            <ReportsPanel 
-              collapsed={reportsPanelCollapsed} 
-              setCollapsed={setReportsPanelCollapsed} 
-              sidebarCollapsed={sidebarCollapsed} 
-              onEventClick={handleEventClick}
-              highlightedEventId={highlightedEventId}
-            />
+          <div className={`absolute top-0 left-0 h-full z-30 pointer-events-none`} style={{ width: 'min(100vw, 400px)', maxWidth: 480, minWidth: 320 }}>
+            <div className={`transition-transform duration-300 h-full ${reportsPanelCollapsed ? "-translate-x-full" : "translate-x-0"} pointer-events-auto`}>
+              <ReportsPanel 
+                collapsed={reportsPanelCollapsed} 
+                setCollapsed={setReportsPanelCollapsed} 
+                sidebarCollapsed={sidebarCollapsed} 
+                onEventClick={handleEventClick}
+                highlightedEventId={highlightedEventId}
+              />
+            </div>
+            {/* Floating expand button always visible */}
+            {reportsPanelCollapsed && (
+              <div className="absolute top-6 left-0 z-40 pointer-events-auto">
+                <ReportsPanel 
+                  collapsed={true}
+                  setCollapsed={setReportsPanelCollapsed}
+                  sidebarCollapsed={sidebarCollapsed}
+                  onEventClick={handleEventClick}
+                  highlightedEventId={highlightedEventId}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
