@@ -154,6 +154,9 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
           zoom: 10
         });
 
+        // Add built-in navigation control (zoom + compass)
+        map.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }), 'top-right');
+
         mapRef.current = map;
         setMapInitialized(true);
       } catch (error) {
@@ -250,86 +253,7 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
         Events: {events.length} | Status: {mapInitialized ? 'Ready' : 'Loading'}
       </div>
       
-      {/* Navigation */}
-      <div
-        className="absolute top-1/2 transform -translate-y-1/2 flex flex-col space-y-1"
-        style={{
-          right: reportsPanelCollapsed ? 16 : 420 // px; adjust 420 to match overlay width
-        }}
-      >
-        <button 
-          onClick={async () => {
-            if (mapRef.current) mapRef.current.zoomIn();
-          }}
-          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
-        >
-          +
-        </button>
-        <button 
-          onClick={async () => {
-            if (mapRef.current) mapRef.current.zoomOut();
-          }}
-          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
-        >
-          −
-        </button>
-        <button 
-          onClick={async () => {
-            if (mapRef.current) {
-              mapRef.current.flyTo({ center: [36.8219, -1.2921], zoom: 10 });
-            }
-          }}
-          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-sm font-bold hover:bg-gray-50"
-          title="Reset to Nairobi"
-        >
-          ⌂
-        </button>
-        {/* Gyro controls: rotate left/right 360° and 720° */}
-        <button
-          onClick={async () => {
-            if (mapRef.current) {
-              mapRef.current.rotateTo(mapRef.current.getBearing() - 360, { duration: 1000 });
-            }
-          }}
-          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
-          title="Rotate left 360°"
-        >
-          ↺
-        </button>
-        <button
-          onClick={async () => {
-            if (mapRef.current) {
-              mapRef.current.rotateTo(mapRef.current.getBearing() + 360, { duration: 1000 });
-            }
-          }}
-          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
-          title="Rotate right 360°"
-        >
-          ↻
-        </button>
-        <button
-          onClick={async () => {
-            if (mapRef.current) {
-              mapRef.current.rotateTo(mapRef.current.getBearing() - 720, { duration: 1500 });
-            }
-          }}
-          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
-          title="Rotate left 720°"
-        >
-          ⟲
-        </button>
-        <button
-          onClick={async () => {
-            if (mapRef.current) {
-              mapRef.current.rotateTo(mapRef.current.getBearing() + 720, { duration: 1500 });
-            }
-          }}
-          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
-          title="Rotate right 720°"
-        >
-          ⟳
-        </button>
-      </div>
+  {/* Navigation: now handled by Mapbox NavigationControl */}
     </div>
   );
 }
