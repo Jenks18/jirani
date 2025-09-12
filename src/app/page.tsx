@@ -23,14 +23,17 @@ export default function HomePage() {
       </div>
       {/* Main content with animated margin-left */}
       <div
-        className="h-full w-full overflow-hidden relative transition-all duration-300"
-        style={{ marginLeft: sidebarCollapsed ? 64 : 256 }}
+        className="h-full relative transition-all duration-300"
+        style={{
+          marginLeft: sidebarCollapsed ? 64 : 256,
+          width: `calc(100vw - ${sidebarCollapsed ? 64 : 256}px)`
+        }}
       >
-        {/* Map always fills the space next to sidebar */}
+        {/* Map always fills the space next to sidebar, overlays float above */}
         <MapComponent highlightedEventId={highlightedEventId} sidebarCollapsed={sidebarCollapsed} reportsPanelCollapsed={reportsPanelCollapsed} />
-        {/* ReportsPanel overlays on top of map */}
-        <div className={`absolute top-0 left-0 h-full z-30 pointer-events-none`} style={{ width: 'min(100vw, 400px)', maxWidth: 480, minWidth: 320 }}>
-          <div className={`transition-transform duration-300 h-full ${reportsPanelCollapsed ? "-translate-x-full" : "translate-x-0"} pointer-events-auto`}>
+        {/* ReportsPanel overlays on top of map, pointer-events only on panel */}
+        <div className={`fixed top-0 left-0 h-full z-50 pointer-events-none`} style={{ width: 'min(100vw, 400px)', maxWidth: 480, minWidth: 320 }}>
+          <div className={`transition-transform duration-300 h-full ${reportsPanelCollapsed ? "-translate-x-full" : "translate-x-0"} pointer-events-auto shadow-xl`}>
             <ReportsPanel 
               collapsed={reportsPanelCollapsed} 
               setCollapsed={setReportsPanelCollapsed} 
@@ -41,7 +44,7 @@ export default function HomePage() {
           </div>
           {/* Floating expand button always visible */}
           {reportsPanelCollapsed && (
-            <div className="absolute top-6 left-0 z-40 pointer-events-auto">
+            <div className="absolute top-6 left-0 z-50 pointer-events-auto">
               <ReportsPanel 
                 collapsed={true}
                 setCollapsed={setReportsPanelCollapsed}

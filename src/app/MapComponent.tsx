@@ -246,14 +246,13 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
   return (
     <div className="relative w-full h-full">
       {/* Map container */}
-      <div ref={mapContainer} className="w-full h-full" />
-      
-      {/* Status indicator */}
-      <div className="absolute top-4 right-4 bg-white rounded shadow px-3 py-1 text-sm">
+      <div ref={mapContainer} className="w-full h-full" style={{ zIndex: 10 }} />
+
+      {/* Status indicator - always visible, above map and overlays */}
+      <div className="fixed top-4 right-8 bg-white rounded shadow px-3 py-1 text-sm z-[100] pointer-events-auto">
         Events: {events.length} | Status: {mapInitialized ? 'Ready' : 'Loading'}
       </div>
-      
-  {/* Navigation: now handled by Mapbox NavigationControl */}
+      {/* Mapbox controls are handled by NavigationControl, ensure they are not hidden by overlays */}
     </div>
   );
 }
