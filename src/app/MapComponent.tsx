@@ -251,7 +251,12 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
       </div>
       
       {/* Navigation */}
-      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex flex-col space-y-1">
+      <div
+        className="absolute top-1/2 transform -translate-y-1/2 flex flex-col space-y-1"
+        style={{
+          right: reportsPanelCollapsed ? 16 : 420 // px; adjust 420 to match overlay width
+        }}
+      >
         <button 
           onClick={async () => {
             if (mapRef.current) mapRef.current.zoomIn();
