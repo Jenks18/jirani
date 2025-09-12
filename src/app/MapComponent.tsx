@@ -279,6 +279,51 @@ export default function MapComponent({ highlightedEventId, sidebarCollapsed, rep
         >
           ⌂
         </button>
+        {/* Gyro controls: rotate left/right 360° and 720° */}
+        <button
+          onClick={async () => {
+            if (mapRef.current) {
+              mapRef.current.rotateTo(mapRef.current.getBearing() - 360, { duration: 1000 });
+            }
+          }}
+          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
+          title="Rotate left 360°"
+        >
+          ↺
+        </button>
+        <button
+          onClick={async () => {
+            if (mapRef.current) {
+              mapRef.current.rotateTo(mapRef.current.getBearing() + 360, { duration: 1000 });
+            }
+          }}
+          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
+          title="Rotate right 360°"
+        >
+          ↻
+        </button>
+        <button
+          onClick={async () => {
+            if (mapRef.current) {
+              mapRef.current.rotateTo(mapRef.current.getBearing() - 720, { duration: 1500 });
+            }
+          }}
+          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
+          title="Rotate left 720°"
+        >
+          ⟲
+        </button>
+        <button
+          onClick={async () => {
+            if (mapRef.current) {
+              mapRef.current.rotateTo(mapRef.current.getBearing() + 720, { duration: 1500 });
+            }
+          }}
+          className="w-10 h-10 bg-white rounded shadow-lg border flex items-center justify-center text-lg font-bold hover:bg-gray-50"
+          title="Rotate right 720°"
+        >
+          ⟳
+        </button>
       </div>
     </div>
   );
