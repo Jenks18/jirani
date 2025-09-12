@@ -18,17 +18,18 @@ interface Event {
 interface MapComponentProps {
   highlightedEventId?: string | null;
   sidebarCollapsed?: boolean;
+  reportsPanelCollapsed?: boolean;
 }
 
-export default function MapComponent({ highlightedEventId, sidebarCollapsed }: MapComponentProps) {
+export default function MapComponent({ highlightedEventId, sidebarCollapsed, reportsPanelCollapsed }: MapComponentProps) {
   // Resize map when sidebar is collapsed/expanded
   useEffect(() => {
     if (mapRef.current) {
       setTimeout(() => {
         mapRef.current?.resize();
-      }, 350); // Wait for sidebar transition to finish
+      }, 350); // Wait for sidebar/reports panel transition to finish
     }
-  }, [sidebarCollapsed]);
+  }, [sidebarCollapsed, reportsPanelCollapsed]);
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Record<string, mapboxgl.Marker>>({});
