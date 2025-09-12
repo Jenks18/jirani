@@ -41,7 +41,7 @@ export default function HomePage() {
             />
           )}
           <div className="flex-1 h-full w-full overflow-hidden">
-            <MapComponent highlightedEventId={highlightedEventId} />
+            <MapComponent highlightedEventId={highlightedEventId} sidebarCollapsed={sidebarCollapsed} />
           </div>
         </div>
       </div>
