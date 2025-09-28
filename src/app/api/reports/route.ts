@@ -1,18 +1,14 @@
 
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import fs from 'fs';
+import path from 'path';
 
 export async function GET() {
   try {
-    // Fetch all reports from Supabase
-    const { data: reports, error } = await supabase
-      .from('reports')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw error;
-    }
+    // Read reports from local JSON file
+    const filePath = path.join(process.cwd(), 'data', 'reports.json');
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const reports = JSON.parse(fileContents);
 
     const response = {
       events: reports,
@@ -20,7 +16,8 @@ export async function GET() {
       reportCount: reports.length,
       areaCount: 346,
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV
+      environment: process.env.NODE_ENV,
+      source: 'local_json'
     };
     return NextResponse.json(response);
   } catch (error) {
