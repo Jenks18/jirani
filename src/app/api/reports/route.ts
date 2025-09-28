@@ -8,7 +8,7 @@ export async function GET() {
     const { data: reports, error } = await supabase
       .from('reports')
       .select('*')
-      .order('dateTime', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       throw error;

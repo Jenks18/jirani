@@ -50,3 +50,25 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Map controls positioning - center them vertically on the right side */
+.mapboxgl-ctrl-top-right {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  right: 20px !important;
+}
+
+/* Ensure map container takes full space without margins */
+.mapboxgl-map {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}
+
+/* Remove any default margins/padding from mapbox canvas */
+.mapboxgl-canvas-container,
+.mapboxgl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}

@@ -207,6 +207,15 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
     return eventTime > oneHourAgo;
   }).length;
 
+  // Scroll highlighted event into view when its id changes
+  useEffect(() => {
+    if (!highlightedEventId) return;
+    const el = document.getElementById(`report-item-${highlightedEventId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightedEventId]);
+
   if (collapsed) {
     // Floating expand button with event count
     const sidebarWidth = sidebarCollapsed ? 64 : 256;
@@ -288,7 +297,7 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
         )}
         
         {events.map((event, index) => (
-          <div key={event.id} style={{ animationDelay: `${index * 50}ms` }}>
+          <div key={event.id} id={`report-item-${event.id}`} style={{ animationDelay: `${index * 50}ms` }}>
             <EventItem 
               event={event} 
               onEventClick={onEventClick} 

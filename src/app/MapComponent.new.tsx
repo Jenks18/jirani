@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from "react";
-
-// Import Mapbox dynamically to avoid SSR issues
-let mapboxgl: any = null;
+import type { Map as MapboxMap, Marker as MapboxMarker } from 'mapbox-gl';
 
 interface Event {
   id: string;
@@ -18,23 +16,18 @@ interface Event {
   images?: string[];
 }
 
+
 interface MapComponentProps {
   highlightedEventId?: string | null;
 }
 
 export default function MapComponent({ highlightedEventId }: MapComponentProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<Record<string, any>>({});
+  const mapRef = useRef<MapboxMap | null>(null);
+  const markersRef = useRef<Record<string, MapboxMarker | null>>({});
   const [events, setEvents] = useState<Event[]>([]);
   const [mapboxLoaded, setMapboxLoaded] = useState(false);
   const [mapInitialized, setMapInitialized] = useState(false);
-  const [renderCount, setRenderCount] = useState(0);
-
-  // Increment render count
-  useEffect(() => {
-    setRenderCount(prev => prev + 1);
-  });
 
   // Load Mapbox GL JS dynamically
   useEffect(() => {
@@ -42,8 +35,8 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
       try {
         if (typeof window !== 'undefined') {
           // Dynamic import of Mapbox GL JS
-          const mapboxModule = await import('mapbox-gl');
-          mapboxgl = mapboxModule.default;
+          await import('mapbox-gl');
+          // We don't keep a global reference here; other effects will import as needed
           setMapboxLoaded(true);
         }
       } catch (error) {
@@ -65,8 +58,21 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
       const data = await response.json();
       const reports = data.reports || [];
       
-      const transformedEvents: Event[] = reports.map((report: any) => ({
-        id: report._id,
+      interface ReportAPI {
+        _id?: string;
+        id?: string;
+        type?: string;
+        severity?: number;
+        location?: string;
+        summary?: string;
+        dateTime?: string;
+        coordinates?: { coordinates: [number, number] };
+        sourceType?: string;
+        images?: string[];
+      }
+
+      const transformedEvents: Event[] = reports.map((report: ReportAPI) => ({
+        id: report._id || report.id || Math.random().toString(36).slice(2,9),
         type: report.type,
         severity: report.severity,
         location: report.location || 'Unknown location',
@@ -100,74 +106,90 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
 
   // Initialize map only after Mapbox is loaded
   useEffect(() => {
-    if (!mapboxLoaded || !mapboxgl || !mapContainer.current || mapInitialized) {
+    if (!mapboxLoaded || !mapContainer.current || mapInitialized) {
       return;
     }
 
-    try {
-      mapboxgl.accessToken = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
-      
-      const map = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: "mapbox://styles/mapbox/light-v11",
-        center: [36.8219, -1.2921], // Nairobi coordinates
-        zoom: 10,
-        pitch: 0,
-        bearing: 0,
-      });
+    const init = async () => {
+      try {
+        const mapboxModule = await import('mapbox-gl');
+        const mb = mapboxModule.default;
+        mb.accessToken = "pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw";
 
-      mapRef.current = map;
-      setMapInitialized(true);
+        const map = new mb.Map({
+          container: mapContainer.current as HTMLDivElement,
+          style: "mapbox://styles/mapbox/light-v11",
+          center: [36.8219, -1.2921], // Nairobi coordinates
+          zoom: 10,
+          pitch: 0,
+          bearing: 0,
+        });
 
-      map.on('load', () => {
-        console.log('Map loaded successfully');
-      });
+        mapRef.current = map as unknown as MapboxMap;
+        setMapInitialized(true);
 
-    } catch (error) {
-      console.error('Error initializing map:', error);
-    }
+        map.on('load', () => {
+          console.log('Map loaded successfully');
+        });
+      } catch (error) {
+        console.error('Error initializing map:', error);
+      }
+    };
+
+    init();
   }, [mapboxLoaded, mapInitialized]);
 
   // Update markers when events change
   useEffect(() => {
-    if (!mapRef.current || !events.length) return;
+    if (!mapRef.current) return;
 
-    // Clear existing markers
-    Object.values(markersRef.current).forEach((marker: any) => marker.remove());
-    markersRef.current = {};
-
-    // Add markers for events
-    events.forEach((event) => {
-      if (!event.coordinates) return;
-
+    const update = async () => {
       try {
-        const el = document.createElement("div");
-        el.className = "marker";
-        el.style.width = "20px";
-        el.style.height = "20px";
-        el.style.borderRadius = "50%";
-        el.style.border = "2px solid white";
-        el.style.cursor = "pointer";
-        
-        // Color based on severity
-        const colors = {
-          1: "#22c55e", // Green
-          2: "#eab308", // Yellow
-          3: "#f97316", // Orange
-          4: "#ef4444", // Red
-          5: "#dc2626"  // Dark Red
-        };
-        el.style.backgroundColor = colors[event.severity as keyof typeof colors] || "#6b7280";
+        const mapboxModule = await import('mapbox-gl');
+        const mb = mapboxModule.default;
 
-        const marker = new mapboxgl.Marker(el)
-          .setLngLat([event.coordinates[1], event.coordinates[0]])
-          .addTo(mapRef.current);
+        // Clear existing markers
+        Object.values(markersRef.current).forEach((marker) => marker?.remove());
+        markersRef.current = {};
 
-        markersRef.current[event.id] = marker;
+        // Add markers for events
+        events.forEach((event) => {
+          if (!event.coordinates) return;
+
+          try {
+            const el = document.createElement("div");
+            el.className = "marker";
+            el.style.width = "20px";
+            el.style.height = "20px";
+            el.style.borderRadius = "50%";
+            el.style.border = "2px solid white";
+            el.style.cursor = "pointer";
+            
+            // Color based on severity
+            const colors = {
+              1: "#22c55e", // Green
+              2: "#eab308", // Yellow
+              3: "#f97316", // Orange
+              4: "#ef4444", // Red
+              5: "#dc2626"  // Dark Red
+            } as Record<number, string>;
+            el.style.backgroundColor = colors[event.severity] || "#6b7280";
+
+            const marker = new mb.Marker(el)
+              .setLngLat([event.coordinates[1], event.coordinates[0]])
+              .addTo(mapRef.current as MapboxMap);
+
+            markersRef.current[event.id] = marker as unknown as MapboxMarker;
+          } catch (error) {
+            console.error('Error adding marker:', error);
+          }
+        });
       } catch (error) {
-        console.error('Error adding marker:', error);
+        console.error('Marker update failed:', error);
       }
-    });
+    };
+
+    update();
   }, [events, mapInitialized]);
 
   // Fetch events on mount
@@ -176,6 +198,24 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
     const interval = setInterval(fetchEvents, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, []);
+
+  // Update marker visuals when highlightedEventId changes
+  useEffect(() => {
+    if (!highlightedEventId) return;
+    Object.entries(markersRef.current).forEach(([id, marker]) => {
+      const el = marker?.getElement?.() as HTMLElement | undefined;
+      if (!el) return;
+      if (id === highlightedEventId) {
+        el.style.width = '30px';
+        el.style.height = '30px';
+        el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
+      } else {
+        el.style.width = '20px';
+        el.style.height = '20px';
+        el.style.boxShadow = '';
+      }
+    });
+  }, [highlightedEventId]);
 
   if (!mapboxLoaded) {
     return (
@@ -192,7 +232,7 @@ export default function MapComponent({ highlightedEventId }: MapComponentProps) 
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
       <div className="absolute top-4 right-4 bg-white rounded shadow px-3 py-1 text-sm">
-        Events: {events.length} | Renders: {renderCount}
+        Events: {events.length}
       </div>
     </div>
   );

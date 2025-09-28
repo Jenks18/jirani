@@ -14,25 +14,15 @@ export default function HomePage() {
     setTimeout(() => setHighlightedEventId(null), 3000);
   };
 
-  // Sidebar width
-  const sidebarWidth = sidebarCollapsed ? 64 : 256;
-  // Reports panel width (collapsed = 0)
-  const reportsPanelWidth = reportsPanelCollapsed ? 0 : 400;
-
   return (
-    <div className="h-screen w-screen flex flex-row overflow-hidden">
+    <div className="h-screen w-screen flex overflow-hidden">
       {/* Sidebar */}
-      <div
-        className={`h-full z-40 bg-white shadow-lg transition-all duration-300 flex-shrink-0`}
-        style={{ width: sidebarWidth, minWidth: sidebarCollapsed ? 64 : 220, transitionProperty: 'width, min-width' }}
-      >
+      <div className="h-full flex-shrink-0 z-40">
         <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       </div>
-      {/* Reports Panel */}
-      <div
-        className={`h-full z-30 transition-all duration-300 flex-shrink-0 bg-white shadow-xl ${reportsPanelCollapsed ? 'overflow-hidden' : ''}`}
-        style={{ width: reportsPanelWidth, minWidth: reportsPanelCollapsed ? 0 : 320, maxWidth: 480, transitionProperty: 'width, min-width' }}
-      >
+
+      {/* Live Reports Panel */}
+      <div className="h-full flex-shrink-0 bg-white shadow-lg z-30" style={{ width: 400 }}>
         <ReportsPanel
           collapsed={reportsPanelCollapsed}
           setCollapsed={setReportsPanelCollapsed}
@@ -41,12 +31,14 @@ export default function HomePage() {
           highlightedEventId={highlightedEventId}
         />
       </div>
-      {/* Map fills remaining space */}
-      <div className="h-full flex-1 relative">
+
+      {/* Map Container - takes remaining space */}
+      <div className="h-full flex-1 relative z-20 min-w-0">
         <MapComponent
           highlightedEventId={highlightedEventId}
           sidebarCollapsed={sidebarCollapsed}
           reportsPanelCollapsed={reportsPanelCollapsed}
+          onMarkerClick={handleEventClick}
         />
       </div>
     </div>

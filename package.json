@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "deploy": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh",
+    "prepare-deploy": "npm run type-check && npm run lint && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

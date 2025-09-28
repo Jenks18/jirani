@@ -1,24 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jirani - Community Safety Platform
+
+A real-time community safety and incident reporting platform built with Next.js, Mapbox GL JS, and Supabase.
+
+## Features
+
+- 📍 Live incident mapping and tracking
+- 📱 Real-time report submissions
+- 🗺️ Interactive map interface
+- 📊 Data visualization (coming soon)
+- 👥 Community engagement tools (coming soon)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+1. Node.js 18+ installed
+2. A Supabase account and project
+3. A Mapbox account and API token
+
+### Environment Setup
+
+1. Copy `.env.local.example` to `.env.local`:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Fill in your environment variables:
+- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon/public key
+- `NEXT_PUBLIC_MAPBOX_TOKEN`: Your Mapbox access token
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Run the development server:
+```bash
+npm run dev
+```
+
+3. Open [http://localhost:3000](http://localhost:3000) to view the app
+
+### Deployment
+
+1. Create a new project on [Vercel](https://vercel.com)
+2. Connect your GitHub repository
+3. Add the following environment variables in Vercel:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_MAPBOX_TOKEN`
+4. Deploy!
 
 ## Learn More
 
