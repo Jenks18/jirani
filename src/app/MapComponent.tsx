@@ -46,10 +46,22 @@ export default function MapComponent({
       attributionControl: true
     });
 
-    // Add navigation controls in the middle-right
+    // Add navigation controls with compass in the middle-right
     map.current.addControl(
-      new mapboxgl.NavigationControl(),
+      new mapboxgl.NavigationControl({
+        visualizePitch: true,
+        showCompass: true,
+      }),
       'right'
+    );
+
+    // Add scale control
+    map.current.addControl(
+      new mapboxgl.ScaleControl({
+        maxWidth: 80,
+        unit: 'metric'
+      }),
+      'bottom-right'
     );
 
     map.current.on('load', () => {
@@ -85,28 +97,64 @@ export default function MapComponent({
       // Style the marker
       Object.assign(el.style, {
         backgroundColor: getSeverityColor(report.severity),
-        width: '12px',
-        height: '12px',
+        width: '16px',
+        height: '16px',
         borderRadius: '50%',
-        border: '2px solid white',
+        border: '3px solid white',
         cursor: 'pointer',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+        transition: 'all 0.2s ease-in-out'
       });
+
+      // Create popup
+      const popup = new mapboxgl.Popup({
+        offset: 25,
+        closeButton: false,
+        maxWidth: '300px'
+      }).setHTML(
+        `<div class="p-2">
+          <h3 class="font-bold text-gray-900">${report.title}</h3>
+          <p class="text-sm text-gray-600">${report.description}</p>
+          <div class="mt-2 text-xs text-gray-500">
+            <span class="inline-flex items-center">
+              <span style="background-color: ${getSeverityColor(report.severity)}" 
+                    class="w-2 h-2 rounded-full mr-1"></span>
+              ${report.severity.toUpperCase()} Severity
+            </span>
+          </div>
+        </div>`
+      );
 
       // Add hover effects
       el.addEventListener('mouseenter', () => {
-        el.style.transform = 'scale(1.5)';
+        el.style.transform = 'scale(1.5) translateZ(0)';
         el.style.zIndex = '1000';
+        popup.addTo(map.current!);
       });
 
       el.addEventListener('mouseleave', () => {
-        el.style.transform = 'scale(1)';
+        el.style.transform = 'scale(1) translateZ(0)';
         el.style.zIndex = '1';
+        popup.remove();
       });
 
       // Add click handler
       if (onMarkerClick) {
-        el.addEventListener('click', () => onMarkerClick(report.id));
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Fly to the marker location with animation
+          map.current?.flyTo({
+            center: report.coordinates,
+            zoom: 15,
+            speed: 0.8,
+            curve: 1.4,
+            essential: true
+          });
+          
+          onMarkerClick(report.id);
+        });
       }
 
       // Create and add the marker to the map
