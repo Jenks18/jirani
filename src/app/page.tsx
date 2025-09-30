@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import ReportsPanel from "./ReportsPanel";
 import MapComponent from "./MapComponent";
@@ -26,6 +26,19 @@ export default function HomePage() {
     setFilteredEventId(null);
     setHighlightedEventId(null);
   };
+
+  // Clear selection/filter with Escape key
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (highlightedEventId || filteredEventId) {
+          handleClearFilter();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [highlightedEventId, filteredEventId]);
 
   // Sidebar width
   const sidebarWidth = sidebarCollapsed ? 64 : 256;
