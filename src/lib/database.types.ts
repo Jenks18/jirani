@@ -42,8 +42,8 @@ export interface Database {
 				Relationships: [];
 			};
 		};
-		Functions: {};
-		Enums: {};
-		CompositeTypes: {};
+		Functions: Record<string, never>;
+		Enums: Record<string, never>;
+		CompositeTypes: Record<string, never>;
 	};
 }

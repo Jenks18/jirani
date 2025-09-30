@@ -33,12 +33,13 @@ export async function GET() {
       url: process.env.NEXT_PUBLIC_SUPABASE_URL
     });
     
-  } catch (error: any) {
-    console.error('Debug error:', error);
+  } catch (error) {
+    const err = error as Error;
+    console.error('Debug error:', err);
     return NextResponse.json({ 
       success: false, 
-      error: error.message,
-      stack: error.stack,
+      error: err.message,
+      stack: err.stack,
       url: process.env.NEXT_PUBLIC_SUPABASE_URL,
       hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     });

@@ -97,7 +97,8 @@ export default function MapComponent({
       const response = await fetch('/api/reports');
       if (!response.ok) throw new Error('Failed to fetch reports');
       const data = await response.json();
-      const normalized: Report[] = (data.reports || []).map((r: any) => {
+  type Incoming = Partial<Report> & { id?: string | number; name?: string; dateTime?: string; priority?: string; coordinates?: [number, number] } & Record<string, unknown>;
+  const normalized: Report[] = (data.reports as Incoming[] | undefined || []).map((r: Incoming) => {
         // Ensure id is a string consistently
         const idStr = String(r.id);
         // Prefer explicit longitude/latitude fields, fall back to coordinates array if present
@@ -247,7 +248,7 @@ export default function MapComponent({
         if (!e.features?.length) return;
         const feature = e.features[0];
         const coordinates = (feature.geometry as GeoJSON.Point).coordinates.slice();
-        const { title, description, severity } = feature.properties as any;
+  const { title, description, severity } = feature.properties as { title?: string; description?: string; severity: string };
         popupRef.current = new mapboxgl.Popup({
           offset: 15,
           closeButton: false,

@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from "react";
 
 console.log("ReportsPanel: mounted");
-import { FaChevronLeft, FaMapMarkerAlt, FaClock } from "react-icons/fa";
+import { FaChevronLeft, FaClock } from "react-icons/fa";
 
-interface Report {
-  id: string;
-  dateTime: string;
-  coordinates: {
-    type: string;
-    coordinates: [number, number];
-  };
-  type: string;
-  severity: number;
-  summary: string;
-  sourceType: string;
+// Simplified report shape for transformation
+interface SourceReport {
+  id: string | number;
+  dateTime?: string;
+  coordinates?: { type?: string; coordinates?: [number, number] } | [number, number];
+  type?: string; title?: string;
+  severity?: number;
+  summary?: string; description?: string;
+  sourceType?: string;
   location?: string;
   images?: string[];
+  latitude?: number; longitude?: number;
 }
 
 type Event = {
@@ -189,22 +188,21 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
       if (!response.ok) throw new Error('Failed to fetch events');
       
       const data = await response.json();
-      const reports = data.reports || [];
+  const reports: SourceReport[] = data.reports || [];
   console.log('ReportsPanel: fetched reports from API:', reports);
       
       // Transform API data to match Event interface
-      const transformedEvents = reports.map((report: any) => {
+  const transformedEvents = reports.map((report: SourceReport) => {
         // Support both flat shape (latitude/longitude) and nested geojson-like shape
         let coords: [number, number] | null = null;
         if (Array.isArray(report.coordinates) && report.coordinates.length === 2) {
-          // Original file uses [lat, lng]; convert to [lng, lat]
-          const [lat, lng] = report.coordinates;
+          // If plain array assume [lat, lng]
+          const [lat, lng] = report.coordinates as [number, number];
           coords = [lng, lat];
-        } else if (report.coordinates?.coordinates && Array.isArray(report.coordinates.coordinates)) {
-          const arr = report.coordinates.coordinates;
+        } else if (!Array.isArray(report.coordinates) && report.coordinates && 'coordinates' in report.coordinates && Array.isArray(report.coordinates.coordinates)) {
+          const arr = (report.coordinates as { coordinates?: [number, number] }).coordinates!;
           if (arr.length === 2) {
-            // Assume [lng, lat]
-            coords = [arr[0], arr[1]];
+            coords = [arr[0], arr[1]]; // assume already [lng, lat]
           }
         } else if (typeof report.longitude === 'number' && typeof report.latitude === 'number') {
           coords = [report.longitude, report.latitude];
@@ -215,10 +213,10 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
           severity: typeof report.severity === 'number' ? report.severity : 3,
           location: report.location || 'Unknown location',
           description: report.summary || report.description || 'No description provided',
-          timestamp: report.dateTime || report.created_at,
+          timestamp: report.dateTime || new Date().toISOString(),
           coordinates: coords,
           from: report.sourceType || 'Unknown',
-          createdAt: report.dateTime || report.created_at,
+          createdAt: report.dateTime || new Date().toISOString(),
           images: report.images || []
         } as Event;
       });
