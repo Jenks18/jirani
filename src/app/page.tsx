@@ -18,8 +18,6 @@ export default function HomePage() {
     
     setHighlightedEventId(eventId);
     setFilteredEventId(eventId); // Filter to show only this event
-    // Keep highlight longer to allow for scrolling animation
-    setTimeout(() => setHighlightedEventId(null), 5000);
   };
 
   const handleClearFilter = () => {
@@ -75,7 +73,13 @@ export default function HomePage() {
           highlightedEventId={highlightedEventId}
           sidebarCollapsed={sidebarCollapsed}
           reportsPanelCollapsed={reportsPanelCollapsed}
-          onMarkerClick={handleEventClick}
+          onMarkerClick={(eventId) => {
+            handleEventClick(eventId);
+            // Ensure reports panel is open
+            if (reportsPanelCollapsed) {
+              setReportsPanelCollapsed(false);
+            }
+          }}
         />
       </div>
     </div>

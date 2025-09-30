@@ -22,6 +22,19 @@ interface MapComponentProps {
   onMarkerClick?: (eventId: string) => void;
 }
 
+const getSeverityColor = (severity: string): string => {
+  switch (severity.toLowerCase()) {
+    case 'low':
+      return '#4ade80';
+    case 'medium':
+      return '#fb923c';
+    case 'high':
+      return '#ef4444';
+    default:
+      return '#ef4444';
+  }
+};
+
 export default function MapComponent({
   highlightedEventId,
   sidebarCollapsed,
@@ -31,6 +44,7 @@ export default function MapComponent({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
+  const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
 
   // Initialize map
   useEffect(() => {
@@ -46,16 +60,12 @@ export default function MapComponent({
       attributionControl: true
     });
 
-    // Add navigation controls with compass in the middle-right
-    map.current.addControl(
-      new mapboxgl.NavigationControl({
-        visualizePitch: true,
-        showCompass: true,
-      }),
-      'right'
-    );
+    const nav = new mapboxgl.NavigationControl({
+      visualizePitch: true,
+      showCompass: true
+    });
+    map.current.addControl(nav, 'right');
 
-    // Add scale control
     map.current.addControl(
       new mapboxgl.ScaleControl({
         maxWidth: 80,
@@ -83,24 +93,57 @@ export default function MapComponent({
       setReports(data.reports || []);
     } catch (error) {
       console.error('Error fetching reports:', error);
+      // Fallback to test data if API fails
+      const testReports: Report[] = [
+        {
+          id: '1',
+          title: 'Suspicious Activity at Westlands',
+          description: 'Group of individuals loitering around parked vehicles',
+          location: 'The Westgate Mall, Westlands',
+          coordinates: [36.8033, -1.2571],
+          severity: 'medium',
+          priority: 'medium',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          title: 'Traffic Incident in CBD',
+          description: 'Multiple vehicle collision causing traffic buildup',
+          location: 'Moi Avenue, CBD',
+          coordinates: [36.8219, -1.2855],
+          severity: 'high',
+          priority: 'high',
+          created_at: new Date().toISOString()
+        }
+      ];
+      setReports(testReports);
     }
   };
 
-  // Add markers when reports change
+  // Add/update markers when reports or highlighted event changes
   useEffect(() => {
     if (!map.current || !reports.length) return;
+
+    // Clear existing markers that are no longer in the reports
+    Object.entries(markersRef.current).forEach(([id, marker]) => {
+      if (!reports.find(r => r.id === id)) {
+        marker.remove();
+        delete markersRef.current[id];
+      }
+    });
 
     reports.forEach(report => {
       const el = document.createElement('div');
       el.className = 'marker';
+      el.id = `marker-${report.id}`;
       
       // Style the marker
       Object.assign(el.style, {
         backgroundColor: getSeverityColor(report.severity),
-        width: '16px',
-        height: '16px',
+        width: '12px',
+        height: '12px',
         borderRadius: '50%',
-        border: '3px solid white',
+        border: '2px solid white',
         cursor: 'pointer',
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
         transition: 'all 0.2s ease-in-out'
@@ -127,44 +170,61 @@ export default function MapComponent({
 
       // Add hover effects
       el.addEventListener('mouseenter', () => {
-        el.style.transform = 'scale(1.5) translateZ(0)';
-        el.style.zIndex = '1000';
-        popup.addTo(map.current!);
+        if (report.id !== highlightedEventId) {
+          el.style.transform = 'scale(1.5)';
+          el.style.zIndex = '1000';
+          popup.addTo(map.current!);
+        }
       });
 
       el.addEventListener('mouseleave', () => {
-        el.style.transform = 'scale(1) translateZ(0)';
-        el.style.zIndex = '1';
-        popup.remove();
+        if (report.id !== highlightedEventId) {
+          el.style.transform = 'scale(1)';
+          el.style.zIndex = '1';
+          popup.remove();
+        }
       });
 
       // Add click handler
-      if (onMarkerClick) {
-        el.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          // Fly to the marker location with animation
-          map.current?.flyTo({
-            center: report.coordinates,
-            zoom: 15,
-            speed: 0.8,
-            curve: 1.4,
-            essential: true
-          });
-          
-          onMarkerClick(report.id);
+      el.addEventListener('click', () => {
+        map.current?.flyTo({
+          center: report.coordinates,
+          zoom: 13,
+          speed: 0.6,
+          curve: 1.2,
+          essential: true
         });
-      }
+        
+        onMarkerClick?.(report.id);
+      });
 
-      // Create and add the marker to the map
-      new mapboxgl.Marker(el)
+      // Remove existing marker if it exists
+      markersRef.current[report.id]?.remove();
+
+      // Create and add the new marker
+      const marker = new mapboxgl.Marker(el)
         .setLngLat(report.coordinates)
         .addTo(map.current!);
-    });
-  }, [reports, onMarkerClick]);
 
-  // Handle sidebar/panel collapse with debounced resize
+      markersRef.current[report.id] = marker;
+
+      // Highlight active marker if it matches
+      if (highlightedEventId === report.id) {
+        el.style.transform = 'scale(1.5)';
+        el.style.zIndex = '1000';
+        popup.addTo(map.current!);
+        
+        // Center on highlighted marker
+        map.current?.flyTo({
+          center: report.coordinates,
+          zoom: 13,
+          speed: 0.6,
+        });
+      }
+    });
+  }, [reports, highlightedEventId, onMarkerClick]);
+
+  // Handle resize and panel collapse
   useEffect(() => {
     if (!map.current) return;
 
@@ -172,37 +232,15 @@ export default function MapComponent({
 
     const handleResize = () => {
       if (!map.current) return;
-
       map.current.resize();
-
-      // Calculate paddings based on sidebar states
-      const padding = {
-        left: sidebarCollapsed ? 50 : 300,
-        right: reportsPanelCollapsed ? 50 : 300,
-        top: 50,
-        bottom: 50
-      };
-
-      // Get current center and zoom before resize
-      const center = map.current.getCenter();
-      const zoom = map.current.getZoom();
-
-      // Apply the new padding and restore the view
-      map.current.setPadding(padding);
-      map.current.setCenter(center);
-      map.current.setZoom(zoom);
     };
 
-    // Debounced resize handler
     const debouncedResize = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(handleResize, 100);
     };
 
-    // Initial resize
     handleResize();
-
-    // Add event listener
     window.addEventListener('resize', debouncedResize);
     
     return () => {
@@ -210,19 +248,6 @@ export default function MapComponent({
       window.removeEventListener('resize', debouncedResize);
     };
   }, [sidebarCollapsed, reportsPanelCollapsed]);
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity.toLowerCase()) {
-      case 'low':
-        return '#4ade80';
-      case 'medium':
-        return '#fb923c';
-      case 'high':
-        return '#ef4444';
-      default:
-        return '#ef4444';
-    }
-  };
 
   return (
     <div className="h-full w-full absolute inset-0">

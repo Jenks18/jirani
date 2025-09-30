@@ -36,6 +36,31 @@ function EventItem({ event, onEventClick, isHighlighted }: {
   onEventClick?: (eventId: string) => void;
   isHighlighted?: boolean;
 }) {
+  const eventRef = React.useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to highlighted event to bring it to the top of the list
+  useEffect(() => {
+    if (isHighlighted && eventRef.current) {
+      // Delay to ensure panel transitions are complete
+      setTimeout(() => {
+        if (eventRef.current) {
+          // Find the scrollable container
+          const scrollContainer = eventRef.current.closest('.overflow-y-auto');
+          
+          if (scrollContainer) {
+            // Scroll to position the highlighted item at the top of the visible area
+            const elementTop = eventRef.current.offsetTop;
+            const containerPadding = 16; // Account for padding
+            
+            scrollContainer.scrollTo({
+              top: Math.max(0, elementTop - containerPadding),
+              behavior: 'smooth'
+            });
+          }
+        }
+      }, 400);
+    }
+  }, [isHighlighted]);
   const getSeverityColor = (severity: number) => {
     switch (severity) {
       case 1: return 'bg-green-500';
@@ -86,44 +111,56 @@ function EventItem({ event, onEventClick, isHighlighted }: {
 
   return (
     <div 
-      className={`bg-white border-b border-[#DEE2E6] px-4 py-4 transition-all duration-200 cursor-pointer ${
+      ref={eventRef}
+      className={`transition-all duration-200 cursor-pointer border-b border-gray-100 ${
         isHighlighted 
-          ? 'bg-blue-50 border-l-4 border-l-blue-500 shadow-lg' 
-          : 'hover:bg-[#F8F9FA]'
-      } animate-slideIn`} 
+          ? 'bg-blue-50 shadow-md' 
+          : 'bg-white hover:bg-gray-50'
+      }`} 
       onClick={() => onEventClick?.(event.id)}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className={`inline-block w-3 h-3 rounded-full ${getSeverityColor(event.severity)} border border-white shadow-sm flex-shrink-0 mt-0.5`} />
-          <h3 className="font-semibold text-[#495057] text-sm leading-tight">{event.type}</h3>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className={`text-xs px-2 py-1 rounded-full text-white ${getSeverityColor(event.severity)} font-medium`}>
-            {getSeverityText(event.severity)}
-          </span>
-        </div>
-      </div>
-      
-      <p className="text-[#495057] text-sm leading-relaxed mb-3 line-clamp-3">{event.description}</p>
-      
-      <div className="flex flex-col gap-1.5 text-xs text-[#6C757D]">
-        <div className="flex items-center gap-1.5">
-          <FaMapMarkerAlt className="text-[#6C757D] flex-shrink-0" />
-          <span className="truncate">{event.location}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <FaClock className="text-[#6C757D] flex-shrink-0" />
-          <div className="flex flex-col">
-            <span>{formatTimeAgo(event.createdAt)}</span>
-            <span className="text-[10px] text-[#ADB5BD]">{formatFullDate(event.createdAt)}</span>
+      <div className="px-6 py-5">
+        {/* Header with severity indicator */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-1 h-8 rounded-full ${getSeverityColor(event.severity)} flex-shrink-0`} />
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg leading-tight">{event.type}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {getSeverityText(event.severity).toUpperCase()}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="text-right flex flex-col items-end gap-1">
+            <button className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+            <button className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+              </svg>
+            </button>
           </div>
         </div>
-        {event.images && event.images.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-blue-600 font-medium">{event.images.length} image(s)</span>
+        
+        {/* Description */}
+        <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">{event.description}</p>
+        
+        {/* Footer with date and location */}
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span className="font-medium">{formatFullDate(event.createdAt)}</span>
+          <div className="flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="truncate max-w-[150px]">{event.location}</span>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -136,9 +173,11 @@ interface ReportsPanelProps {
   sidebarCollapsed: boolean;
   onEventClick?: (eventId: string) => void;
   highlightedEventId?: string | null;
+  filteredEventId?: string | null;
+  onClearFilter?: () => void;
 }
 
-function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick, highlightedEventId }: ReportsPanelProps) {
+function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick, highlightedEventId, filteredEventId, onClearFilter }: ReportsPanelProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -207,15 +246,6 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
     return eventTime > oneHourAgo;
   }).length;
 
-  // Scroll highlighted event into view when its id changes
-  useEffect(() => {
-    if (!highlightedEventId) return;
-    const el = document.getElementById(`report-item-${highlightedEventId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [highlightedEventId]);
-
   if (collapsed) {
     // Floating expand button with event count
     const sidebarWidth = sidebarCollapsed ? 64 : 256;
@@ -242,31 +272,42 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
   }
 
   return (
-    <div className="bg-[#F8F9FA] h-full overflow-hidden shadow-xl border-r border-[#DEE2E6] transition-all duration-300 flex flex-col" style={{ minWidth: 320, maxWidth: 480, width: 400 }}>
+    <div className="bg-white h-full overflow-hidden shadow-xl border-r border-gray-200 transition-all duration-300 flex flex-col" style={{ minWidth: 320, maxWidth: 480, width: 400 }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-[#DEE2E6] bg-white shadow-sm">
-        <div className="flex items-center gap-3">
-          <FaChevronLeft
-            className="text-[#ADB5BD] text-lg cursor-pointer transition-all duration-200 hover:text-[#495057] hover:scale-110"
+      <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-white">
+        <div className="flex items-center gap-4">
+          <button
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             onClick={() => setCollapsed(true)}
-          />
+          >
+            <FaChevronLeft className="text-gray-400 text-lg" />
+          </button>
           <div>
-            <h2 className="text-xl font-bold text-[#343A40]">Live Reports</h2>
-            <p className="text-xs text-[#6C757D]">
-              {eventCount} total • {recentCount} in last hour
+            <h2 className="text-2xl font-bold text-gray-900">Reports</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {eventCount} total incidents
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
           {loading && (
-            <div className="w-3 h-3 border-2 border-[#DEE2E6] border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
           )}
-          <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
         </div>
       </div>
 
       {/* Events Container */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-gray-50">
         {loading && events.length === 0 && (
           <div className="p-6 text-center">
             <div className="animate-pulse">
@@ -296,8 +337,22 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
           </div>
         )}
         
-        {events.map((event, index) => (
-          <div key={event.id} id={`report-item-${event.id}`} style={{ animationDelay: `${index * 50}ms` }}>
+        {filteredEventId && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-blue-700 font-medium">Showing filtered result</span>
+              <button 
+                onClick={onClearFilter}
+                className="text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                Show all reports
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {(filteredEventId ? events.filter(event => event.id === filteredEventId) : events).map((event, index) => (
+          <div key={event.id} style={{ animationDelay: `${index * 50}ms` }}>
             <EventItem 
               event={event} 
               onEventClick={onEventClick} 

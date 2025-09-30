@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "title": "Water Supply Issue",
+    "description": "No water supply for the past 3 days in Estate Block A",
+    "category": "Utilities",
+    "location": "Estate Block A",
+    "coordinates": [-1.2921, 36.8219],
+    "priority": "High",
+    "status": "Reported",
+    "dateTime": "2024-01-15T10:30:00Z",
+    "reporter": "John Doe"
+  },
+  {
+    "id": 2,
+    "title": "Street Light Outage",
+    "description": "Street lights not working on Moi Avenue",
+    "category": "Infrastructure",
+    "location": "Moi Avenue",
+    "coordinates": [-1.2864, 36.8172],
+    "priority": "Medium",
+    "status": "In Progress",
+    "dateTime": "2024-01-14T08:15:00Z",
+    "reporter": "Jane Smith"
+  },
+  {
+    "id": 3,
+    "title": "Pothole on Main Road",
+    "description": "Large pothole causing traffic issues",
+    "category": "Roads",
+    "location": "Main Road Junction",
+    "coordinates": [-1.2833, 36.8167],
+    "priority": "High",
+    "status": "Resolved",
+    "dateTime": "2024-01-13T14:45:00Z",
+    "reporter": "Mike Johnson"
+  },
+  {
+    "id": 4,
+    "title": "Garbage Collection Delay",
+    "description": "Garbage not collected for over a week",
+    "category": "Sanitation",
+    "location": "Riverside Estate",
+    "coordinates": [-1.2876, 36.8198],
+    "priority": "Medium",
+    "status": "Reported",
+    "dateTime": "2024-01-12T16:20:00Z",
+    "reporter": "Sarah Wilson"
+  },
+  {
+    "id": 5,
+    "title": "Broken Sewage Line",
+    "description": "Sewage overflow near the shopping center",
+    "category": "Utilities",
+    "location": "Shopping Center",
+    "coordinates": [-1.2845, 36.8234],
+    "priority": "Critical",
+    "status": "In Progress",
+    "dateTime": "2024-01-11T09:10:00Z",
+    "reporter": "David Brown"
+  }
+]
