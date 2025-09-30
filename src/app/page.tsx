@@ -9,6 +9,7 @@ export default function HomePage() {
   const [reportsPanelCollapsed, setReportsPanelCollapsed] = useState(false);
   const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
   const [filteredEventId, setFilteredEventId] = useState<string | null>(null);
+  const [highlightSeq, setHighlightSeq] = useState(0); // increments every selection to force map recenter
 
   const handleEventClick = (eventId: string) => {
     // If reports panel is collapsed, expand it first
@@ -18,6 +19,7 @@ export default function HomePage() {
     
     setHighlightedEventId(eventId);
     setFilteredEventId(eventId); // Filter to show only this event
+  setHighlightSeq(s => s + 1); // force downstream effects even if same id
   };
 
   const handleClearFilter = () => {
@@ -71,6 +73,7 @@ export default function HomePage() {
       <div className="h-full flex-grow overflow-hidden transition-all duration-300 ease-in-out">
         <MapComponent
           highlightedEventId={highlightedEventId}
+          highlightSeq={highlightSeq}
           sidebarCollapsed={sidebarCollapsed}
           reportsPanelCollapsed={reportsPanelCollapsed}
           onMarkerClick={(eventId) => {

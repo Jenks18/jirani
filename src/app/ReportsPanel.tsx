@@ -193,19 +193,35 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
   console.log('ReportsPanel: fetched reports from API:', reports);
       
       // Transform API data to match Event interface
-      const transformedEvents = reports.map((report: Report) => ({
-  id: report.id,
-        type: report.type,
-        severity: report.severity,
-        location: report.location || 'Unknown location',
-        description: report.summary,
-        timestamp: report.dateTime,
-        coordinates: report.coordinates?.coordinates ? 
-          [report.coordinates.coordinates[1], report.coordinates.coordinates[0]] : null,
-        from: report.sourceType,
-        createdAt: report.dateTime,
-        images: report.images || []
-      }));
+      const transformedEvents = reports.map((report: any) => {
+        // Support both flat shape (latitude/longitude) and nested geojson-like shape
+        let coords: [number, number] | null = null;
+        if (Array.isArray(report.coordinates) && report.coordinates.length === 2) {
+          // Original file uses [lat, lng]; convert to [lng, lat]
+          const [lat, lng] = report.coordinates;
+          coords = [lng, lat];
+        } else if (report.coordinates?.coordinates && Array.isArray(report.coordinates.coordinates)) {
+          const arr = report.coordinates.coordinates;
+          if (arr.length === 2) {
+            // Assume [lng, lat]
+            coords = [arr[0], arr[1]];
+          }
+        } else if (typeof report.longitude === 'number' && typeof report.latitude === 'number') {
+          coords = [report.longitude, report.latitude];
+        }
+        return {
+          id: String(report.id),
+          type: report.type || report.title || 'Incident',
+          severity: typeof report.severity === 'number' ? report.severity : 3,
+          location: report.location || 'Unknown location',
+          description: report.summary || report.description || 'No description provided',
+          timestamp: report.dateTime || report.created_at,
+          coordinates: coords,
+          from: report.sourceType || 'Unknown',
+          createdAt: report.dateTime || report.created_at,
+          images: report.images || []
+        } as Event;
+      });
   console.log('ReportsPanel: transformed events:', transformedEvents);
       
       // Sort events by creation time (newest first)
