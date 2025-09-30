@@ -4,8 +4,6 @@ import { getEvents } from '../../../lib/eventStorage';
 export async function GET() {
   try {
     const events = await getEvents();
-    
-    // Transform events for map display
     const mapEvents = events.map(event => ({
       id: event.id,
       type: event.type,
@@ -17,7 +15,6 @@ export async function GET() {
       createdAt: event.createdAt,
       hasImages: (event.images?.length || 0) > 0
     }));
-
     return NextResponse.json({
       events: mapEvents,
       total: events.length,

@@ -1,5 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { supabase } from './supabaseClient';
+import type { Database } from './database.types';
 
 // Simple in-memory storage for events (will be replaced with database)
 interface StoredEvent {
@@ -64,40 +66,105 @@ async function initializeEvents(): Promise<void> {
 }
 
 export async function storeEvent(event: EventData, from: string, images?: string[]): Promise<StoredEvent> {
-  await initializeEvents();
-  
-  const storedEvent: StoredEvent = {
-    id: generateId(),
-    type: event.type || 'Unknown',
-    severity: event.severity || 1,
-    location: event.location || 'Unknown location',
-    description: event.description || 'No description provided',
-    timestamp: event.timestamp || new Date().toISOString(),
-    coordinates: event.coordinates || null,
-    from,
-    createdAt: new Date().toISOString(),
-    images: images || []
-  };
-  
-  events.push(storedEvent);
-  console.log('Event stored:', storedEvent);
-  
-  // Save to file asynchronously (don't wait for it)
-  saveEventsToFile(events).catch(error => 
-    console.error('Failed to save events to file:', error)
-  );
-  
-  return storedEvent;
+  // Try Supabase first
+  try {
+    const insertPayload: Database['public']['Tables']['events']['Insert'] = {
+      type: event.type || 'Unknown',
+      severity: event.severity || 1,
+      location: event.location || 'Unknown location',
+      description: event.description || 'No description provided',
+      event_timestamp: event.timestamp || new Date().toISOString(),
+      longitude: event.coordinates ? event.coordinates[0] : null,
+      latitude: event.coordinates ? event.coordinates[1] : null,
+      from_phone: from,
+      images: images && images.length ? images : null,
+      source: 'whatsapp'
+    };
+
+    const { data, error } = await supabase.from('events').insert(insertPayload).select('*').single();
+    if (error) throw error;
+
+    const storedEvent: StoredEvent = {
+      id: data.id,
+      type: data.type,
+      severity: data.severity,
+      location: data.location,
+      description: data.description,
+      timestamp: data.event_timestamp,
+      coordinates: data.longitude != null && data.latitude != null ? [data.longitude, data.latitude] : null,
+      from: data.from_phone || from,
+      createdAt: data.created_at,
+      images: data.images || []
+    };
+    console.log('Event stored in Supabase:', storedEvent.id);
+    return storedEvent;
+  } catch (dbError) {
+    console.error('Supabase insert failed, falling back to file storage:', dbError);
+    // Fallback to file system path
+    await initializeEvents();
+    const storedEvent: StoredEvent = {
+      id: generateId(),
+      type: event.type || 'Unknown',
+      severity: event.severity || 1,
+      location: event.location || 'Unknown location',
+      description: event.description || 'No description provided',
+      timestamp: event.timestamp || new Date().toISOString(),
+      coordinates: event.coordinates || null,
+      from,
+      createdAt: new Date().toISOString(),
+      images: images || []
+    };
+    events.push(storedEvent);
+    saveEventsToFile(events).catch(err => console.error('Failed to save events to file:', err));
+    return storedEvent;
+  }
 }
 
 export async function getEvents(): Promise<StoredEvent[]> {
-  await initializeEvents();
-  return events;
+  try {
+    const { data, error } = await supabase.from('events').select('*').order('event_timestamp', { ascending: false }).limit(500);
+    if (error) throw error;
+    return (data || []).map(row => ({
+      id: row.id,
+      type: row.type,
+      severity: row.severity,
+      location: row.location,
+      description: row.description,
+      timestamp: row.event_timestamp,
+      coordinates: row.longitude != null && row.latitude != null ? [row.longitude, row.latitude] : null,
+      from: row.from_phone || 'unknown',
+      createdAt: row.created_at,
+      images: row.images || []
+    }));
+  } catch (err) {
+    console.error('Supabase fetch failed, using file fallback:', err);
+    await initializeEvents();
+    return events;
+  }
 }
 
 export async function getEventById(id: string): Promise<StoredEvent | undefined> {
-  await initializeEvents();
-  return events.find(event => event.id === id);
+  try {
+    const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+    if (error) throw error;
+    if (!data) return undefined;
+    return {
+      id: data.id,
+      type: data.type,
+      severity: data.severity,
+      location: data.location,
+      description: data.description,
+      timestamp: data.event_timestamp,
+      coordinates: data.longitude != null && data.latitude != null ? [data.longitude, data.latitude] : null,
+      from: data.from_phone || 'unknown',
+      createdAt: data.created_at,
+      images: data.images || []
+    };
+  } catch (err) {
+    console.error('Supabase single fetch failed, using file fallback:', err);
+    await initializeEvents();
+    return events.find(event => event.id === id);
+  }
 }
 
 function generateId(): string {
