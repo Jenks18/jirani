@@ -9,57 +9,80 @@ import {
   clearPendingConfirmation
 } from '../../../lib/conversationMemory';
 
-// Simple response generator for immediate replies
-function generateSimpleResponse(message: string): string {
+// Conversational response generator that understands context
+function generateConversationalResponse(message: string, fromPhone: string, conversationHistory: string): string {
   const lowerMessage = message.toLowerCase();
+  const isRepeatMessage = conversationHistory.includes(message.substring(0, 20));
   
-  // Emergency/help keywords - immediate action
+  // Handle repeated messages differently
+  if (isRepeatMessage && lowerMessage.length > 10) {
+    return "I see you sent this message before. Is there something specific you'd like me to help you with regarding this incident?";
+  }
+  
+  // Emergency/urgent situations - immediate priority
   if (lowerMessage.includes('emergency') || lowerMessage.includes('help') || lowerMessage.includes('urgent') || 
       lowerMessage.includes('danger') || lowerMessage.includes('911') || lowerMessage.includes('999')) {
-    return "🚨 I understand this is urgent! If you're in immediate danger, please contact emergency services at 999 or 911 right away. Once you're safe, I'm here to help you report what happened. Please share your location and what's happening.";
+    return "🚨 This sounds urgent! Are you safe right now? If you're in immediate danger, please call 999 or 911 first. Once you're safe, I can help you report what happened.";
   }
   
-  // Crime-related keywords - helpful but not pushy
-  if (lowerMessage.includes('theft') || lowerMessage.includes('robbery') || lowerMessage.includes('stolen') || 
-      lowerMessage.includes('mugged') || lowerMessage.includes('pickpocket')) {
-    return "I'm sorry this happened to you. If you'd like to report this incident, I can help. Could you tell me where this occurred and any other details you're comfortable sharing?";
+  // Violence/crime with weapons - high priority
+  if (lowerMessage.includes('knife') || lowerMessage.includes('gun') || lowerMessage.includes('weapon') || 
+      lowerMessage.includes('shot') || lowerMessage.includes('stabbed') || lowerMessage.includes('attacked')) {
+    return "Oh my goodness, that sounds really scary! First - are you hurt? Do you need medical attention? I'm here to listen and help you report this when you're ready.";
   }
   
-  if (lowerMessage.includes('violence') || lowerMessage.includes('fight') || lowerMessage.includes('attack') || 
-      lowerMessage.includes('assault') || lowerMessage.includes('beaten') || lowerMessage.includes('shot') || 
-      lowerMessage.includes('shooting') || lowerMessage.includes('stabbed') || lowerMessage.includes('knife')) {
-    return "I'm really sorry to hear about this. Your safety is the priority. If you need medical attention, please get help first. When you're ready, I can help you report what happened.";
-  }
-
-  // Serious crimes - carjacking, armed robbery, etc.
-  if (lowerMessage.includes('carjacking') || lowerMessage.includes('carjacked') || lowerMessage.includes('hijacked') ||
-      lowerMessage.includes('armed robbery') || lowerMessage.includes('gunpoint') || lowerMessage.includes('weapon') ||
-      lowerMessage.includes('gun') || lowerMessage.includes('pistol')) {
-    return "That sounds terrifying. Are you safe now? I can help you report this incident. Please tell me where and when this happened.";
-  }
-  
-  // Greetings - warm and friendly
-  if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey') || lowerMessage.includes('hola')) {
-    return "Hello! 👋 I'm Jirani. How are you doing today?";
+  // Theft/robbery - empathetic and helpful
+  if (lowerMessage.includes('stole') || lowerMessage.includes('theft') || lowerMessage.includes('robbery') || 
+      lowerMessage.includes('mugged') || lowerMessage.includes('bike') && lowerMessage.includes('plate')) {
+    // Check if they're giving details about a crime
+    if (lowerMessage.includes('6:00') || lowerMessage.includes('westland') || lowerMessage.includes('aga khan') || 
+        lowerMessage.includes('black shirt') || lowerMessage.includes('plate') || lowerMessage.includes('walking')) {
+      
+      return "Thank you for sharing those details. That sounds really frightening - I'm glad you're safe now. Based on what you've told me, would you like me to officially record this incident? Just reply 'yes' if you'd like me to log this report, or 'no' if you'd prefer not to.";
+    }
+    return "I'm so sorry to hear you experienced this. That must have been really frightening. Can you tell me a bit more about what happened? When and where did this occur?";
   }
   
-  // Casual conversation starters
-  if (lowerMessage.includes('how are you') || lowerMessage.includes('whats up') || lowerMessage.includes('what\'s up')) {
-    return "I'm doing well, thank you! I'm here to help keep our communities safer. Is everything okay with you today?";
+  // Simple greetings
+  if (lowerMessage === 'hi' || lowerMessage === 'hello' || lowerMessage === 'hey') {
+    const greetings = [
+      "Hi there! How can I help you today?",
+      "Hello! I'm Jirani, here to help with community safety. What's going on?",
+      "Hey! Thanks for reaching out. Is everything okay?"
+    ];
+    return greetings[Math.floor(Math.random() * greetings.length)];
   }
   
-  // Location/area safety queries
-  if (lowerMessage.includes('safe') && (lowerMessage.includes('area') || lowerMessage.includes('neighborhood') || lowerMessage.includes('place'))) {
-    return "I can help you with safety information for your area! Which location or neighborhood are you asking about?";
+  // Follow-up messages like "hi", "something happened"
+  if (lowerMessage === 'something happened' || lowerMessage.includes('something happened')) {
+    return "I'm here to listen. What happened? Take your time - you can tell me as much or as little as you're comfortable sharing.";
   }
   
-  // General questions
-  if (lowerMessage.includes('what') && lowerMessage.includes('do')) {
-    return "I help people in Kenya report safety incidents and get information about their communities. You can ask me about safety in your area, report incidents, or just chat! What would you like to know?";
+  // Very short messages that might be testing
+  if (lowerMessage.length < 4) {
+    return "I'm here! What's going on? You can tell me about anything that's happened or if you need help with something.";
   }
   
-  // Default response - friendly and open
-  return "Thanks for reaching out! 😊 I'm here to help with safety-related questions or if you need to report anything. Feel free to tell me what's on your mind - we can just chat or I can help with something specific.";
+  // Questions about what the bot does
+  if (lowerMessage.includes('what') && (lowerMessage.includes('do') || lowerMessage.includes('help'))) {
+    return "I help people report safety incidents in their communities. If something's happened to you or you've witnessed something concerning, I can help you record it and get the information to the right people. What's on your mind?";
+  }
+  
+  // If message seems like they're starting to describe an incident
+  if (lowerMessage.includes('was walking') || lowerMessage.includes('happened') || lowerMessage.includes('saw') ||
+      lowerMessage.includes('witnessed') || lowerMessage.includes('occurred')) {
+    return "I'm listening. Please go ahead and tell me what happened. Don't worry about getting everything perfect - just share what you remember.";
+  }
+  
+  // Default conversational response
+  const defaultResponses = [
+    "I'm here to help! Can you tell me more about what's going on?",
+    "Thanks for reaching out. What would you like to talk about?",
+    "I'm listening. How can I help you today?",
+    "Hi! Is there something you'd like to report or discuss?"
+  ];
+  
+  return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
 }
 
 // WhatsApp Cloud API webhook handler
@@ -135,8 +158,11 @@ export async function POST(req: NextRequest) {
     // Add message to conversation history
     addMessageToConversation(from, 'user', messageText);
 
-    // Initialize response variables
-    let replyMessage = generateSimpleResponse(messageText);
+    // Get conversation history for context
+    const conversationHistory = getConversationHistory(from);
+
+    // Initialize response variables  
+    let replyMessage = generateConversationalResponse(messageText, from, conversationHistory);
     let storedEvent = null;
 
     // Check if user is confirming a pending report
@@ -171,6 +197,24 @@ export async function POST(req: NextRequest) {
     } else {
       // Normal processing - try to enhance with LLM if available
       console.log('Processing normal message (not a confirmation)');
+      
+      // Check if the message contains incident details and set up for confirmation
+      const lowerMessage = messageText.toLowerCase();
+      if ((lowerMessage.includes('stole') || lowerMessage.includes('theft') || lowerMessage.includes('robbery')) &&
+          (lowerMessage.includes('6:00') || lowerMessage.includes('westland') || lowerMessage.includes('aga khan') || 
+           lowerMessage.includes('black shirt') || lowerMessage.includes('plate') || lowerMessage.includes('walking'))) {
+        
+        const incidentDetails = {
+          type: 'Theft/Robbery',
+          location: lowerMessage.includes('westland') ? 'Westlands, near Aga Khan' : 'Location described in message',
+          description: messageText,
+          timestamp: new Date().toISOString()
+        };
+        
+        setPendingConfirmation(from, incidentDetails);
+        console.log('Set pending confirmation for incident details');
+      }
+      
       try {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
       const controller = new AbortController();

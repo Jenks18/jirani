@@ -13,5 +13,20 @@
     "from": "254712345678",
     "createdAt": "2025-09-09T20:44:32.162Z",
     "images": []
+  },
+  {
+    "id": "mge2bf6imeis8m7fng8",
+    "type": "Theft/Robbery",
+    "severity": 3,
+    "location": "Location described in message",
+    "description": "There was a theft at 7am near the mall. Someone took my bag while I was walking.",
+    "timestamp": "2025-10-05T18:55:32.546Z",
+    "coordinates": [
+      36.8219,
+      -1.2921
+    ],
+    "from": "+9876543210",
+    "createdAt": "2025-10-05T18:55:46.074Z",
+    "images": []
   }
 ]
