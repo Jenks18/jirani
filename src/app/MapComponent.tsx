@@ -91,36 +91,71 @@ export default function MapComponent({
     };
   }, []);
 
-  // Fetch reports
+  // Fetch events (Supabase) with fallback to legacy /api/reports
   const fetchReports = async () => {
+    const normalizeSeverity = (sev: unknown): string => {
+      if (typeof sev === 'string') return sev.toLowerCase();
+      if (typeof sev === 'number') {
+        if (sev <= 2) return 'low';
+        if (sev === 3) return 'medium';
+        return 'high';
+      }
+      return 'medium';
+    };
     try {
-      const response = await fetch('/api/reports');
-      if (!response.ok) throw new Error('Failed to fetch reports');
+      let response = await fetch('/api/events');
+      if (!response.ok) throw new Error('events endpoint failed');
       const data = await response.json();
-  type Incoming = Partial<Report> & { id?: string | number; name?: string; dateTime?: string; priority?: string; coordinates?: [number, number] } & Record<string, unknown>;
-  const normalized: Report[] = (data.reports as Incoming[] | undefined || []).map((r: Incoming) => {
-        // Ensure id is a string consistently
-        const idStr = String(r.id);
-        // Prefer explicit longitude/latitude fields, fall back to coordinates array if present
-        const latitude = typeof r.latitude === 'number' ? r.latitude : (Array.isArray(r.coordinates) ? r.coordinates[0] : undefined);
-        const longitude = typeof r.longitude === 'number' ? r.longitude : (Array.isArray(r.coordinates) ? r.coordinates[1] : undefined);
+      const incoming = (data.events || []) as any[];
+      if (!Array.isArray(incoming)) throw new Error('Invalid events shape');
+  const normalized: Report[] = incoming.map(ev => {
+        const idStr = String(ev.id);
+        const coords = Array.isArray(ev.coordinates) ? ev.coordinates : null; // [lng,lat]
+        const longitude = coords ? coords[0] : (typeof ev.longitude === 'number' ? ev.longitude : undefined);
+        const latitude = coords ? coords[1] : (typeof ev.latitude === 'number' ? ev.latitude : undefined);
         return {
           id: idStr,
-            title: r.title || r.name || 'Untitled',
-            description: r.description || '',
-            location: r.location || '',
-            coordinates: [longitude, latitude],
-            latitude,
-            longitude,
-            severity: r.severity || r.priority || 'medium',
-            priority: r.priority || 'medium',
-            created_at: r.created_at || r.dateTime || new Date().toISOString()
-        } as Report;
-  }).filter((r: Report) => typeof r.longitude === 'number' && typeof r.latitude === 'number');
-      console.log('[Map] Loaded reports:', normalized.length, normalized.slice(0,3));
+          title: ev.type || ev.title || 'Incident',
+          description: ev.description || ev.summary || 'No description provided',
+          location: ev.location || 'Unknown location',
+          coordinates: (longitude != null && latitude != null ? [longitude, latitude] : [0,0]) as [number, number],
+          latitude: (latitude ?? 0) as number,
+          longitude: (longitude ?? 0) as number,
+          severity: normalizeSeverity(ev.severity),
+          priority: normalizeSeverity(ev.severity),
+          created_at: ev.timestamp || ev.createdAt || new Date().toISOString()
+        };
+      }).filter(r => r.longitude !== 0 || r.latitude !== 0);
+      console.log('[Map] Loaded events:', normalized.length, normalized.slice(0,3));
       setReports(normalized);
-    } catch (error) {
-      console.error('Error fetching reports:', error);
+    } catch (eventsErr) {
+      console.warn('[Map] Falling back to /api/reports:', eventsErr);
+      try {
+        const response2 = await fetch('/api/reports');
+        if (!response2.ok) throw new Error('Failed to fetch legacy reports');
+        const data2 = await response2.json();
+        const legacy = (data2.reports || []) as any[];
+  const normalizedLegacy: Report[] = legacy.map(r => {
+          const idStr = String(r.id);
+          const latitude = typeof r.latitude === 'number' ? r.latitude : (Array.isArray(r.coordinates) ? r.coordinates[0] : undefined);
+          const longitude = typeof r.longitude === 'number' ? r.longitude : (Array.isArray(r.coordinates) ? r.coordinates[1] : undefined);
+          return {
+            id: idStr,
+            title: r.title || r.type || 'Incident',
+            description: r.description || r.summary || 'No description provided',
+            location: r.location || 'Unknown location',
+            coordinates: (longitude != null && latitude != null ? [longitude, latitude] : [0,0]) as [number, number],
+            latitude: (latitude ?? 0) as number,
+            longitude: (longitude ?? 0) as number,
+            severity: normalizeSeverity(r.severity || r.priority),
+            priority: normalizeSeverity(r.priority || r.severity),
+            created_at: r.created_at || r.dateTime || new Date().toISOString()
+          } as Report;
+        }).filter(r => r.longitude !== 0 || r.latitude !== 0);
+        setReports(normalizedLegacy);
+      } catch (legacyErr) {
+        console.error('Both /api/events and /api/reports failed', legacyErr);
+      }
     }
   };
 

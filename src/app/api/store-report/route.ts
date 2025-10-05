@@ -33,7 +33,12 @@ export async function POST(req: NextRequest) {
       source: body.source || 'api'
     };
 
-    const { data, error } = await supabase.from('events').insert(insertPayload).select().single();
+    // Cast to any array to avoid TS mismatch when local Database types lag schema
+    const { data, error } = await supabase
+      .from('events')
+      .insert([insertPayload] as any)
+      .select()
+      .single();
     if (error) {
       console.error('Supabase insert error:', error);
       return NextResponse.json({ error: error.message, details: error }, { status: 500 });

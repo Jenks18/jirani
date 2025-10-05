@@ -184,11 +184,16 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
   // Function to fetch new events
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/reports');
+      // Prefer new events endpoint
+      let response = await fetch('/api/events');
+      if (!response.ok) {
+        console.warn('Primary /api/events failed, falling back to /api/reports');
+        response = await fetch('/api/reports');
+      }
       if (!response.ok) throw new Error('Failed to fetch events');
       
       const data = await response.json();
-  const reports: SourceReport[] = data.reports || [];
+      const reports: SourceReport[] = data.events || data.reports || [];
   console.log('ReportsPanel: fetched reports from API:', reports);
       
       // Transform API data to match Event interface
