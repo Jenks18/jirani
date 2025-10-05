@@ -81,7 +81,8 @@ export async function storeEvent(event: EventData, from: string, images?: string
       source: 'whatsapp'
     };
 
-    const { data, error } = await supabase.from('events').insert(insertPayload).select('*').single();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).from('events').insert(insertPayload).select('*').single();
     if (error) throw error;
 
     const storedEvent: StoredEvent = {
@@ -122,9 +123,11 @@ export async function storeEvent(event: EventData, from: string, images?: string
 
 export async function getEvents(): Promise<StoredEvent[]> {
   try {
-    const { data, error } = await supabase.from('events').select('*').order('event_timestamp', { ascending: false }).limit(500);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).from('events').select('*').order('event_timestamp', { ascending: false }).limit(500);
     if (error) throw error;
-    return (data || []).map(row => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data || []).map((row: any) => ({
       id: row.id,
       type: row.type,
       severity: row.severity,
@@ -145,7 +148,8 @@ export async function getEvents(): Promise<StoredEvent[]> {
 
 export async function getEventById(id: string): Promise<StoredEvent | undefined> {
   try {
-    const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).from('events').select('*').eq('id', id).single();
     if (error) throw error;
     if (!data) return undefined;
     return {

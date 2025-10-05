@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from "react";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface Report {
   id: number;
@@ -29,8 +31,8 @@ export default function MapComponent({
   onMarkerClick 
 }: MapComponentProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<{ [key: string]: any }>({});
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const [reports, setReports] = useState<Report[]>([]);
 
   // Fetch reports from API
@@ -126,7 +128,7 @@ export default function MapComponent({
 
           const marker = new mapboxgl.default.Marker(el)
             .setLngLat([lng, lat])
-            .addTo(mapRef.current);
+            .addTo(mapRef.current!);
 
           markersRef.current[report.id] = marker;
         });
@@ -161,7 +163,7 @@ export default function MapComponent({
   // Resize map when sidebar changes
   useEffect(() => {
     if (mapRef.current) {
-      setTimeout(() => mapRef.current.resize(), 300);
+      setTimeout(() => mapRef.current?.resize(), 300);
     }
   }, [sidebarCollapsed, reportsPanelCollapsed]);
 

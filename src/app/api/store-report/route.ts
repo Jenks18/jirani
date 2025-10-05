@@ -33,10 +33,11 @@ export async function POST(req: NextRequest) {
       source: body.source || 'api'
     };
 
-    // Cast to any array to avoid TS mismatch when local Database types lag schema
-    const { data, error } = await supabase
+    // Temporary any cast to bypass Supabase typing mismatch - TODO: update Database types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from('events')
-      .insert([insertPayload] as any)
+      .insert([insertPayload])
       .select()
       .single();
     if (error) {

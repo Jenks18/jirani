@@ -130,10 +130,10 @@ export default function MapComponent({
         bottom: 50
       };
 
-      map.current?.fitBounds(
-        map.current.getBounds(),
-        { padding, duration: 0 }
-      );
+      const bounds = map.current?.getBounds();
+      if (bounds) {
+        map.current?.fitBounds(bounds, { padding, duration: 0 });
+      }
     };
 
     resize();

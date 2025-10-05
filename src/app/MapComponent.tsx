@@ -17,6 +17,24 @@ interface Report {
   created_at: string;
 }
 
+interface RawEvent {
+  id: string | number;
+  type?: string;
+  title?: string;
+  description?: string;
+  summary?: string;
+  location?: string;
+  coordinates?: [number, number];
+  latitude?: number;
+  longitude?: number;
+  severity?: string | number;
+  priority?: string | number;
+  timestamp?: string;
+  createdAt?: string;
+  created_at?: string;
+  dateTime?: string;
+}
+
 interface MapComponentProps {
   highlightedEventId?: string | null;
   highlightSeq?: number; // increments each selection even if same id
@@ -103,10 +121,10 @@ export default function MapComponent({
       return 'medium';
     };
     try {
-      let response = await fetch('/api/events');
+      const response = await fetch('/api/events');
       if (!response.ok) throw new Error('events endpoint failed');
       const data = await response.json();
-      const incoming = (data.events || []) as any[];
+      const incoming = (data.events || []) as RawEvent[];
       if (!Array.isArray(incoming)) throw new Error('Invalid events shape');
   const normalized: Report[] = incoming.map(ev => {
         const idStr = String(ev.id);
@@ -134,7 +152,7 @@ export default function MapComponent({
         const response2 = await fetch('/api/reports');
         if (!response2.ok) throw new Error('Failed to fetch legacy reports');
         const data2 = await response2.json();
-        const legacy = (data2.reports || []) as any[];
+        const legacy = (data2.reports || []) as RawEvent[];
   const normalizedLegacy: Report[] = legacy.map(r => {
           const idStr = String(r.id);
           const latitude = typeof r.latitude === 'number' ? r.latitude : (Array.isArray(r.coordinates) ? r.coordinates[0] : undefined);

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from "react";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface Report {
   id: number;
@@ -29,8 +31,8 @@ export default function MapComponent({
   onMarkerClick 
 }: MapComponentProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<{ [key: string]: any }>({});
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const [reports, setReports] = useState<Report[]>([]);
 
   // Fetch reports
@@ -141,10 +143,9 @@ export default function MapComponent({
         }
       });
 
-      const mapboxgl = require('mapbox-gl');
       const marker = new mapboxgl.Marker(el)
         .setLngLat([lng, lat]) // Mapbox expects [lng, lat]
-        .addTo(mapRef.current);
+        .addTo(mapRef.current!);
 
       markersRef.current[report.id] = marker;
       
