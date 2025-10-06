@@ -165,10 +165,10 @@ Respond naturally as Jirani. Be conversational, warm, and helpful. If they ask w
 
 Keep responses short (2-3 sentences). Be human, not robotic.`;
 
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
       
       console.log('🌐 Calling Gemini API...');
-      console.log('🌐 API URL (without key):', apiUrl.split('?')[0]);
+      console.log('🌐 Model: gemini-2.5-flash');
       
       const requestBody = {
         contents: [{
