@@ -2,32 +2,30 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    console.log('🧪 Testing Gemini AI directly...');
+    console.log('🧪 Testing OpenAI directly...');
     
-    const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-    console.log('🔑 API Key exists:', !!GOOGLE_API_KEY);
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    console.log('🔑 API Key exists:', !!OPENAI_API_KEY);
+    console.log('🔑 API Key length:', OPENAI_API_KEY?.length || 0);
     
-    if (!GOOGLE_API_KEY) {
-      return NextResponse.json({ error: 'GOOGLE_API_KEY not found' }, { status: 500 });
+    if (!OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OPENAI_API_KEY not found' }, { status: 500 });
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
-    
-    const response = await fetch(apiUrl, {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: "You are Jirani. Someone asks: who are you? Respond warmly in 2 sentences."
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.9,
-          maxOutputTokens: 300
-        }
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are Jirani, a friendly assistant.' },
+          { role: 'user', content: 'Who are you? Answer in one sentence.' }
+        ],
+        temperature: 0.8,
+        max_tokens: 100
       })
     });
 
@@ -37,18 +35,19 @@ export async function GET() {
       const errorText = await response.text();
       console.error('❌ Error:', errorText);
       return NextResponse.json({ 
-        error: `Gemini API error: ${response.status}`,
+        error: `OpenAI API error: ${response.status}`,
         details: errorText 
       }, { status: 500 });
     }
 
     const data = await response.json();
-    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const aiText = data.choices?.[0]?.message?.content;
 
     return NextResponse.json({ 
       success: true,
       response: aiText,
-      fullData: data 
+      model: 'gpt-4o-mini',
+      keyLength: OPENAI_API_KEY.length
     });
     
   } catch (error) {
