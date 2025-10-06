@@ -83,32 +83,49 @@ class WhatsAppConversationManager {
   private detectIncident(message: string): IncidentReport | null {
     const lowerMessage = message.toLowerCase();
     
-    // Crime-related keywords
-    const crimeKeywords = ['stole', 'stolen', 'robbed', 'robbery', 'theft', 'mugged', 'attacked', 'knife', 'gun'];
+    // Crime-related keywords with broader context
+    const crimeKeywords = ['stole', 'stolen', 'robbed', 'robbery', 'theft', 'mugged', 'attacked', 'knife', 'gun', 'weapon', 'threatened', 'assault', 'mugging'];
     const hasCrimeKeyword = crimeKeywords.some(keyword => lowerMessage.includes(keyword));
     
-    if (!hasCrimeKeyword && !lowerMessage.includes('incident') && !lowerMessage.includes('happened')) {
+    // Also check for phrases that indicate something bad happened
+    const incidentPhrases = ['somebody robbed', 'someone stole', 'got robbed', 'was robbed', 'they took', 'he took', 'she took'];
+    const hasIncidentPhrase = incidentPhrases.some(phrase => lowerMessage.includes(phrase));
+    
+    if (!hasCrimeKeyword && !hasIncidentPhrase && !lowerMessage.includes('incident')) {
       return null;
     }
 
-    // Determine incident type
+    // Determine incident type with better context
     let type = 'General Incident';
-    if (lowerMessage.includes('knife') || lowerMessage.includes('gun') || lowerMessage.includes('weapon')) {
+    if (lowerMessage.match(/knife|gun|weapon|armed|pistol|blade/)) {
       type = 'Armed Robbery';
-    } else if (lowerMessage.includes('stole') || lowerMessage.includes('theft') || lowerMessage.includes('robbed')) {
+    } else if (lowerMessage.match(/stole|theft|robbed|robbery|took my|grabbed my|snatched/)) {
       type = 'Theft/Robbery';
-    } else if (lowerMessage.includes('mugged') || lowerMessage.includes('attacked')) {
+    } else if (lowerMessage.match(/mugged|attacked|assault|beat|hit me|pushed me/)) {
       type = 'Assault';
+    } else if (lowerMessage.match(/threatened|intimidat|scared|following me/)) {
+      type = 'Threat/Harassment';
     }
 
-    // Extract location hints
-    const locationKeywords = ['near', 'at ', 'in ', 'westland', 'kikuyu', 'mall', 'road', 'street'];
+    // Better location extraction
+    const locationKeywords = ['near', 'at ', 'in ', 'on ', 'by ', 'westland', 'kikuyu', 'mall', 'road', 'street', 'avenue', 'around', 'outside'];
     const hasLocation = locationKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    // Extract specific location if mentioned
+    let specificLocation = undefined;
+    if (hasLocation) {
+      const locationMatch = lowerMessage.match(/(near|at|in|on|by|around|outside)\s+([a-z\s]+?)(?:\.|,|$|\sand\s)/i);
+      if (locationMatch) {
+        specificLocation = locationMatch[0].trim();
+      } else {
+        specificLocation = 'Location mentioned in description';
+      }
+    }
 
     return {
       type,
       description: message,
-      location: hasLocation ? 'Location mentioned in description' : undefined,
+      location: specificLocation,
       timestamp: new Date().toISOString(),
       severity: type.includes('Armed') ? 5 : type.includes('Assault') ? 4 : 3,
       confirmed: false
@@ -132,71 +149,136 @@ class WhatsAppConversationManager {
         conversation.conversationPhase = 'greeting';
         return "No problem at all. I won't record anything. Is there anything else I can help you with today?";
       } else {
+        // They're adding more details while we're waiting for confirmation - add it to the incident
+        if (conversation.currentIncident) {
+          conversation.currentIncident.description += ` ${userMessage}`;
+          return "Got it, I've added that detail to the report. Do you want me to log this incident now? Just say 'yes' to confirm.";
+        }
         return "I'm waiting for your confirmation about the incident you reported. Please reply 'yes' to record it or 'no' to cancel.";
       }
+    }
+
+    // Get conversation context
+    const recentMessages = conversation.messages.slice(-6);
+    const conversationContext = recentMessages.map(m => m.content).join(' ').toLowerCase();
+    
+    // Check if we're currently collecting incident details
+    const isCollectingDetails = conversation.conversationPhase === 'collecting';
+    const hasAskedForDetails = conversationContext.includes('when and where') || 
+                               conversationContext.includes('tell me more') ||
+                               conversationContext.includes('what happened');
+    
+    // Check if this is providing requested information
+    const isProvidingTime = lowerMessage.match(/\d+:\d+|morning|afternoon|evening|night|today|yesterday|last night|this morning/);
+    const isProvidingLocation = lowerMessage.match(/near|at |in |around|by |westland|kikuyu|nairobi|mall|street|road|avenue/);
+    const isProvidingDetails = userMessage.length > 15 && !['hi', 'hello', 'hey', 'ola'].includes(lowerMessage);
+    
+    // If they just answered our question with details, acknowledge and continue the conversation
+    if (hasAskedForDetails && (isProvidingTime || isProvidingLocation || isProvidingDetails)) {
+      // Build on what they said
+      let response = "";
+      
+      if (isProvidingTime && !isProvidingLocation) {
+        response = `Okay, so this happened ${userMessage}. Where did this take place? Even a general area like a neighborhood name helps.`;
+        conversation.conversationPhase = 'collecting';
+      } else if (isProvidingLocation && !isProvidingTime) {
+        response = `I see, this was ${userMessage}. What time did it happen? Was it during the day, evening, or night?`;
+        conversation.conversationPhase = 'collecting';
+      } else if (isProvidingTime && isProvidingLocation) {
+        // They gave us enough detail - create incident
+        const detectedIncident = this.detectIncident(conversationContext + ' ' + userMessage);
+        if (detectedIncident) {
+          conversation.currentIncident = detectedIncident;
+          conversation.awaitingConfirmation = true;
+          conversation.conversationPhase = 'confirming';
+          return `Thank you for sharing all those details. Just to make sure I have this right:\n\n${detectedIncident.description}\n\nShould I officially log this report? Reply 'yes' to confirm.`;
+        } else {
+          response = `Thank you for sharing that information. It sounds like something concerning happened. Can you tell me exactly what occurred - like what was taken or what the person did?`;
+          conversation.conversationPhase = 'collecting';
+        }
+      } else {
+        // Just general details, acknowledge and ask for more
+        response = `I understand. Can you tell me more about when and where this happened? The more specific you can be, the better.`;
+        conversation.conversationPhase = 'collecting';
+      }
+      
+      return response;
     }
 
     // Check for new incident
     const detectedIncident = this.detectIncident(userMessage);
     if (detectedIncident) {
       conversation.currentIncident = detectedIncident;
-      conversation.awaitingConfirmation = true;
-      conversation.conversationPhase = 'confirming';
+      conversation.conversationPhase = 'collecting';
       
-      return `I understand you're reporting a ${detectedIncident.type.toLowerCase()}. This sounds serious and I want to make sure I record this correctly.\n\nIncident: ${detectedIncident.description}\n\nWould you like me to officially log this report? Please reply 'yes' to confirm or 'no' to cancel.`;
+      // Ask follow-up questions naturally
+      const responses = [
+        `I'm really sorry to hear that happened to you. That must have been scary. Can you tell me when and where this occurred?`,
+        `Oh no, I'm so sorry you went through that. Are you okay now? When and where did this happen?`,
+        `That sounds really frightening. I'm here to help you report this. Can you share when and where it took place?`
+      ];
+      
+      return responses[Math.floor(Math.random() * responses.length)];
     }
 
     // Handle follow-up incident requests
     if ((lowerMessage.includes('add') && lowerMessage.includes('another')) || 
         (lowerMessage.includes('report') && lowerMessage.includes('another')) ||
-        lowerMessage.includes('more incident')) {
+        (lowerMessage.includes('one more') || lowerMessage.includes('also happened'))) {
       conversation.conversationPhase = 'collecting';
-      return "I understand you want to report another incident. Please tell me what happened - describe the situation, when it occurred, and where it took place.";
+      conversation.currentIncident = undefined;
+      return "Of course, I'm here to listen. Tell me about this other incident - what happened?";
     }
 
-    // Contextual responses based on conversation phase and history
-    const recentMessages = conversation.messages.slice(-4);
-    const hasRecentCrimeDiscussion = recentMessages.some(msg => 
-      msg.content.toLowerCase().includes('stole') || 
-      msg.content.toLowerCase().includes('robbery') ||
-      msg.content.toLowerCase().includes('incident')
-    );
-
     // Emergency situations
-    if (lowerMessage.includes('emergency') || lowerMessage.includes('danger') || lowerMessage.includes('help')) {
-      return "🚨 This sounds urgent! Are you in immediate danger? If so, please call emergency services (999 or 911) right away. Once you're safe, I can help you report what happened.";
+    if (lowerMessage.includes('emergency') || lowerMessage.includes('danger') || 
+        (lowerMessage.includes('help') && lowerMessage.includes('now'))) {
+      return "🚨 This sounds urgent! Are you in immediate danger right now? If yes, please call emergency services (999 or 911) immediately. Once you're safe, I'm here to help you document what happened.";
     }
 
     // Simple greetings
-    if (['hi', 'hello', 'hey', 'ola'].includes(lowerMessage.trim())) {
+    if (['hi', 'hello', 'hey', 'ola', 'hola'].includes(lowerMessage.trim())) {
       conversation.conversationPhase = 'greeting';
       const greetings = [
-        "Hi there! I'm here to help with community safety reports. How are you doing today?",
-        "Hello! I help people report safety incidents in their area. Is everything okay?",
-        "Hey! Thanks for reaching out. Is there something you'd like to report or discuss?"
+        "Hi there! How are you doing? I'm here if you need to report anything or just want to talk.",
+        "Hello! Hope you're doing well. Is there something on your mind?",
+        "Hey! How can I help you today? I'm here to listen."
       ];
       return greetings[Math.floor(Math.random() * greetings.length)];
     }
 
-    // Location-only messages (might be starting to describe an incident)
-    if (lowerMessage.includes('near') || lowerMessage.includes('kikuyu') || lowerMessage.includes('westland')) {
+    // Check how they're doing / general check-ins
+    if (lowerMessage.match(/how are you|how's it going|what's up|wassup/)) {
+      return "I'm here and ready to help! More importantly - how are YOU doing? Is everything okay?";
+    }
+
+    // Location-only messages
+    if ((lowerMessage.includes('near') || lowerMessage.includes('kikuyu') || 
+         lowerMessage.includes('westland') || lowerMessage.includes('nairobi')) && 
+        userMessage.split(' ').length < 5) {
       conversation.conversationPhase = 'collecting';
-      return "I see you mentioned a location. Are you reporting something that happened there? Please tell me more about what occurred.";
+      return `You mentioned ${userMessage} - is something happening there or did something occur in that area? Tell me more.`;
     }
 
     // General conversational responses based on context
-    if (hasRecentCrimeDiscussion) {
-      return "I'm still here listening. If you want to report another incident or add more details, just let me know. How else can I help you today?";
+    const hasRecentIncidentDiscussion = conversationContext.includes('stole') || 
+                                       conversationContext.includes('robbery') ||
+                                       conversationContext.includes('robbed') ||
+                                       conversationContext.includes('incident');
+    
+    if (hasRecentIncidentDiscussion && conversation.conversationPhase === 'collecting') {
+      return "I'm still listening. Take your time and share whatever details you remember. Every bit helps.";
     }
 
-    // Default responses
-    const defaultResponses = [
-      "I'm here to help! You can report safety incidents, ask questions, or just tell me what's on your mind.",
-      "Thanks for reaching out. Is there something happening in your area that you'd like to report?",
-      "I'm listening. Feel free to share whatever's concerning you or if you've witnessed something that should be reported."
+    // Catch-all conversational responses
+    const responses = [
+      "I'm here to help. What's going on?",
+      "Tell me more - what's on your mind?",
+      "I'm listening. Feel free to share what's happening.",
+      "You can talk to me about anything. What would you like to discuss?"
     ];
 
-    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+    return responses[Math.floor(Math.random() * responses.length)];
   }
 
   public processMessage(userId: string, message: string): { response: string; incident?: IncidentReport } {
