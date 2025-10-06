@@ -132,11 +132,90 @@ class WhatsAppConversationManager {
     };
   }
 
-  private generateResponse(userId: string, userMessage: string): string {
+  private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string | null> {
+    try {
+      // Use the LLM API to generate intelligent responses
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://jirani-dk58srmho-jenks18s-projects.vercel.app';
+      
+      const systemPrompt = `You are Jirani, a friendly and empathetic community safety assistant helping people in Kenya report incidents and feel heard. You have a warm, conversational personality.
+
+CORE BEHAVIORS:
+- Answer questions about yourself naturally (name: Jirani, purpose: help report safety incidents)
+- Have real conversations - don't just pattern match keywords
+- Remember context from earlier in the conversation
+- Ask follow-up questions naturally
+- Show empathy when people share difficult experiences
+- Guide users through reporting incidents without being robotic
+
+CONVERSATION FLOW:
+1. If someone greets you or asks who you are - respond naturally and warmly
+2. If someone mentions a crime/incident - express empathy and gently ask for details (when, where)
+3. When collecting details - acknowledge what they share and ask follow-up questions
+4. Once you have incident details - summarize and ask if they want to officially report it
+5. After reporting - offer continued support
+
+RESPONSE STYLE:
+- Natural, conversational tone
+- Empathetic and supportive
+- Short, clear responses (2-3 sentences usually)
+- Ask ONE question at a time
+- Use Kenyan context (mention police, local areas if relevant)
+
+CONVERSATION HISTORY:
+${conversationHistory}
+
+USER MESSAGE: ${userMessage}
+
+Respond naturally as Jirani would in a real conversation. Be helpful, empathetic, and conversational.`;
+
+      const response = await fetch(`${baseUrl}/api/process-llm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: systemPrompt,
+          provider: 'gemini'
+        }),
+        signal: AbortSignal.timeout(8000)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.result && typeof data.result === 'string') {
+          // Clean up the response
+          let aiResponse = data.result.trim();
+          
+          // Remove markdown formatting if present
+          aiResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+          
+          // If it returned JSON, extract the reply
+          if (aiResponse.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(aiResponse);
+              if (parsed.reply) {
+                return parsed.reply;
+              }
+            } catch {
+              // Not valid JSON, use as is
+            }
+          }
+          
+          return aiResponse;
+        }
+      }
+      
+      // Fallback if LLM fails
+      return null;
+    } catch (error) {
+      console.error('AI response generation failed:', error);
+      return null;
+    }
+  }
+
+  private async generateResponse(userId: string, userMessage: string): Promise<string> {
     const conversation = this.getConversation(userId);
     const lowerMessage = userMessage.toLowerCase();
 
-    // Handle confirmation responses
+    // Handle confirmation responses first (these need immediate action)
     if (conversation.awaitingConfirmation && conversation.currentIncident) {
       if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y') {
         conversation.currentIncident.confirmed = true;
@@ -148,147 +227,54 @@ class WhatsAppConversationManager {
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'greeting';
         return "No problem at all. I won't record anything. Is there anything else I can help you with today?";
-      } else {
-        // They're adding more details while we're waiting for confirmation - add it to the incident
-        if (conversation.currentIncident) {
-          conversation.currentIncident.description += ` ${userMessage}`;
-          return "Got it, I've added that detail to the report. Do you want me to log this incident now? Just say 'yes' to confirm.";
-        }
-        return "I'm waiting for your confirmation about the incident you reported. Please reply 'yes' to record it or 'no' to cancel.";
       }
     }
 
-    // Get conversation context
-    const recentMessages = conversation.messages.slice(-6);
-    const conversationContext = recentMessages.map(m => m.content).join(' ').toLowerCase();
+    // Get full conversation context for AI
+    const conversationHistory = conversation.messages
+      .slice(-10) // Last 10 messages for context
+      .map(m => `${m.role === 'user' ? 'User' : 'Jirani'}: ${m.content}`)
+      .join('\n');
+
+    // Try to get AI response first
+    const aiResponse = await this.generateResponseWithAI(userId, userMessage, conversationHistory);
     
-    // Check if we're currently collecting incident details
-    const isCollectingDetails = conversation.conversationPhase === 'collecting';
-    const hasAskedForDetails = conversationContext.includes('when and where') || 
-                               conversationContext.includes('tell me more') ||
-                               conversationContext.includes('what happened');
-    
-    // Check if this is providing requested information
-    const isProvidingTime = lowerMessage.match(/\d+:\d+|morning|afternoon|evening|night|today|yesterday|last night|this morning/);
-    const isProvidingLocation = lowerMessage.match(/near|at |in |around|by |westland|kikuyu|nairobi|mall|street|road|avenue/);
-    const isProvidingDetails = userMessage.length > 15 && !['hi', 'hello', 'hey', 'ola'].includes(lowerMessage);
-    
-    // If they just answered our question with details, acknowledge and continue the conversation
-    if (hasAskedForDetails && (isProvidingTime || isProvidingLocation || isProvidingDetails)) {
-      // Build on what they said
-      let response = "";
-      
-      if (isProvidingTime && !isProvidingLocation) {
-        response = `Okay, so this happened ${userMessage}. Where did this take place? Even a general area like a neighborhood name helps.`;
-        conversation.conversationPhase = 'collecting';
-      } else if (isProvidingLocation && !isProvidingTime) {
-        response = `I see, this was ${userMessage}. What time did it happen? Was it during the day, evening, or night?`;
-        conversation.conversationPhase = 'collecting';
-      } else if (isProvidingTime && isProvidingLocation) {
-        // They gave us enough detail - create incident
-        const detectedIncident = this.detectIncident(conversationContext + ' ' + userMessage);
-        if (detectedIncident) {
-          conversation.currentIncident = detectedIncident;
-          conversation.awaitingConfirmation = true;
-          conversation.conversationPhase = 'confirming';
-          return `Thank you for sharing all those details. Just to make sure I have this right:\n\n${detectedIncident.description}\n\nShould I officially log this report? Reply 'yes' to confirm.`;
-        } else {
-          response = `Thank you for sharing that information. It sounds like something concerning happened. Can you tell me exactly what occurred - like what was taken or what the person did?`;
-          conversation.conversationPhase = 'collecting';
-        }
-      } else {
-        // Just general details, acknowledge and ask for more
-        response = `I understand. Can you tell me more about when and where this happened? The more specific you can be, the better.`;
+    if (aiResponse) {
+      // Check if the AI response indicates an incident should be detected
+      const detectedIncident = this.detectIncident(userMessage);
+      if (detectedIncident && !conversation.currentIncident) {
+        conversation.currentIncident = detectedIncident;
         conversation.conversationPhase = 'collecting';
       }
       
-      return response;
+      return aiResponse;
     }
 
-    // Check for new incident
+    // Fallback to rule-based responses if AI fails
     const detectedIncident = this.detectIncident(userMessage);
     if (detectedIncident) {
       conversation.currentIncident = detectedIncident;
       conversation.conversationPhase = 'collecting';
-      
-      // Ask follow-up questions naturally
-      const responses = [
-        `I'm really sorry to hear that happened to you. That must have been scary. Can you tell me when and where this occurred?`,
-        `Oh no, I'm so sorry you went through that. Are you okay now? When and where did this happen?`,
-        `That sounds really frightening. I'm here to help you report this. Can you share when and where it took place?`
-      ];
-      
-      return responses[Math.floor(Math.random() * responses.length)];
-    }
-
-    // Handle follow-up incident requests
-    if ((lowerMessage.includes('add') && lowerMessage.includes('another')) || 
-        (lowerMessage.includes('report') && lowerMessage.includes('another')) ||
-        (lowerMessage.includes('one more') || lowerMessage.includes('also happened'))) {
-      conversation.conversationPhase = 'collecting';
-      conversation.currentIncident = undefined;
-      return "Of course, I'm here to listen. Tell me about this other incident - what happened?";
-    }
-
-    // Emergency situations
-    if (lowerMessage.includes('emergency') || lowerMessage.includes('danger') || 
-        (lowerMessage.includes('help') && lowerMessage.includes('now'))) {
-      return "🚨 This sounds urgent! Are you in immediate danger right now? If yes, please call emergency services (999 or 911) immediately. Once you're safe, I'm here to help you document what happened.";
+      return `I'm really sorry to hear that happened to you. That must have been scary. Can you tell me when and where this occurred?`;
     }
 
     // Simple greetings
     if (['hi', 'hello', 'hey', 'ola', 'hola'].includes(lowerMessage.trim())) {
-      conversation.conversationPhase = 'greeting';
-      const greetings = [
-        "Hi there! How are you doing? I'm here if you need to report anything or just want to talk.",
-        "Hello! Hope you're doing well. Is there something on your mind?",
-        "Hey! How can I help you today? I'm here to listen."
-      ];
-      return greetings[Math.floor(Math.random() * greetings.length)];
+      return "Hi there! I'm Jirani, your community safety assistant. How can I help you today?";
     }
 
-    // Check how they're doing / general check-ins
-    if (lowerMessage.match(/how are you|how's it going|what's up|wassup/)) {
-      return "I'm here and ready to help! More importantly - how are YOU doing? Is everything okay?";
-    }
-
-    // Location-only messages
-    if ((lowerMessage.includes('near') || lowerMessage.includes('kikuyu') || 
-         lowerMessage.includes('westland') || lowerMessage.includes('nairobi')) && 
-        userMessage.split(' ').length < 5) {
-      conversation.conversationPhase = 'collecting';
-      return `You mentioned ${userMessage} - is something happening there or did something occur in that area? Tell me more.`;
-    }
-
-    // General conversational responses based on context
-    const hasRecentIncidentDiscussion = conversationContext.includes('stole') || 
-                                       conversationContext.includes('robbery') ||
-                                       conversationContext.includes('robbed') ||
-                                       conversationContext.includes('incident');
-    
-    if (hasRecentIncidentDiscussion && conversation.conversationPhase === 'collecting') {
-      return "I'm still listening. Take your time and share whatever details you remember. Every bit helps.";
-    }
-
-    // Catch-all conversational responses
-    const responses = [
-      "I'm here to help. What's going on?",
-      "Tell me more - what's on your mind?",
-      "I'm listening. Feel free to share what's happening.",
-      "You can talk to me about anything. What would you like to discuss?"
-    ];
-
-    return responses[Math.floor(Math.random() * responses.length)];
+    // Generic fallback
+    return "I'm here to help. What's on your mind?";
   }
 
-  public processMessage(userId: string, message: string): { response: string; incident?: IncidentReport } {
+  public async processMessage(userId: string, message: string): Promise<{ response: string; incident?: IncidentReport }> {
     const conversation = this.getConversation(userId);
     
     // Add user message
     this.addMessage(userId, 'user', message);
     
     // Generate response
-    const response = this.generateResponse(userId, message);
+    const response = await this.generateResponse(userId, message);
     
     // Add assistant response
     this.addMessage(userId, 'assistant', response);

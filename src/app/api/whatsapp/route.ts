@@ -71,8 +71,8 @@ export async function POST(req: NextRequest) {
 
     console.log(`Processing message from ${from}: "${message}"`);
 
-    // Process message through conversation manager
-    const result = conversationManager.processMessage(from, message);
+    // Process message through conversation manager (now async with AI)
+    const result = await conversationManager.processMessage(from, message);
     
     console.log(`Generated response: "${result.response}"`);
     
