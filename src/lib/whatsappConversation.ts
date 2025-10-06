@@ -138,14 +138,18 @@ class WhatsAppConversationManager {
       console.log('📝 User message:', userMessage);
       console.log('📚 Context:', conversationHistory);
       
-      // Check if API key exists
-      const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-      console.log('🔑 API Key exists:', !!GOOGLE_API_KEY);
-      console.log('🔑 API Key length:', GOOGLE_API_KEY?.length || 0);
+      // Multiple API keys for fallback when quota is exceeded
+      const API_KEYS = [
+        process.env.GOOGLE_API_KEY,
+        process.env.GOOGLE_API_KEY_2,
+        'AIzaSyDtlNuLbl_FEU3edltAWf2kVRHs6_xUhg4' // Backup key
+      ].filter(Boolean) as string[]; // Remove any undefined values
       
-      if (!GOOGLE_API_KEY) {
-        console.error('❌ GOOGLE_API_KEY NOT FOUND IN ENVIRONMENT!');
-        throw new Error('GOOGLE_API_KEY not configured');
+      console.log('🔑 Available API keys:', API_KEYS.length);
+      
+      if (API_KEYS.length === 0) {
+        console.error('❌ NO GOOGLE API KEYS CONFIGURED!');
+        throw new Error('No Google API keys available');
       }
 
       const systemContext = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're having a natural conversation with a real person.
@@ -165,11 +169,6 @@ Respond naturally as Jirani. Be conversational, warm, and helpful. If they ask w
 
 Keep responses short (2-3 sentences). Be human, not robotic.`;
 
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
-      
-      console.log('🌐 Calling Gemini API...');
-      console.log('🌐 Model: gemini-2.5-flash');
-      
       const requestBody = {
         contents: [{
           parts: [{
@@ -183,37 +182,67 @@ Keep responses short (2-3 sentences). Be human, not robotic.`;
         }
       };
       
-      console.log('📦 Request body:', JSON.stringify(requestBody, null, 2));
+      console.log('📦 Request prepared');
       
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
+      // Try each API key until one works
+      let lastError: Error | null = null;
+      
+      for (let i = 0; i < API_KEYS.length; i++) {
+        const apiKey = API_KEYS[i];
+        console.log(`🔑 Trying API key ${i + 1}/${API_KEYS.length}...`);
+        
+        try {
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+          
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+          });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response ok:', response.ok);
+          console.log(`📡 Response status from key ${i + 1}:`, response.status);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Gemini API error response:', errorText);
-        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+          if (response.status === 429) {
+            // Quota exceeded, try next key
+            console.log(`⚠️ Key ${i + 1} quota exceeded, trying next key...`);
+            const errorText = await response.text();
+            lastError = new Error(`API key ${i + 1} quota exceeded: ${errorText}`);
+            continue;
+          }
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Key ${i + 1} error:`, errorText);
+            lastError = new Error(`API key ${i + 1} error: ${response.status} - ${errorText}`);
+            continue;
+          }
+
+          const data = await response.json();
+          console.log(`✅ Success with key ${i + 1}!`);
+          
+          const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (!aiText) {
+            console.error('❌ No text in response from key', i + 1);
+            lastError = new Error(`No text in Gemini response from key ${i + 1}`);
+            continue;
+          }
+
+          console.log('💬 AI generated response:', aiText);
+          return aiText.trim();
+          
+        } catch (error) {
+          console.error(`❌ Exception with key ${i + 1}:`, error);
+          lastError = error instanceof Error ? error : new Error(String(error));
+          continue;
+        }
       }
-
-      const data = await response.json();
-      console.log('✅ Gemini raw response:', JSON.stringify(data, null, 2));
       
-      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!aiText) {
-        console.error('❌ No text in Gemini response. Full response:', JSON.stringify(data, null, 2));
-        throw new Error('No text in Gemini response');
-      }
-
-      console.log('💬 AI generated response:', aiText);
-      return aiText.trim();
+      // If we get here, all keys failed
+      console.error('❌❌❌ ALL API KEYS FAILED ❌❌❌');
+      throw lastError || new Error('All API keys failed');
       
     } catch (error) {
       console.error('❌❌❌ AI CALL COMPLETELY FAILED ❌❌❌');
