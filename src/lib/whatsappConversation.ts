@@ -138,6 +138,16 @@ class WhatsAppConversationManager {
       console.log('📝 User message:', userMessage);
       console.log('📚 Context:', conversationHistory);
       
+      // Check if API key exists
+      const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+      console.log('🔑 API Key exists:', !!GOOGLE_API_KEY);
+      console.log('🔑 API Key length:', GOOGLE_API_KEY?.length || 0);
+      
+      if (!GOOGLE_API_KEY) {
+        console.error('❌ GOOGLE_API_KEY NOT FOUND IN ENVIRONMENT!');
+        throw new Error('GOOGLE_API_KEY not configured');
+      }
+
       const systemContext = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're having a natural conversation with a real person.
 
 PERSONALITY:
@@ -155,46 +165,50 @@ Respond naturally as Jirani. Be conversational, warm, and helpful. If they ask w
 
 Keep responses short (2-3 sentences). Be human, not robotic.`;
 
-      const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-      if (!GOOGLE_API_KEY) {
-        throw new Error('GOOGLE_API_KEY not configured');
-      }
-
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
       
       console.log('🌐 Calling Gemini API...');
+      console.log('🌐 API URL (without key):', apiUrl.split('?')[0]);
+      
+      const requestBody = {
+        contents: [{
+          parts: [{
+            text: systemContext
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.9,
+          maxOutputTokens: 300,
+          topP: 0.95
+        }
+      };
+      
+      console.log('📦 Request body:', JSON.stringify(requestBody, null, 2));
       
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: systemContext
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.9,
-            maxOutputTokens: 300,
-            topP: 0.95
-          }
-        })
+        body: JSON.stringify(requestBody)
       });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Gemini API error:', response.status, errorText);
-        throw new Error(`Gemini API error: ${response.status}`);
+        console.error('❌ Gemini API error response:', errorText);
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('✅ Gemini response received:', JSON.stringify(data, null, 2));
+      console.log('✅ Gemini raw response:', JSON.stringify(data, null, 2));
       
       const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (!aiText) {
+        console.error('❌ No text in Gemini response. Full response:', JSON.stringify(data, null, 2));
         throw new Error('No text in Gemini response');
       }
 
@@ -202,10 +216,15 @@ Keep responses short (2-3 sentences). Be human, not robotic.`;
       return aiText.trim();
       
     } catch (error) {
-      console.error('❌ AI CALL FAILED:', error);
+      console.error('❌❌❌ AI CALL COMPLETELY FAILED ❌❌❌');
+      console.error('Error details:', error);
+      console.error('Error message:', error instanceof Error ? error.message : String(error));
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       
       // INTELLIGENT FALLBACK - still conversational
       const lowerMessage = userMessage.toLowerCase();
+      
+      console.log('⚠️ Using fallback response for:', lowerMessage);
       
       if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name') || lowerMessage === 'who are you') {
         return "I'm Jirani, your community safety assistant! 😊 I'm here to help you report incidents and keep our community safe. Think of me as your reliable neighbor looking out for you. What brings you here today?";
