@@ -134,92 +134,80 @@ class WhatsAppConversationManager {
 
   private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
     try {
-      // Use the LLM API to generate intelligent responses
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://jirani-dk58srmho-jenks18s-projects.vercel.app';
+      console.log('🤖 CALLING GEMINI AI DIRECTLY...');
+      console.log('📝 User message:', userMessage);
+      console.log('📚 Context:', conversationHistory);
       
-      const systemPrompt = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're a real person having a genuine conversation.
+      const systemContext = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're having a natural conversation with a real person.
 
-WHO YOU ARE:
-- Name: Jirani (means "neighbor" in Swahili)
-- Purpose: Help people report safety incidents and feel supported
-- Personality: Warm, empathetic, conversational, reliable friend
-- You ALWAYS remember the conversation context
+PERSONALITY:
+- Warm, friendly, conversational
+- Like talking to a caring neighbor
+- Remember everything said in this conversation
+- Natural Kenyan English
 
-HOW YOU TALK:
-- Like a caring friend, not a robot
-- Natural, warm, conversational Kenyan English
-- 2-3 sentences max per response
-- Ask ONE question at a time
-- Remember what was said before
-- Show genuine empathy and care
+CONVERSATION SO FAR:
+${conversationHistory || 'This is the start of the conversation.'}
 
-CONVERSATION MEMORY:
-${conversationHistory || 'This is a new conversation.'}
+CURRENT USER MESSAGE: "${userMessage}"
 
-CURRENT MESSAGE: ${userMessage}
+Respond naturally as Jirani. Be conversational, warm, and helpful. If they ask who you are, tell them. If they greet you, greet back. If they report an incident, show empathy and gently ask for details. 
 
-INSTRUCTIONS:
-- If asked who you are: Introduce yourself as Jirani warmly
-- If greeted: Greet back naturally and ask how you can help
-- If they share an incident: Show empathy first, then gently gather details (what, when, where)
-- Always acknowledge their previous messages
-- Be conversational and human
+Keep responses short (2-3 sentences). Be human, not robotic.`;
 
-Respond now as Jirani would:`;
+      const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+      if (!GOOGLE_API_KEY) {
+        throw new Error('GOOGLE_API_KEY not configured');
+      }
 
-      console.log('🤖 Calling AI with prompt...');
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
       
-      const response = await fetch(`${baseUrl}/api/process-llm`, {
+      console.log('🌐 Calling Gemini API...');
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: systemPrompt,
-          provider: 'gemini'
-        }),
-        signal: AbortSignal.timeout(15000) // Increased timeout to 15 seconds
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: systemContext
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.9,
+            maxOutputTokens: 300,
+            topP: 0.95
+          }
+        })
       });
 
       if (!response.ok) {
-        console.error('❌ AI API returned error:', response.status, response.statusText);
-        throw new Error(`AI API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Gemini API error:', response.status, errorText);
+        throw new Error(`Gemini API error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ AI response received:', data);
+      console.log('✅ Gemini response received:', JSON.stringify(data, null, 2));
       
-      if (data.result && typeof data.result === 'string') {
-        // Clean up the response
-        let aiResponse = data.result.trim();
-        
-        // Remove any markdown or JSON formatting
-        aiResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-        
-        // If it returned JSON, extract the reply
-        if (aiResponse.startsWith('{')) {
-          try {
-            const parsed = JSON.parse(aiResponse);
-            if (parsed.reply) {
-              aiResponse = parsed.reply;
-            }
-          } catch {
-            // Not valid JSON, use as is
-          }
-        }
-        
-        console.log('💬 Final AI response:', aiResponse);
-        return aiResponse;
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!aiText) {
+        throw new Error('No text in Gemini response');
       }
-      
-      throw new Error('No valid AI response');
+
+      console.log('💬 AI generated response:', aiText);
+      return aiText.trim();
       
     } catch (error) {
-      console.error('❌ AI response generation failed:', error);
+      console.error('❌ AI CALL FAILED:', error);
       
-      // Intelligent fallback based on message content
+      // INTELLIGENT FALLBACK - still conversational
       const lowerMessage = userMessage.toLowerCase();
       
-      // Personal questions about the bot
-      if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name')) {
+      if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name') || lowerMessage === 'who are you') {
         return "I'm Jirani, your community safety assistant! 😊 I'm here to help you report incidents and keep our community safe. Think of me as your reliable neighbor looking out for you. What brings you here today?";
       }
       
@@ -227,12 +215,11 @@ Respond now as Jirani would:`;
         return "I help people like you report safety incidents in our community. Whether it's theft, harassment, or any security concern, I'm here to listen and record what happened so we can keep everyone safer. How can I support you today?";
       }
       
-      // Greetings
       if (['hi', 'hello', 'hey', 'ola', 'hola', 'jambo'].some(g => lowerMessage.trim() === g)) {
         return "Hey there! 👋 I'm Jirani, your community safety buddy. I'm here to listen and help. What's going on?";
       }
       
-      // Generic conversational fallback
+      // Last resort fallback
       return "I'm here and listening. 😊 Tell me what's on your mind, or ask me anything you'd like to know.";
     }
   }
