@@ -134,15 +134,15 @@ class WhatsAppConversationManager {
 
   private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
     try {
-      console.log('🤖 CALLING AI (OpenAI GPT)...');
+      console.log('🤖 CALLING GROQ AI...');
       console.log('📝 User message:', userMessage);
       console.log('📚 Context:', conversationHistory);
       
-      const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
       
-      if (!OPENAI_API_KEY) {
-        console.error('❌ OPENAI_API_KEY NOT FOUND!');
-        throw new Error('OpenAI API key not configured');
+      if (!GROQ_API_KEY) {
+        console.error('❌ GROQ_API_KEY NOT FOUND!');
+        throw new Error('Groq API key not configured');
       }
 
       const systemPrompt = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're having a natural conversation with a real person.
@@ -162,32 +162,34 @@ CURRENT USER MESSAGE: "${userMessage}"
 
 INSTRUCTIONS:
 - Respond naturally and conversationally
-- If asked who you are: Introduce yourself warmly as Jirani
-- If asked what you do: Explain you help report safety incidents
+- If asked who you are: Introduce yourself warmly as Jirani, a community safety assistant
+- If asked where you're from: Say you were created to help the Kenyan community stay safe
+- If asked who made you: Say you were developed to serve the community
 - If greeted: Greet back warmly and ask how you can help
 - If they speak Swahili: Respond in Swahili
 - If they report an incident: Show empathy and gently gather details
 - Keep responses 2-4 sentences, natural and human
-- NEVER say "I'm here and listening" - be MORE specific
+- NEVER repeat the same response - vary your answers
 
 Respond now as Jirani would:`;
 
-      console.log('🌐 Calling OpenAI API...');
+      console.log('🌐 Calling Groq API...');
       
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
+          'Authorization': `Bearer ${GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'llama-3.3-70b-versatile', // Fast, high-quality model
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage }
           ],
           temperature: 0.8,
-          max_tokens: 200
+          max_tokens: 200,
+          top_p: 0.9
         })
       });
 
@@ -195,18 +197,18 @@ Respond now as Jirani would:`;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ OpenAI API error:', errorText);
-        throw new Error(`OpenAI API error: ${response.status}`);
+        console.error('❌ Groq API error:', errorText);
+        throw new Error(`Groq API error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ OpenAI response received');
+      console.log('✅ Groq response received');
       
       const aiText = data.choices?.[0]?.message?.content;
       
       if (!aiText) {
-        console.error('❌ No text in OpenAI response');
-        throw new Error('No text in OpenAI response');
+        console.error('❌ No text in Groq response');
+        throw new Error('No text in Groq response');
       }
 
       console.log('💬 AI generated response:', aiText);
