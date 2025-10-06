@@ -26,8 +26,8 @@ interface ConversationState {
 
 class WhatsAppConversationManager {
   private conversations = new Map<string, ConversationState>();
-  private readonly MAX_MESSAGES = 20;
-  private readonly CONVERSATION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  private readonly MAX_MESSAGES = 50; // Increased for better memory
+  private readonly CONVERSATION_TIMEOUT = 60 * 60 * 1000; // 60 minutes - longer sessions
 
   constructor() {
     // Clean up old conversations every 5 minutes
@@ -132,42 +132,43 @@ class WhatsAppConversationManager {
     };
   }
 
-  private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string | null> {
+  private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
     try {
       // Use the LLM API to generate intelligent responses
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://jirani-dk58srmho-jenks18s-projects.vercel.app';
       
-      const systemPrompt = `You are Jirani, a friendly and empathetic community safety assistant helping people in Kenya report incidents and feel heard. You have a warm, conversational personality.
+      const systemPrompt = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're a real person having a genuine conversation.
 
-CORE BEHAVIORS:
-- Answer questions about yourself naturally (name: Jirani, purpose: help report safety incidents)
-- Have real conversations - don't just pattern match keywords
-- Remember context from earlier in the conversation
-- Ask follow-up questions naturally
-- Show empathy when people share difficult experiences
-- Guide users through reporting incidents without being robotic
+WHO YOU ARE:
+- Name: Jirani (means "neighbor" in Swahili)
+- Purpose: Help people report safety incidents and feel supported
+- Personality: Warm, empathetic, conversational, reliable friend
+- You ALWAYS remember the conversation context
 
-CONVERSATION FLOW:
-1. If someone greets you or asks who you are - respond naturally and warmly
-2. If someone mentions a crime/incident - express empathy and gently ask for details (when, where)
-3. When collecting details - acknowledge what they share and ask follow-up questions
-4. Once you have incident details - summarize and ask if they want to officially report it
-5. After reporting - offer continued support
-
-RESPONSE STYLE:
-- Natural, conversational tone
-- Empathetic and supportive
-- Short, clear responses (2-3 sentences usually)
+HOW YOU TALK:
+- Like a caring friend, not a robot
+- Natural, warm, conversational Kenyan English
+- 2-3 sentences max per response
 - Ask ONE question at a time
-- Use Kenyan context (mention police, local areas if relevant)
+- Remember what was said before
+- Show genuine empathy and care
 
-CONVERSATION HISTORY:
-${conversationHistory}
+CONVERSATION MEMORY:
+${conversationHistory || 'This is a new conversation.'}
 
-USER MESSAGE: ${userMessage}
+CURRENT MESSAGE: ${userMessage}
 
-Respond naturally as Jirani would in a real conversation. Be helpful, empathetic, and conversational.`;
+INSTRUCTIONS:
+- If asked who you are: Introduce yourself as Jirani warmly
+- If greeted: Greet back naturally and ask how you can help
+- If they share an incident: Show empathy first, then gently gather details (what, when, where)
+- Always acknowledge their previous messages
+- Be conversational and human
 
+Respond now as Jirani would:`;
+
+      console.log('🤖 Calling AI with prompt...');
+      
       const response = await fetch(`${baseUrl}/api/process-llm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -175,39 +176,64 @@ Respond naturally as Jirani would in a real conversation. Be helpful, empathetic
           prompt: systemPrompt,
           provider: 'gemini'
         }),
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(15000) // Increased timeout to 15 seconds
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.result && typeof data.result === 'string') {
-          // Clean up the response
-          let aiResponse = data.result.trim();
-          
-          // Remove markdown formatting if present
-          aiResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-          
-          // If it returned JSON, extract the reply
-          if (aiResponse.startsWith('{')) {
-            try {
-              const parsed = JSON.parse(aiResponse);
-              if (parsed.reply) {
-                return parsed.reply;
-              }
-            } catch {
-              // Not valid JSON, use as is
+      if (!response.ok) {
+        console.error('❌ AI API returned error:', response.status, response.statusText);
+        throw new Error(`AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ AI response received:', data);
+      
+      if (data.result && typeof data.result === 'string') {
+        // Clean up the response
+        let aiResponse = data.result.trim();
+        
+        // Remove any markdown or JSON formatting
+        aiResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        
+        // If it returned JSON, extract the reply
+        if (aiResponse.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(aiResponse);
+            if (parsed.reply) {
+              aiResponse = parsed.reply;
             }
+          } catch {
+            // Not valid JSON, use as is
           }
-          
-          return aiResponse;
         }
+        
+        console.log('💬 Final AI response:', aiResponse);
+        return aiResponse;
       }
       
-      // Fallback if LLM fails
-      return null;
+      throw new Error('No valid AI response');
+      
     } catch (error) {
-      console.error('AI response generation failed:', error);
-      return null;
+      console.error('❌ AI response generation failed:', error);
+      
+      // Intelligent fallback based on message content
+      const lowerMessage = userMessage.toLowerCase();
+      
+      // Personal questions about the bot
+      if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name')) {
+        return "I'm Jirani, your community safety assistant! 😊 I'm here to help you report incidents and keep our community safe. Think of me as your reliable neighbor looking out for you. What brings you here today?";
+      }
+      
+      if (lowerMessage.includes('what do you do') || lowerMessage.includes('what can you do')) {
+        return "I help people like you report safety incidents in our community. Whether it's theft, harassment, or any security concern, I'm here to listen and record what happened so we can keep everyone safer. How can I support you today?";
+      }
+      
+      // Greetings
+      if (['hi', 'hello', 'hey', 'ola', 'hola', 'jambo'].some(g => lowerMessage.trim() === g)) {
+        return "Hey there! 👋 I'm Jirani, your community safety buddy. I'm here to listen and help. What's going on?";
+      }
+      
+      // Generic conversational fallback
+      return "I'm here and listening. 😊 Tell me what's on your mind, or ask me anything you'd like to know.";
     }
   }
 
@@ -215,56 +241,46 @@ Respond naturally as Jirani would in a real conversation. Be helpful, empathetic
     const conversation = this.getConversation(userId);
     const lowerMessage = userMessage.toLowerCase();
 
+    console.log(`📱 Processing message from ${userId}: "${userMessage}"`);
+    console.log(`📊 Conversation phase: ${conversation.conversationPhase}`);
+
     // Handle confirmation responses first (these need immediate action)
     if (conversation.awaitingConfirmation && conversation.currentIncident) {
       if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y') {
         conversation.currentIncident.confirmed = true;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
-        return "✅ Thank you! I've recorded this incident. The report has been logged and will help keep our community safe. You're very brave for reporting this.";
+        return "✅ Thank you! I've recorded this incident. The report has been logged and will help keep our community safe. You're very brave for reporting this. Is there anything else I can help you with?";
       } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n') {
         conversation.currentIncident = undefined;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'greeting';
-        return "No problem at all. I won't record anything. Is there anything else I can help you with today?";
+        return "No problem at all. I won't record anything. I'm still here if you need me for anything else. What would you like to talk about?";
       }
     }
 
     // Get full conversation context for AI
     const conversationHistory = conversation.messages
-      .slice(-10) // Last 10 messages for context
+      .slice(-8) // Last 8 messages for context
       .map(m => `${m.role === 'user' ? 'User' : 'Jirani'}: ${m.content}`)
       .join('\n');
 
-    // Try to get AI response first
+    console.log('📝 Conversation history:', conversationHistory);
+
+    // ALWAYS use AI for responses - no fallback to generic responses
     const aiResponse = await this.generateResponseWithAI(userId, userMessage, conversationHistory);
     
-    if (aiResponse) {
-      // Check if the AI response indicates an incident should be detected
-      const detectedIncident = this.detectIncident(userMessage);
-      if (detectedIncident && !conversation.currentIncident) {
-        conversation.currentIncident = detectedIncident;
-        conversation.conversationPhase = 'collecting';
-      }
-      
-      return aiResponse;
-    }
-
-    // Fallback to rule-based responses if AI fails
+    console.log('💭 Generated response:', aiResponse);
+    
+    // Check if the message indicates an incident
     const detectedIncident = this.detectIncident(userMessage);
-    if (detectedIncident) {
+    if (detectedIncident && !conversation.currentIncident) {
+      console.log('🚨 Incident detected:', detectedIncident);
       conversation.currentIncident = detectedIncident;
       conversation.conversationPhase = 'collecting';
-      return `I'm really sorry to hear that happened to you. That must have been scary. Can you tell me when and where this occurred?`;
     }
-
-    // Simple greetings
-    if (['hi', 'hello', 'hey', 'ola', 'hola'].includes(lowerMessage.trim())) {
-      return "Hi there! I'm Jirani, your community safety assistant. How can I help you today?";
-    }
-
-    // Generic fallback
-    return "I'm here to help. What's on your mind?";
+    
+    return aiResponse;
   }
 
   public async processMessage(userId: string, message: string): Promise<{ response: string; incident?: IncidentReport }> {
