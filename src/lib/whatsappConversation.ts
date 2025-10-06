@@ -134,121 +134,87 @@ class WhatsAppConversationManager {
 
   private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
     try {
-      console.log('🤖 CALLING GEMINI AI DIRECTLY...');
+      console.log('🤖 CALLING AI (OpenAI GPT)...');
       console.log('📝 User message:', userMessage);
       console.log('📚 Context:', conversationHistory);
       
-      // Multiple API keys for fallback when quota is exceeded
-      const API_KEYS = [
-        process.env.GOOGLE_API_KEY,
-        process.env.GOOGLE_API_KEY_2,
-        'AIzaSyDtlNuLbl_FEU3edltAWf2kVRHs6_xUhg4' // Backup key
-      ].filter(Boolean) as string[]; // Remove any undefined values
+      const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
       
-      console.log('🔑 Available API keys:', API_KEYS.length);
-      
-      if (API_KEYS.length === 0) {
-        console.error('❌ NO GOOGLE API KEYS CONFIGURED!');
-        throw new Error('No Google API keys available');
+      if (!OPENAI_API_KEY) {
+        console.error('❌ OPENAI_API_KEY NOT FOUND!');
+        throw new Error('OpenAI API key not configured');
       }
 
-      const systemContext = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're having a natural conversation with a real person.
+      const systemPrompt = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're having a natural conversation with a real person.
 
 PERSONALITY:
 - Warm, friendly, conversational
 - Like talking to a caring neighbor
 - Remember everything said in this conversation
-- Natural Kenyan English
+- Natural Kenyan English (can speak Swahili too if asked)
+- NEVER give generic one-line responses
+- ALWAYS be specific and conversational
 
 CONVERSATION SO FAR:
 ${conversationHistory || 'This is the start of the conversation.'}
 
 CURRENT USER MESSAGE: "${userMessage}"
 
-Respond naturally as Jirani. Be conversational, warm, and helpful. If they ask who you are, tell them. If they greet you, greet back. If they report an incident, show empathy and gently ask for details. 
+INSTRUCTIONS:
+- Respond naturally and conversationally
+- If asked who you are: Introduce yourself warmly as Jirani
+- If asked what you do: Explain you help report safety incidents
+- If greeted: Greet back warmly and ask how you can help
+- If they speak Swahili: Respond in Swahili
+- If they report an incident: Show empathy and gently gather details
+- Keep responses 2-4 sentences, natural and human
+- NEVER say "I'm here and listening" - be MORE specific
 
-Keep responses short (2-3 sentences). Be human, not robotic.`;
+Respond now as Jirani would:`;
 
-      const requestBody = {
-        contents: [{
-          parts: [{
-            text: systemContext
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.9,
-          maxOutputTokens: 300,
-          topP: 0.95
-        }
-      };
+      console.log('🌐 Calling OpenAI API...');
       
-      console.log('📦 Request prepared');
-      
-      // Try each API key until one works
-      let lastError: Error | null = null;
-      
-      for (let i = 0; i < API_KEYS.length; i++) {
-        const apiKey = API_KEYS[i];
-        console.log(`🔑 Trying API key ${i + 1}/${API_KEYS.length}...`);
-        
-        try {
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-          
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-          });
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+          ],
+          temperature: 0.8,
+          max_tokens: 200
+        })
+      });
 
-          console.log(`📡 Response status from key ${i + 1}:`, response.status);
+      console.log('📡 Response status:', response.status);
 
-          if (response.status === 429) {
-            // Quota exceeded, try next key
-            console.log(`⚠️ Key ${i + 1} quota exceeded, trying next key...`);
-            const errorText = await response.text();
-            lastError = new Error(`API key ${i + 1} quota exceeded: ${errorText}`);
-            continue;
-          }
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ Key ${i + 1} error:`, errorText);
-            lastError = new Error(`API key ${i + 1} error: ${response.status} - ${errorText}`);
-            continue;
-          }
-
-          const data = await response.json();
-          console.log(`✅ Success with key ${i + 1}!`);
-          
-          const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          
-          if (!aiText) {
-            console.error('❌ No text in response from key', i + 1);
-            lastError = new Error(`No text in Gemini response from key ${i + 1}`);
-            continue;
-          }
-
-          console.log('💬 AI generated response:', aiText);
-          return aiText.trim();
-          
-        } catch (error) {
-          console.error(`❌ Exception with key ${i + 1}:`, error);
-          lastError = error instanceof Error ? error : new Error(String(error));
-          continue;
-        }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ OpenAI API error:', errorText);
+        throw new Error(`OpenAI API error: ${response.status}`);
       }
+
+      const data = await response.json();
+      console.log('✅ OpenAI response received');
       
-      // If we get here, all keys failed
-      console.error('❌❌❌ ALL API KEYS FAILED ❌❌❌');
-      throw lastError || new Error('All API keys failed');
+      const aiText = data.choices?.[0]?.message?.content;
+      
+      if (!aiText) {
+        console.error('❌ No text in OpenAI response');
+        throw new Error('No text in OpenAI response');
+      }
+
+      console.log('💬 AI generated response:', aiText);
+      return aiText.trim();
       
     } catch (error) {
       console.error('❌❌❌ AI CALL COMPLETELY FAILED ❌❌❌');
       console.error('Error details:', error);
-      console.error('Error message:', error instanceof Error ? error.message : String(error));
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       
       // INTELLIGENT FALLBACK - still conversational
       const lowerMessage = userMessage.toLowerCase();
@@ -267,8 +233,8 @@ Keep responses short (2-3 sentences). Be human, not robotic.`;
         return "Hey there! 👋 I'm Jirani, your community safety buddy. I'm here to listen and help. What's going on?";
       }
       
-      // Last resort fallback
-      return "I'm here and listening. 😊 Tell me what's on your mind, or ask me anything you'd like to know.";
+      // Last resort - but more specific
+      return "Hey! I'm Jirani, your safety assistant. You can ask me anything - who I am, what I do, or tell me about any safety concerns in your area. What would you like to know?";
     }
   }
 
