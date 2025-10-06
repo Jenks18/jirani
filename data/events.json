@@ -28,5 +28,20 @@
     "from": "+9876543210",
     "createdAt": "2025-10-05T18:55:46.074Z",
     "images": []
+  },
+  {
+    "id": "mgek94pv3ou2xkxhb4d",
+    "type": "Armed Theft/Robbery",
+    "severity": 3,
+    "location": "Westlands, near Aga Khan",
+    "description": "6:00 am and on the road near aga khan westland. I was walking. They got on a bike with plate 647382 hE WAS WEARING A BLACK SHIRT,A ND HE HAD AKNIFE",
+    "timestamp": "2025-10-06T03:09:13.888Z",
+    "coordinates": [
+      36.8097,
+      -1.2676
+    ],
+    "from": "+9999999999",
+    "createdAt": "2025-10-06T03:17:52.291Z",
+    "images": []
   }
 ]

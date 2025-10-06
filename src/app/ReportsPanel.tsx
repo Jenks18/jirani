@@ -7,6 +7,8 @@ import { FaChevronLeft, FaClock } from "react-icons/fa";
 interface SourceReport {
   id: string | number;
   dateTime?: string;
+  timestamp?: string;
+  createdAt?: string;
   coordinates?: { type?: string; coordinates?: [number, number] } | [number, number];
   type?: string; title?: string;
   severity?: number;
@@ -218,10 +220,10 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
           severity: typeof report.severity === 'number' ? report.severity : 3,
           location: report.location || 'Unknown location',
           description: report.summary || report.description || 'No description provided',
-          timestamp: report.dateTime || new Date().toISOString(),
+          timestamp: report.dateTime || report.timestamp || report.createdAt || new Date().toISOString(),
           coordinates: coords,
           from: report.sourceType || 'Unknown',
-          createdAt: report.dateTime || new Date().toISOString(),
+          createdAt: report.dateTime || report.createdAt || report.timestamp || new Date().toISOString(),
           images: report.images || []
         } as Event;
       });

@@ -12,11 +12,15 @@ import {
 // Conversational response generator that understands context
 function generateConversationalResponse(message: string, fromPhone: string, conversationHistory: string): string {
   const lowerMessage = message.toLowerCase();
-  const isRepeatMessage = conversationHistory.includes(message.substring(0, 20));
   
-  // Handle repeated messages differently
-  if (isRepeatMessage && lowerMessage.length > 10) {
-    return "I see you sent this message before. Is there something specific you'd like me to help you with regarding this incident?";
+  // Don't treat short messages as repeats, and be more selective about repeat detection
+  const isActualRepeat = conversationHistory.includes(`user: ${message}`) && 
+                        message.length > 15 &&
+                        conversationHistory.split(`user: ${message}`).length > 2; // appeared more than once
+  
+  // Handle actual repeated messages (but not first-time similar content)
+  if (isActualRepeat) {
+    return "I noticed you sent this same message again. Would you like me to help you with this incident report?";
   }
   
   // Emergency/urgent situations - immediate priority
@@ -28,18 +32,32 @@ function generateConversationalResponse(message: string, fromPhone: string, conv
   // Violence/crime with weapons - high priority
   if (lowerMessage.includes('knife') || lowerMessage.includes('gun') || lowerMessage.includes('weapon') || 
       lowerMessage.includes('shot') || lowerMessage.includes('stabbed') || lowerMessage.includes('attacked')) {
-    return "Oh my goodness, that sounds really scary! First - are you hurt? Do you need medical attention? I'm here to listen and help you report this when you're ready.";
+    return "Oh my goodness, that sounds terrifying! First - are you hurt? Do you need medical attention? I'm here to listen and help you report this. Can you tell me where this happened?";
   }
   
-  // Theft/robbery - empathetic and helpful
+  // Detailed incident reports - check for specific incident details
+  const hasTimeDetail = lowerMessage.includes('6:00') || lowerMessage.includes('7:00') || lowerMessage.includes('8:00') || 
+                       lowerMessage.includes('am') || lowerMessage.includes('pm') || lowerMessage.includes('morning') || 
+                       lowerMessage.includes('evening') || lowerMessage.includes('afternoon');
+  
+  const hasLocationDetail = lowerMessage.includes('westland') || lowerMessage.includes('aga khan') || 
+                           lowerMessage.includes('mall') || lowerMessage.includes('road') || 
+                           lowerMessage.includes('near') || lowerMessage.includes('at ');
+  
+  const hasIncidentDetail = lowerMessage.includes('walking') || lowerMessage.includes('bike') || 
+                           lowerMessage.includes('plate') || lowerMessage.includes('shirt') || 
+                           lowerMessage.includes('wearing') || lowerMessage.includes('took') ||
+                           lowerMessage.includes('stole') || lowerMessage.includes('got on');
+  
+  // If they're providing detailed incident information
+  if ((hasTimeDetail && hasLocationDetail) || (hasLocationDetail && hasIncidentDetail) || 
+      (lowerMessage.includes('knife') && hasLocationDetail)) {
+    return "Thank you for sharing those details with me. That sounds really frightening, and I'm so sorry this happened to you. Are you safe now? Would you like me to officially record this incident so it can be reported to the authorities? Just reply 'yes' to confirm or 'no' if you'd prefer not to.";
+  }
+  
+  // General theft/robbery/crime - empathetic response
   if (lowerMessage.includes('stole') || lowerMessage.includes('theft') || lowerMessage.includes('robbery') || 
-      lowerMessage.includes('mugged') || lowerMessage.includes('bike') && lowerMessage.includes('plate')) {
-    // Check if they're giving details about a crime
-    if (lowerMessage.includes('6:00') || lowerMessage.includes('westland') || lowerMessage.includes('aga khan') || 
-        lowerMessage.includes('black shirt') || lowerMessage.includes('plate') || lowerMessage.includes('walking')) {
-      
-      return "Thank you for sharing those details. That sounds really frightening - I'm glad you're safe now. Based on what you've told me, would you like me to officially record this incident? Just reply 'yes' if you'd like me to log this report, or 'no' if you'd prefer not to.";
-    }
+      lowerMessage.includes('mugged') || lowerMessage.includes('stolen') || lowerMessage.includes('robbed')) {
     return "I'm so sorry to hear you experienced this. That must have been really frightening. Can you tell me a bit more about what happened? When and where did this occur?";
   }
   
@@ -200,19 +218,40 @@ export async function POST(req: NextRequest) {
       
       // Check if the message contains incident details and set up for confirmation
       const lowerMessage = messageText.toLowerCase();
-      if ((lowerMessage.includes('stole') || lowerMessage.includes('theft') || lowerMessage.includes('robbery')) &&
-          (lowerMessage.includes('6:00') || lowerMessage.includes('westland') || lowerMessage.includes('aga khan') || 
-           lowerMessage.includes('black shirt') || lowerMessage.includes('plate') || lowerMessage.includes('walking'))) {
+      
+      // Enhanced incident detection
+      const hasTimeDetail = lowerMessage.includes('6:00') || lowerMessage.includes('7:00') || lowerMessage.includes('8:00') || 
+                           lowerMessage.includes('am') || lowerMessage.includes('pm') || lowerMessage.includes('morning') || 
+                           lowerMessage.includes('evening') || lowerMessage.includes('afternoon');
+      
+      const hasLocationDetail = lowerMessage.includes('westland') || lowerMessage.includes('aga khan') || 
+                               lowerMessage.includes('mall') || lowerMessage.includes('road') || 
+                               lowerMessage.includes('near') || lowerMessage.includes('at ');
+      
+      const hasIncidentDetail = lowerMessage.includes('walking') || lowerMessage.includes('bike') || 
+                               lowerMessage.includes('plate') || lowerMessage.includes('shirt') || 
+                               lowerMessage.includes('wearing') || lowerMessage.includes('took') ||
+                               lowerMessage.includes('stole') || lowerMessage.includes('got on') ||
+                               lowerMessage.includes('knife') || lowerMessage.includes('theft');
+      
+      // If message contains detailed incident information, set up pending confirmation
+      if ((hasTimeDetail && hasLocationDetail) || (hasLocationDetail && hasIncidentDetail) || 
+          (lowerMessage.includes('knife') && hasLocationDetail) || 
+          (lowerMessage.includes('stole') && lowerMessage.length > 30)) {
         
         const incidentDetails = {
-          type: 'Theft/Robbery',
-          location: lowerMessage.includes('westland') ? 'Westlands, near Aga Khan' : 'Location described in message',
+          type: lowerMessage.includes('knife') ? 'Armed Theft/Robbery' : 
+                lowerMessage.includes('theft') || lowerMessage.includes('stole') ? 'Theft/Robbery' : 
+                'Incident',
+          location: lowerMessage.includes('westland') ? 'Westlands, near Aga Khan' : 
+                   lowerMessage.includes('mall') ? 'Near shopping mall' :
+                   'Location described in message',
           description: messageText,
           timestamp: new Date().toISOString()
         };
         
         setPendingConfirmation(from, incidentDetails);
-        console.log('Set pending confirmation for incident details');
+        console.log('Set pending confirmation for detailed incident');
       }
       
       try {
