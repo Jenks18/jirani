@@ -1,4 +1,5 @@
 // ...existing code...
+import React, { useRef } from "react";
 import {
   FaTachometerAlt, FaMapMarkerAlt, FaFileAlt, FaChartBar, FaBell, FaCog, FaUserCircle,
   FaExclamationTriangle, FaMapMarkedAlt, FaComments, FaUsers, FaBars
@@ -36,8 +37,25 @@ function NavItem({ icon, text, isActive, navCollapsed }: {
 }
 
 export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed: (c: boolean) => void }) {
+  // Track whether the sidebar was collapsed when the user hovered in, so we can restore on leave
+  const wasCollapsedOnEnter = useRef<boolean>(false);
+
+  const handleMouseEnter = () => {
+    wasCollapsedOnEnter.current = collapsed;
+    if (collapsed) setCollapsed(false); // auto-expand on hover
+  };
+
+  const handleMouseLeave = () => {
+    // Only collapse back if we auto-expanded due to hover
+    if (wasCollapsedOnEnter.current) setCollapsed(true);
+  };
+
   return (
-    <aside className={`bg-white h-full flex flex-col ${collapsed ? "w-16 min-w-[64px]" : "w-64 min-w-[220px]"} shadow-lg transition-all duration-300`}>
+    <aside
+      className={`bg-white h-full flex flex-col ${collapsed ? "w-16 min-w-[64px]" : "w-64 min-w-[220px]"} shadow-lg transition-all duration-300`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} py-6 px-6`}>
         {!collapsed && <span className="font-bold text-2xl text-black">Jirani</span>}
         <button onClick={() => setCollapsed(!collapsed)} className="text-xl text-black focus:outline-none">
