@@ -1,4 +1,4 @@
-// ...existing code...
+"use client";
 import React, { useRef } from "react";
 import {
   FaTachometerAlt, FaMapMarkerAlt, FaFileAlt, FaChartBar, FaBell, FaCog, FaUserCircle,
@@ -28,7 +28,7 @@ function NavItem({ icon, text, isActive, navCollapsed }: {
   return (
     <div
       className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-all duration-200 relative
-        ${isActive ? "bg-white font-bold" : "hover:bg-gray-100"} ${navCollapsed ? "justify-center" : ""}`}
+        ${isActive ? "bg-white font-bold" : "hover:bg-[#F1F3F5]"} ${navCollapsed ? "justify-center" : ""}`}
       style={{ minHeight: "44px" }}>
       {icon && <span className={`text-xl ${isActive ? "text-black" : "text-gray-400"}`}>{icon}</span>}
       {!navCollapsed && <span className={`text-base ${isActive ? "font-bold text-black" : "text-gray-600"}`}>{text}</span>}
@@ -37,17 +37,21 @@ function NavItem({ icon, text, isActive, navCollapsed }: {
 }
 
 export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed: (c: boolean) => void }) {
-  // Track whether the sidebar was collapsed when the user hovered in, so we can restore on leave
-  const wasCollapsedOnEnter = useRef<boolean>(false);
+  // Track whether we auto-expanded due to hover, so we only auto-collapse in that case
+  const autoHoverExpandedRef = useRef(false);
 
   const handleMouseEnter = () => {
-    wasCollapsedOnEnter.current = collapsed;
-    if (collapsed) setCollapsed(false); // auto-expand on hover
+    if (collapsed) {
+      setCollapsed(false);
+      autoHoverExpandedRef.current = true;
+    }
   };
 
   const handleMouseLeave = () => {
-    // Only collapse back if we auto-expanded due to hover
-    if (wasCollapsedOnEnter.current) setCollapsed(true);
+    if (autoHoverExpandedRef.current) {
+      setCollapsed(true);
+      autoHoverExpandedRef.current = false;
+    }
   };
 
   return (
