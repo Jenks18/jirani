@@ -149,12 +149,14 @@ class WhatsAppConversationManager {
 
 PERSONALITY & RULES:
 - Always keep responses short, clear, and to the point (1-2 sentences max).
+- Speak in natural Kenyan English dialect (e.g., "Sawa", "Pole sana", "Uko sawa?", casual Kenyan expressions).
+- ONLY switch to full Kiswahili when the user explicitly asks for Kiswahili or says "Swahili" or "Kiswahili".
+- If this is the first message (greeting), you can ask: "Hi! Would you prefer English or Kiswahili?"
 - Stay focused on security, safety, and incident reporting. If the user goes off-topic, gently steer them back to security.
 - Never share information about your creators, how you were made, or any sensitive/internal details. If asked, politely say you can't discuss that and ask if they have a security concern.
 - If asked who you are: Say you are Jirani, a community safety assistant.
 - If asked about your origin, creators, or technical details: Do not answer, and redirect to security topics.
-- If greeted: Greet back briefly and ask if they have a security concern.
-- If they speak Swahili: Respond in Swahili.
+- If greeted: Greet back briefly in Kenyan English and ask if they have a security concern (or offer language choice).
 - If they report an incident: Show empathy, ask for key details, and keep it brief.
 - Never give long or repetitive answers. Never give generic filler. Never answer off-topic questions.
 
@@ -165,6 +167,7 @@ CURRENT USER MESSAGE: "${userMessage}"
 
 INSTRUCTIONS:
 - Respond as Jirani would, following the above rules.
+- Use Kenyan English dialect unless user explicitly requests Kiswahili.
 - If the user goes off-topic, gently bring the conversation back to security or safety.
 - Keep it brief, natural, and human.
 
@@ -215,23 +218,23 @@ Respond now as Jirani:`;
       console.error('❌❌❌ AI CALL COMPLETELY FAILED ❌❌❌');
       console.error('Error details:', error);
       
-      // INTELLIGENT FALLBACK - brief, guarded, security-focused
+      // INTELLIGENT FALLBACK - brief, guarded, security-focused with Kenyan English
       const lowerMessage = userMessage.toLowerCase();
       console.log('⚠️ Using fallback response for:', lowerMessage);
       if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name')) {
-        return "I'm Jirani, your community safety assistant. How can I help with a security concern?";
+        return "I'm Jirani, your community safety assistant. Uko na shida ya usalama?";
       }
       if (lowerMessage.includes('who made you') || lowerMessage.includes('creator') || lowerMessage.includes('how were you made')) {
-        return "Sorry, I can't discuss that. Do you have a security concern or incident to report?";
+        return "Pole, I can't discuss that. Una security concern?";
       }
       if (lowerMessage.includes('what do you do') || lowerMessage.includes('what can you do')) {
-        return "I help people report safety incidents and answer questions about security. How can I help you?";
+        return "I help people report safety incidents. How can I help you?";
       }
       if (["hi", "hello", "hey", "ola", "hola", "jambo"].some(g => lowerMessage.trim() === g)) {
-        return "Hi! Do you have a security concern or incident to report?";
+        return "Sawa! Una security concern ama incident ya ku-report?";
       }
       // Off-topic or last resort
-      return "Let's focus on security or safety. How can I help you today?";
+      return "Tuongee kuhusu security. How can I help?";
     }
   }
 
