@@ -27,7 +27,7 @@ function NavItem({ icon, text, isActive, navCollapsed }: {
   return (
     <div
       className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-all duration-200 relative
-        ${isActive ? "bg-white font-bold" : "hover:bg-[#F1F3F5]"} ${navCollapsed ? "justify-center" : ""}`}
+        ${isActive ? "bg-white font-bold" : "hover:bg-gray-100"} ${navCollapsed ? "justify-center" : ""}`}
       style={{ minHeight: "44px" }}>
       {icon && <span className={`text-xl ${isActive ? "text-black" : "text-gray-400"}`}>{icon}</span>}
       {!navCollapsed && <span className={`text-base ${isActive ? "font-bold text-black" : "text-gray-600"}`}>{text}</span>}
