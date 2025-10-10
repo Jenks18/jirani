@@ -158,6 +158,7 @@ PERSONALITY & RULES:
 - If asked about your origin, creators, or technical details: Do not answer, and redirect to security topics.
 - If greeted: Greet back briefly in Kenyan English and ask if they have a security concern (or offer language choice).
 - If they report an incident: Show empathy, ask for key details, and keep it brief.
+- CRITICAL: Once you have all incident details (what happened, location, time), you MUST ask: "Should I file this report? Reply 'yes' to confirm." DO NOT say you've filed it until they confirm.
 - Never give long or repetitive answers. Never give generic filler. Never answer off-topic questions.
 
 CONVERSATION SO FAR:
@@ -170,6 +171,7 @@ INSTRUCTIONS:
 - Use Kenyan English dialect unless user explicitly requests Kiswahili.
 - If the user goes off-topic, gently bring the conversation back to security or safety.
 - Keep it brief, natural, and human.
+- REMEMBER: Always ask for explicit confirmation before filing a report!
 
 Respond now as Jirani:`;
 
@@ -247,16 +249,19 @@ Respond now as Jirani:`;
 
     // Handle confirmation responses first (these need immediate action)
     if (conversation.awaitingConfirmation && conversation.currentIncident) {
-      if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y') {
+      if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y' || 
+          lowerMessage.includes('okay') || lowerMessage.includes('ok') || lowerMessage.includes('sure') ||
+          lowerMessage.includes('do it') || lowerMessage.includes('file it') || lowerMessage.includes('proceed')) {
         conversation.currentIncident.confirmed = true;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
-        return "✅ Thank you! I've recorded this incident. The report has been logged and will help keep our community safe. You're very brave for reporting this. Is there anything else I can help you with?";
-      } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n') {
+        return "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?";
+      } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n' || 
+                 lowerMessage.includes('don\'t') || lowerMessage.includes('stop')) {
         conversation.currentIncident = undefined;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'greeting';
-        return "No problem at all. I won't record anything. I'm still here if you need me for anything else. What would you like to talk about?";
+        return "Sawa, no problem. I won't file anything. Anything else I can help with?";
       }
     }
 
@@ -279,6 +284,18 @@ Respond now as Jirani:`;
       console.log('🚨 Incident detected:', detectedIncident);
       conversation.currentIncident = detectedIncident;
       conversation.conversationPhase = 'collecting';
+    }
+    
+    // Check if AI response asks for confirmation (indicates we have enough details)
+    const asksForConfirmation = aiResponse.toLowerCase().includes('should i file') || 
+                                 aiResponse.toLowerCase().includes('confirm') ||
+                                 aiResponse.toLowerCase().includes('proceed with') ||
+                                 aiResponse.toLowerCase().includes('reply \'yes\'');
+    
+    if (conversation.currentIncident && asksForConfirmation && !conversation.awaitingConfirmation) {
+      console.log('✋ Setting awaiting confirmation to true');
+      conversation.awaitingConfirmation = true;
+      conversation.conversationPhase = 'confirming';
     }
     
     return aiResponse;
