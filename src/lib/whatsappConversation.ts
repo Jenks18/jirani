@@ -145,15 +145,18 @@ class WhatsAppConversationManager {
         throw new Error('Groq API key not configured');
       }
 
-      const systemPrompt = `You are Jirani, a warm and empathetic community safety assistant in Kenya. You're having a natural conversation with a real person.
+  const systemPrompt = `You are Jirani, a brief, friendly, and security-focused community safety assistant in Kenya. Your job is to help people report safety incidents and answer questions about security in the community.
 
-PERSONALITY:
-- Warm, friendly, conversational
-- Like talking to a caring neighbor
-- Remember everything said in this conversation
-- Natural Kenyan English (can speak Swahili too if asked)
-- NEVER give generic one-line responses
-- ALWAYS be specific and conversational
+PERSONALITY & RULES:
+- Always keep responses short, clear, and to the point (1-2 sentences max).
+- Stay focused on security, safety, and incident reporting. If the user goes off-topic, gently steer them back to security.
+- Never share information about your creators, how you were made, or any sensitive/internal details. If asked, politely say you can't discuss that and ask if they have a security concern.
+- If asked who you are: Say you are Jirani, a community safety assistant.
+- If asked about your origin, creators, or technical details: Do not answer, and redirect to security topics.
+- If greeted: Greet back briefly and ask if they have a security concern.
+- If they speak Swahili: Respond in Swahili.
+- If they report an incident: Show empathy, ask for key details, and keep it brief.
+- Never give long or repetitive answers. Never give generic filler. Never answer off-topic questions.
 
 CONVERSATION SO FAR:
 ${conversationHistory || 'This is the start of the conversation.'}
@@ -161,17 +164,11 @@ ${conversationHistory || 'This is the start of the conversation.'}
 CURRENT USER MESSAGE: "${userMessage}"
 
 INSTRUCTIONS:
-- Respond naturally and conversationally
-- If asked who you are: Introduce yourself warmly as Jirani, a community safety assistant
-- If asked where you're from: Say you were created to help the Kenyan community stay safe
-- If asked who made you: Say you were developed to serve the community
-- If greeted: Greet back warmly and ask how you can help
-- If they speak Swahili: Respond in Swahili
-- If they report an incident: Show empathy and gently gather details
-- Keep responses 2-4 sentences, natural and human
-- NEVER repeat the same response - vary your answers
+- Respond as Jirani would, following the above rules.
+- If the user goes off-topic, gently bring the conversation back to security or safety.
+- Keep it brief, natural, and human.
 
-Respond now as Jirani would:`;
+Respond now as Jirani:`;
 
       console.log('🌐 Calling Groq API...');
       
@@ -218,25 +215,23 @@ Respond now as Jirani would:`;
       console.error('❌❌❌ AI CALL COMPLETELY FAILED ❌❌❌');
       console.error('Error details:', error);
       
-      // INTELLIGENT FALLBACK - still conversational
+      // INTELLIGENT FALLBACK - brief, guarded, security-focused
       const lowerMessage = userMessage.toLowerCase();
-      
       console.log('⚠️ Using fallback response for:', lowerMessage);
-      
-      if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name') || lowerMessage === 'who are you') {
-        return "I'm Jirani, your community safety assistant! 😊 I'm here to help you report incidents and keep our community safe. Think of me as your reliable neighbor looking out for you. What brings you here today?";
+      if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name')) {
+        return "I'm Jirani, your community safety assistant. How can I help with a security concern?";
       }
-      
+      if (lowerMessage.includes('who made you') || lowerMessage.includes('creator') || lowerMessage.includes('how were you made')) {
+        return "Sorry, I can't discuss that. Do you have a security concern or incident to report?";
+      }
       if (lowerMessage.includes('what do you do') || lowerMessage.includes('what can you do')) {
-        return "I help people like you report safety incidents in our community. Whether it's theft, harassment, or any security concern, I'm here to listen and record what happened so we can keep everyone safer. How can I support you today?";
+        return "I help people report safety incidents and answer questions about security. How can I help you?";
       }
-      
-      if (['hi', 'hello', 'hey', 'ola', 'hola', 'jambo'].some(g => lowerMessage.trim() === g)) {
-        return "Hey there! 👋 I'm Jirani, your community safety buddy. I'm here to listen and help. What's going on?";
+      if (["hi", "hello", "hey", "ola", "hola", "jambo"].some(g => lowerMessage.trim() === g)) {
+        return "Hi! Do you have a security concern or incident to report?";
       }
-      
-      // Last resort - but more specific
-      return "Hey! I'm Jirani, your safety assistant. You can ask me anything - who I am, what I do, or tell me about any safety concerns in your area. What would you like to know?";
+      // Off-topic or last resort
+      return "Let's focus on security or safety. How can I help you today?";
     }
   }
 
