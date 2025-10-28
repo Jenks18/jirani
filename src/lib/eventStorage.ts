@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { supabase } from './supabaseClient';
+import { supabase, supabaseEnabled } from './supabaseClient';
 import type { Database } from './database.types';
 
 // Simple in-memory storage for events (will be replaced with database)
@@ -188,6 +188,13 @@ export async function storeEvent(event: EventData, from: string, images?: string
 }
 
 export async function getEvents(): Promise<StoredEvent[]> {
+  // If Supabase is not configured, immediately use file fallback to avoid noisy errors.
+  if (!supabaseEnabled || !supabase) {
+    console.warn('Supabase not enabled - returning file-stored events');
+    await initializeEvents();
+    return events;
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any).from('events').select('*').order('event_timestamp', { ascending: false }).limit(500);
