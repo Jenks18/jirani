@@ -16,28 +16,28 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-md shadow-lg border-b border-[--color-kenya-green-600]/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-[--color-kenya-green-600] via-[--color-kenya-red-600] to-[--color-kenya-black] rounded-lg"></div>
-              <span className="text-2xl font-bold text-[--color-kenya-black]">Majira Ni Wetu</span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-[--color-kenya-green-600] via-[--color-kenya-red-600] to-white rounded-lg shadow-lg"></div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-white via-[--color-kenya-green-400] to-[--color-kenya-red-400] bg-clip-text text-transparent">Majira Ni Wetu</span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="#features" className="text-gray-700 hover:text-[--color-kenya-green-700] transition">
+              <Link href="#features" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">
                 Features
               </Link>
-              <Link href="#about" className="text-gray-700 hover:text-[--color-kenya-green-700] transition">
+              <Link href="#about" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">
                 About
               </Link>
-              <Link href="#contact" className="text-gray-700 hover:text-[--color-kenya-green-700] transition">
+              <Link href="#contact" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">
                 Contact
               </Link>
               <Link
                 href="/maps"
-                className="bg-gradient-to-r from-[--color-kenya-green-600] to-[--color-kenya-green-500] text-white px-6 py-2 rounded-lg hover:from-[--color-kenya-green-700] hover:to-[--color-kenya-green-600] transition-all shadow-md"
+                className="bg-gradient-to-r from-[--color-kenya-green-600] to-[--color-kenya-green-500] text-white px-6 py-2 rounded-lg hover:from-[--color-kenya-green-700] hover:to-[--color-kenya-green-600] transition-all shadow-lg hover:shadow-[--shadow-kenya-green]"
               >
                 Open Map
               </Link>
@@ -49,28 +49,28 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Animated background orbs - Kenya colors */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-30">
-          <div className="absolute top-1/4 left-1/6 w-64 h-64 bg-[--color-kenya-green-200] rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/6 w-96 h-96 bg-[--color-kenya-red-200] rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[--color-kenya-green-100] rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 -left-20 w-96 h-96 bg-[--color-kenya-green-600] opacity-20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-[--color-kenya-red-600] opacity-20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-white opacity-5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto text-center z-10">
-          <div className="inline-block mb-4 px-6 py-2 bg-gradient-to-r from-[--color-kenya-green-50] to-[--color-kenya-red-50] border border-[--color-kenya-green-200] rounded-full">
-            <span className="text-[--color-kenya-green-800] font-semibold">🇰🇪 Empowering Kenyan Communities</span>
+          <div className="inline-block mb-4 px-6 py-2 bg-gradient-to-r from-[--color-kenya-green-600]/20 to-[--color-kenya-red-600]/20 border border-[--color-kenya-green-500]/50 rounded-full backdrop-blur-sm">
+            <span className="text-[--color-kenya-green-400] font-semibold">🇰🇪 Empowering Kenyan Communities</span>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 mb-6 leading-tight">
-            Your Neighborhood,
+          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
+            <span className="text-white">Your Neighborhood,</span>
             <br />
-            <span className="bg-gradient-to-r from-[--color-kenya-green-600] via-[--color-kenya-green-500] to-[--color-kenya-red-600] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[--color-kenya-green-400] via-[--color-kenya-green-500] to-[--color-kenya-red-500] bg-clip-text text-transparent">
               Safer Together
             </span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
             AI-powered community safety platform enabling real-time incident reporting and tracking through WhatsApp. 
-            <strong className="text-[--color-kenya-green-700]"> No app download required.</strong>
+            <strong className="text-[--color-kenya-green-400]"> No app download required.</strong>
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -96,21 +96,21 @@ export default function LandingPage() {
           </div>
 
           {/* Trust indicators */}
-          <div className="mt-16 flex flex-wrap justify-center gap-8 items-center text-sm text-gray-600">
+          <div className="mt-16 flex flex-wrap justify-center gap-8 items-center text-sm text-gray-400">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[--color-kenya-green-600]" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-[--color-kenya-green-500]" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span>100% Free</span>
             </div>
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[--color-kenya-green-600]" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-[--color-kenya-green-500]" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
               </svg>
               <span>Privacy First</span>
             </div>
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[--color-kenya-green-600]" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-[--color-kenya-green-500]" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
               </svg>
               <span>WhatsApp Only</span>
@@ -120,18 +120,21 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-[--color-kenya-green-50]/30">
+      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black via-gray-900 to-black relative">
+        {/* Decorative gradient line */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[--color-kenya-green-500] to-transparent opacity-50"></div>
+        
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">How Jirani Works</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">How Jirani Works</h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
               Simple, fast, and accessible to every Kenyan with a phone
             </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="group relative bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-[--shadow-kenya-green] hover:-translate-y-1 transition-all">
+            <div className="group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-8 border border-[--color-kenya-green-600]/30 hover:border-[--color-kenya-green-500] transition-all hover:shadow-[--shadow-kenya-green] hover:-translate-y-1">
               <div className="absolute -top-6 left-8">
                 <div className="bg-gradient-to-br from-green-500 to-green-600 w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,15 +143,15 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="mt-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Report via WhatsApp</h3>
-                <p className="text-gray-600 leading-relaxed">
+                <h3 className="text-2xl font-bold text-white mb-3">Report via WhatsApp</h3>
+                <p className="text-gray-400 leading-relaxed">
                   Simply message Jirani on WhatsApp to report incidents in your area. No app download, no registration - just send a message.
                 </p>
               </div>
             </div>
 
             {/* Feature 2 */}
-            <div className="group relative bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-[--shadow-kenya-red] hover:-translate-y-1 transition-all">
+            <div className="group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-8 border border-[--color-kenya-red-600]/30 hover:border-[--color-kenya-red-500] transition-all hover:shadow-[--shadow-kenya-red] hover:-translate-y-1">
               <div className="absolute -top-6 left-8">
                 <div className="bg-gradient-to-br from-[--color-kenya-red-500] to-[--color-kenya-red-600] w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,15 +160,15 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="mt-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">AI Processing</h3>
-                <p className="text-gray-600 leading-relaxed">
+                <h3 className="text-2xl font-bold text-white mb-3">AI Processing</h3>
+                <p className="text-gray-400 leading-relaxed">
                   Our AI automatically understands your report, categorizes the incident, and extracts location information - all in seconds.
                 </p>
               </div>
             </div>
 
             {/* Feature 3 */}
-            <div className="group relative bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-[--shadow-kenya-green] hover:-translate-y-1 transition-all">
+            <div className="group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-8 border border-[--color-kenya-green-600]/30 hover:border-[--color-kenya-green-500] transition-all hover:shadow-[--shadow-kenya-green] hover:-translate-y-1">
               <div className="absolute -top-6 left-8">
                 <div className="bg-gradient-to-br from-[--color-kenya-green-600] to-[--color-kenya-green-700] w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -174,8 +177,8 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="mt-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Real-time Mapping</h3>
-                <p className="text-gray-600 leading-relaxed">
+                <h3 className="text-2xl font-bold text-white mb-3">Real-time Mapping</h3>
+                <p className="text-gray-400 leading-relaxed">
                   View all community incidents on an interactive map in real-time. Stay informed about what&apos;s happening around you.
                 </p>
               </div>
@@ -185,62 +188,66 @@ export default function LandingPage() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
+      <section id="about" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 via-black to-gray-900 relative">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[--color-kenya-red-600] opacity-10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[--color-kenya-green-600] opacity-10 rounded-full blur-3xl"></div>
+        
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <div className="inline-block px-4 py-2 bg-[--color-kenya-green-100] border border-[--color-kenya-green-300] rounded-full mb-6">
-                <span className="text-[--color-kenya-green-800] font-semibold">🇰🇪 Made for Kenya</span>
+              <div className="inline-block px-4 py-2 bg-[--color-kenya-green-600]/20 border border-[--color-kenya-green-500]/50 rounded-full mb-6 backdrop-blur-sm">
+                <span className="text-[--color-kenya-green-400] font-semibold">🇰🇪 Made for Kenya</span>
               </div>
               
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
                 Majira Ni Wetu: Our Neighborhood
               </h2>
               
-              <p className="text-lg text-gray-600 mb-4 leading-relaxed">
+              <p className="text-lg text-gray-300 mb-4 leading-relaxed">
                 We are on a mission to ensure that all Kenyan communities are safe and protected through accessible technology.
               </p>
               
-              <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-                <strong className="text-[--color-kenya-green-700]">Majira Ni Wetu</strong> (Our Neighborhood) provides a WhatsApp-based safety platform. 
-                Our intelligent assistant, <strong className="text-[--color-kenya-red-600]">Jirani</strong>, enables citizens to report incidents, 
+              <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+                <strong className="text-[--color-kenya-green-400]">Majira Ni Wetu</strong> (Our Neighborhood) provides a WhatsApp-based safety platform. 
+                Our intelligent assistant, <strong className="text-[--color-kenya-red-400]">Jirani</strong>, enables citizens to report incidents, 
                 track local safety issues, and stay connected—all from their phones.
               </p>
               
               <div className="space-y-4 mb-8">
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[--color-kenya-green-100] flex items-center justify-center flex-shrink-0 mt-1">
-                    <svg className="w-4 h-4 text-[--color-kenya-green-700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-6 h-6 rounded-full bg-[--color-kenya-green-600]/30 flex items-center justify-center flex-shrink-0 mt-1">
+                    <svg className="w-4 h-4 text-[--color-kenya-green-400]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900">Free & Accessible</h4>
-                    <p className="text-gray-600">No cost, no barriers - available to every Kenyan</p>
+                    <h4 className="font-bold text-white">Free & Accessible</h4>
+                    <p className="text-gray-400">No cost, no barriers - available to every Kenyan</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[--color-kenya-green-100] flex items-center justify-center flex-shrink-0 mt-1">
-                    <svg className="w-4 h-4 text-[--color-kenya-green-700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-6 h-6 rounded-full bg-[--color-kenya-green-600]/30 flex items-center justify-center flex-shrink-0 mt-1">
+                    <svg className="w-4 h-4 text-[--color-kenya-green-400]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900">Privacy-First Design</h4>
-                    <p className="text-gray-600">GDPR compliant with end-to-end encryption</p>
+                    <h4 className="font-bold text-white">Privacy-First Design</h4>
+                    <p className="text-gray-400">GDPR compliant with end-to-end encryption</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[--color-kenya-green-100] flex items-center justify-center flex-shrink-0 mt-1">
-                    <svg className="w-4 h-4 text-[--color-kenya-green-700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-6 h-6 rounded-full bg-[--color-kenya-green-600]/30 flex items-center justify-center flex-shrink-0 mt-1">
+                    <svg className="w-4 h-4 text-[--color-kenya-green-400]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900">AI-Powered Intelligence</h4>
-                    <p className="text-gray-600">Smart categorization and instant responses</p>
+                    <h4 className="font-bold text-white">AI-Powered Intelligence</h4>
+                    <p className="text-gray-400">Smart categorization and instant responses</p>
                   </div>
                 </div>
               </div>
@@ -248,10 +255,10 @@ export default function LandingPage() {
             
             {/* CTA Card */}
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-[--color-kenya-green-600] to-[--color-kenya-green-700] rounded-3xl blur-xl opacity-20"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-[--color-kenya-green-600] to-[--color-kenya-green-700] rounded-3xl blur-xl opacity-30"></div>
               <div className="relative bg-gradient-to-br from-[--color-kenya-green-600] to-[--color-kenya-green-700] rounded-3xl p-10 text-white shadow-2xl">
                 <h3 className="text-3xl font-bold mb-4">Start Using Jirani Today</h3>
-                <p className="text-[--color-kenya-green-50] mb-8 text-lg leading-relaxed">
+                <p className="text-green-50 mb-8 text-lg leading-relaxed">
                   Join thousands of Kenyans keeping their neighborhoods safe. No sign-up required - just send a message.
                 </p>
                 <a
@@ -263,7 +270,7 @@ export default function LandingPage() {
                 
                 {/* Decorative flag colors */}
                 <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-[--color-kenya-red-600] rounded-full opacity-20 blur-2xl"></div>
-                <div className="absolute -top-4 -left-4 w-24 h-24 bg-[--color-kenya-black] rounded-full opacity-10 blur-xl"></div>
+                <div className="absolute -top-4 -left-4 w-24 h-24 bg-black rounded-full opacity-20 blur-xl"></div>
               </div>
             </div>
           </div>
@@ -311,7 +318,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-[--color-kenya-black] text-gray-300 py-16 px-4 sm:px-6 lg:px-8">
+      <footer id="contact" className="bg-black text-gray-300 py-16 px-4 sm:px-6 lg:px-8 border-t border-[--color-kenya-green-600]/20">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             {/* Brand */}
