@@ -9,6 +9,14 @@
 
 **Majira Ni Wetu** (Our Neighborhood) is the organization behind Jirani. We're on a mission to ensure that all Kenyan communities are safe and protected through accessible technology.
 
+## Domain Structure
+
+This project uses subdomain routing:
+- **majiraniwetu.org** → Landing page (root `/`)
+- **maps.majiraniwetu.org** → Map application (served from `/maps` route)
+
+Both domains point to the same Vercel deployment, with middleware handling the routing.
+
 ## Features
 
 - 📍 **Real-time Incident Mapping** - Interactive Mapbox-powered map displaying community reports

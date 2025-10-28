@@ -35,12 +35,12 @@ export default function LandingPage() {
               <Link href="#contact" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">
                 Contact
               </Link>
-              <Link
-                href="/maps"
+              <a
+                href="https://maps.majiraniwetu.org"
                 className="bg-gradient-to-r from-[--color-kenya-green-600] to-[--color-kenya-green-500] text-white px-6 py-2 rounded-lg hover:from-[--color-kenya-green-700] hover:to-[--color-kenya-green-600] transition-all shadow-lg hover:shadow-[--shadow-kenya-green]"
               >
                 Open Map
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -87,12 +87,12 @@ export default function LandingPage() {
               </svg>
             </a>
             
-            <Link
-              href="/maps"
+            <a
+              href="https://maps.majiraniwetu.org"
               className="bg-white text-[--color-kenya-green-700] border-2 border-[--color-kenya-green-600] px-8 py-4 rounded-xl text-lg font-bold hover:bg-[--color-kenya-green-50] transition-all shadow-md"
             >
               View Live Map →
-            </Link>
+            </a>
           </div>
 
           {/* Trust indicators */}
@@ -338,9 +338,9 @@ export default function LandingPage() {
               <h4 className="text-white font-semibold mb-4">Product</h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <Link href="/maps" className="text-gray-400 hover:text-[--color-kenya-green-400] transition">
+                  <a href="https://maps.majiraniwetu.org" className="text-gray-400 hover:text-[--color-kenya-green-400] transition">
                     Live Map
-                  </Link>
+                  </a>
                 </li>
                 <li>
                   <Link href="#features" className="text-gray-400 hover:text-[--color-kenya-green-400] transition">
