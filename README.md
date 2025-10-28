@@ -1,4 +1,23 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jirani
+
+**Jirani** is a community safety and incident reporting platform that enables citizens to report and track local incidents in real-time through WhatsApp integration and an interactive map interface.
+
+## Features
+
+- 📍 **Real-time Incident Mapping** - Interactive Mapbox-powered map displaying community reports
+- 💬 **WhatsApp Integration** - Report incidents directly through WhatsApp messaging
+- 🤖 **AI-Powered Processing** - Intelligent report categorization and location extraction using LLM
+- 📊 **Event Tracking** - Comprehensive incident management and tracking system
+- 🔒 **Privacy-First** - GDPR-compliant data handling and user privacy protection
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, React, TypeScript, Mapbox GL JS
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **AI/LLM**: Groq, Google Gemini, OpenAI
+- **Messaging**: WhatsApp Cloud API
+- **Deployment**: Vercel
 
 ## Privacy Policy
 
@@ -8,35 +27,86 @@ The privacy policy is available at:
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ and npm
+- Supabase account
+- WhatsApp Business API access
+- Mapbox account
+- LLM API key (Groq/Gemini/OpenAI)
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/Jenks18/jirani.git
+cd jirani
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.local.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Then edit `.env.local` with your API keys and credentials.
 
-## Learn More
+4. Run the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Configuration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See `API_SETUP.md` and `WHATSAPP_SETUP.md` for detailed setup instructions for:
+- WhatsApp Cloud API configuration
+- LLM provider setup
+- Supabase database schema
+- Mapbox integration
 
-## Deploy on Vercel
+## API Routes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `/api/webhook` - WhatsApp webhook endpoint
+- `/api/whatsapp` - WhatsApp message handling
+- `/api/process-llm` - LLM processing endpoint
+- `/api/reports` - Report management
+- `/api/events` - Event data retrieval
+- `/api/store-report` - Report storage
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Database Schema
+
+The application uses Supabase with the following main tables:
+- `reports` - User-submitted incident reports
+- `events` - Processed and categorized incidents
+- `messages` - WhatsApp conversation history
+
+See `supabase/migrations/` for the complete schema.
+
+## Deployment
+
+The application is deployed on Vercel. To deploy your own instance:
+
+```bash
+vercel deploy
+```
+
+Make sure to configure all environment variables in your Vercel project settings.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License.
+
+## Contact
+
+For questions or support, please open an issue on GitHub.
+
