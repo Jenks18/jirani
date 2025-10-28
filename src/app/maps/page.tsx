@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import Sidebar from "./Sidebar";
-import ReportsPanel from "./ReportsPanel";
-import MapComponent from "./MapComponent";
+import Sidebar from "../Sidebar";
+import ReportsPanel from "../ReportsPanel";
+import MapComponent from "../MapComponent";
 
 export default function HomePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
