@@ -25,13 +25,16 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-gradient-to-br from-[--color-kenya-green-600] via-[--color-kenya-red-600] to-white rounded-lg shadow-lg"></div>
               <span className="text-2xl font-bold bg-gradient-to-r from-white via-[--color-kenya-green-400] to-[--color-kenya-red-400] bg-clip-text text-transparent">Majira Ni Wetu</span>
             </div>
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center space-x-6">
               <a
                 href="https://maps.majiraniwetu.org"
                 className="bg-gradient-to-r from-[--color-kenya-green-600] to-[--color-kenya-green-500] text-white px-6 py-2 rounded-lg hover:from-[--color-kenya-green-700] hover:to-[--color-kenya-green-600] transition-all shadow-lg hover:shadow-[--shadow-kenya-green]"
               >
                 Open Map
               </a>
+              <a href="/site/about" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">About</a>
+              <a href="/site/team" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">Team</a>
+              <a href="/site/contact" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">Contact</a>
             </div>
           </div>
         </div>

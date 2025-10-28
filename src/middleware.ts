@@ -57,7 +57,8 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public files (images, fonts, etc.)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*))',
+    // Match all paths except API, next/static, next/image, favicon and files with extensions
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 };
 

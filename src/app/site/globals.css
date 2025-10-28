@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import url("https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css");
+
+:root {
+  --color-kenya-black: #1a1a1a;
+  --color-kenya-red-600: #bb0000;
+  --color-kenya-green-600: #006600;
+}
+
+body { background: linear-gradient(180deg,#0b0b0b 0%,#070707 100%); color: #ededed; font-family: Arial, Helvetica, sans-serif; }
