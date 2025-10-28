@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "^/maps$",
+      "has": [ { "type": "host", "value": "majiraniwetu.org" } ],
+      "status": 308,
+      "dest": "https://maps.majiraniwetu.org"
+    },
+    {
+      "src": "^/maps/(.*)$",
+      "has": [ { "type": "host", "value": "majiraniwetu.org" } ],
+      "status": 308,
+      "dest": "https://maps.majiraniwetu.org/$1"
+    },
+    {
+      "src": "^/(.*)$",
+      "has": [ { "type": "host", "value": "maps.majiraniwetu.org" } ],
+      "dest": "/maps/$1"
+    },
+    {
+      "src": "^/(.*)$",
+      "has": [ { "type": "host", "value": "majiraniwetu.org" } ],
+      "dest": "/site/$1"
+    }
+  ]
+}
