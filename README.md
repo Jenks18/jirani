@@ -15,7 +15,7 @@ This project uses subdomain routing:
 - **majiraniwetu.org** → Landing page only
 - **maps.majiraniwetu.org** → Map application only
 
-Accessing `majiraniwetu.org/maps` will redirect to `maps.majiraniwetu.org`.
+The `/maps` route is NOT accessible on the main domain. Only the subdomain `maps.majiraniwetu.org` serves the map application.
 Both domains point to the same Vercel deployment, with middleware handling the routing.
 
 ## Features

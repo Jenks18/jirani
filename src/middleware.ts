@@ -18,17 +18,17 @@ export function middleware(request: NextRequest) {
   
   console.log('📍 Is Maps Subdomain:', isMapsSubdomain);
   
-  // If accessing from maps subdomain, rewrite to /maps route
+  // ONLY allow maps subdomain - block /maps route on main domain completely
   if (isMapsSubdomain) {
-    console.log('✅ Rewriting to /maps route');
+    console.log('✅ Maps subdomain detected - Rewriting to /maps route');
     // Rewrite to /maps route but keep the URL as maps.majiraniwetu.org
     return NextResponse.rewrite(new URL('/maps', request.url));
   }
   
-  // If accessing /maps on main domain, redirect to maps subdomain
-  if (!isMapsSubdomain && pathname.startsWith('/maps')) {
-    console.log('🔄 Redirecting to maps subdomain');
-    return NextResponse.redirect(new URL('https://maps.majiraniwetu.org', request.url));
+  // Block any direct access to /maps on main domain - return 404
+  if (pathname.startsWith('/maps')) {
+    console.log('� Blocking direct /maps access on main domain');
+    return new NextResponse(null, { status: 404 });
   }
   
   console.log('➡️ Passing through to next()');
