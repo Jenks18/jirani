@@ -12,9 +12,10 @@
 ## Domain Structure
 
 This project uses subdomain routing:
-- **majiraniwetu.org** → Landing page (root `/`)
-- **maps.majiraniwetu.org** → Map application (served from `/maps` route)
+- **majiraniwetu.org** → Landing page only
+- **maps.majiraniwetu.org** → Map application only
 
+Accessing `majiraniwetu.org/maps` will redirect to `maps.majiraniwetu.org`.
 Both domains point to the same Vercel deployment, with middleware handling the routing.
 
 ## Features

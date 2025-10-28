@@ -16,6 +16,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
   
+  // If accessing /maps on main domain, redirect to maps subdomain
+  if (!isMapsSubdomain && url.pathname.startsWith('/maps')) {
+    const mapsUrl = new URL(url);
+    mapsUrl.hostname = hostname.replace(/^(www\.)?/, 'maps.');
+    mapsUrl.pathname = '/';
+    return NextResponse.redirect(mapsUrl);
+  }
+  
   return NextResponse.next();
 }
 
