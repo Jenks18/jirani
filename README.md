@@ -2,7 +2,12 @@
 
 **Jirani** is a community safety and incident reporting platform that enables citizens to report and track local incidents in real-time through WhatsApp integration and an interactive map interface.
 
-🌐 **Live Application**: [maps.majiraniwetu.org](https://maps.majiraniwetu.org)
+🌐 **Website**: [majiraniwetu.org](https://majiraniwetu.org)  
+🗺️ **Live Map**: [maps.majiraniwetu.org](https://maps.majiraniwetu.org)
+
+## About Majira Ni Wetu 🇰🇪
+
+**Majira Ni Wetu** (Our Neighborhood) is the organization behind Jirani. We're on a mission to ensure that all Kenyan communities are safe and protected through accessible technology.
 
 ## Features
 
@@ -20,12 +25,14 @@
 - **AI/LLM**: Groq, Google Gemini, OpenAI
 - **Messaging**: WhatsApp Cloud API
 - **Deployment**: Vercel
-- **Domain**: maps.majiraniwetu.org
+- **Domain Structure**: 
+  - `majiraniwetu.org` - Main landing page
+  - `maps.majiraniwetu.org` - Interactive map application
 
 ## Privacy Policy
 
 The privacy policy is available at:
-- Production: [https://maps.majiraniwetu.org/privacy-policy.pdf](https://maps.majiraniwetu.org/privacy-policy.pdf)
+- Production: [https://majiraniwetu.org/privacy-policy.pdf](https://majiraniwetu.org/privacy-policy.pdf)
 
 ## Getting Started
 

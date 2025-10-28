@@ -1,16 +1,39 @@
 @import "tailwindcss";
 @import url("https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css");
 
+/* Kenya Flag-Inspired Color Theme 🇰🇪 */
+@theme inline {
+  /* Custom Kenya-inspired color palette */
+  --color-kenya-black: #1a1a1a;
+  --color-kenya-red-50: #fee2e2;
+  --color-kenya-red-100: #fecaca;
+  --color-kenya-red-200: #fca5a5;
+  --color-kenya-red-300: #f87171;
+  --color-kenya-red-400: #ef4444;
+  --color-kenya-red-500: #dc143c;
+  --color-kenya-red-600: #bb0000;
+  --color-kenya-red-700: #991b1b;
+  --color-kenya-red-800: #7f1d1d;
+  --color-kenya-red-900: #550000;
+  
+  --color-kenya-green-50: #f0fdf0;
+  --color-kenya-green-100: #dcfce7;
+  --color-kenya-green-200: #bbf7d0;
+  --color-kenya-green-300: #86efac;
+  --color-kenya-green-400: #4ade80;
+  --color-kenya-green-500: #22c55e;
+  --color-kenya-green-600: #006600;
+  --color-kenya-green-700: #005500;
+  --color-kenya-green-800: #004400;
+  --color-kenya-green-900: #003300;
+  
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
