@@ -2,6 +2,8 @@
 
 **Jirani** is a community safety and incident reporting platform that enables citizens to report and track local incidents in real-time through WhatsApp integration and an interactive map interface.
 
+🌐 **Live Application**: [maps.majiraniwetu.org](https://maps.majiraniwetu.org)
+
 ## Features
 
 - 📍 **Real-time Incident Mapping** - Interactive Mapbox-powered map displaying community reports
@@ -18,12 +20,12 @@
 - **AI/LLM**: Groq, Google Gemini, OpenAI
 - **Messaging**: WhatsApp Cloud API
 - **Deployment**: Vercel
+- **Domain**: maps.majiraniwetu.org
 
 ## Privacy Policy
 
 The privacy policy is available at:
-- Production: [https://jirani-opal.vercel.app/privacy-policy.pdf](https://jirani-opal.vercel.app/privacy-policy.pdf)
-- Once you have a custom domain: `https://azigy.com/privacy-policy.pdf`
+- Production: [https://maps.majiraniwetu.org/privacy-policy.pdf](https://maps.majiraniwetu.org/privacy-policy.pdf)
 
 ## Getting Started
 
