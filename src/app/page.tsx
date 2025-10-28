@@ -176,7 +176,7 @@ export default function LandingPage() {
               <div className="mt-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">Real-time Mapping</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  View all community incidents on an interactive map in real-time. Stay informed about what's happening around you.
+                  View all community incidents on an interactive map in real-time. Stay informed about what&apos;s happening around you.
                 </p>
               </div>
             </div>
