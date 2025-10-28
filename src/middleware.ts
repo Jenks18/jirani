@@ -2,36 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host') || '';
-  const { pathname } = request.nextUrl;
-  
-  // Debug logging
-  console.log('🔍 Middleware Debug:', {
-    hostname,
-    pathname,
-    url: request.url
-  });
-  
-  // Check if it's the maps subdomain
-  const isMapsSubdomain = hostname.startsWith('maps.') || 
-                          hostname === 'maps.majiraniwetu.org';
-  
-  console.log('📍 Is Maps Subdomain:', isMapsSubdomain);
-  
-  // ONLY allow maps subdomain - block /maps route on main domain completely
-  if (isMapsSubdomain) {
-    console.log('✅ Maps subdomain detected - Rewriting to /maps route');
-    // Rewrite to /maps route but keep the URL as maps.majiraniwetu.org
-    return NextResponse.rewrite(new URL('/maps', request.url));
-  }
-  
-  // Block any direct access to /maps on main domain - return 404
-  if (pathname.startsWith('/maps')) {
-    console.log('� Blocking direct /maps access on main domain');
-    return new NextResponse(null, { status: 404 });
-  }
-  
-  console.log('➡️ Passing through to next()');
+  // The maps application has been removed from the main repository.
+  // Map functionality is provided by a separate deployment at
+  // https://maps.majiraniwetu.org. The main site should not
+  // perform any special routing for maps.
   return NextResponse.next();
 }
 
