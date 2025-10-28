@@ -1,58 +1,30 @@
-# Jirani - Community Safety Platform
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A real-time community safety and incident reporting platform built with Next.js, Mapbox GL JS, and Supabase.
+## Privacy Policy
 
-## Features
-
-- 📍 Live incident mapping and tracking
-- 📱 Real-time report submissions
-- 🗺️ Interactive map interface
-- 📊 Data visualization (coming soon)
-- 👥 Community engagement tools (coming soon)
+The privacy policy is available at:
+- Production: [https://jirani-opal.vercel.app/privacy-policy.pdf](https://jirani-opal.vercel.app/privacy-policy.pdf)
+- Once you have a custom domain: `https://azigy.com/privacy-policy.pdf`
 
 ## Getting Started
 
-### Prerequisites
+First, run the development server:
 
-1. Node.js 18+ installed
-2. A Supabase account and project
-3. A Mapbox account and API token
-
-### Environment Setup
-
-1. Copy `.env.local.example` to `.env.local`:
-```bash
-cp .env.local.example .env.local
-```
-
-2. Fill in your environment variables:
-- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon/public key
-- `NEXT_PUBLIC_MAPBOX_TOKEN`: Your Mapbox access token
-
-### Development
-
-1. Install dependencies:
-```bash
-npm install
-```
-
-2. Run the development server:
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) to view the app
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Deployment
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-1. Create a new project on [Vercel](https://vercel.com)
-2. Connect your GitHub repository
-3. Add the following environment variables in Vercel:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_MAPBOX_TOKEN`
-4. Deploy!
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
 
