@@ -1,0 +1,57 @@
+name: Smoke tests — routing
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check site routing
+        run: |
+          set -euo pipefail
+          timeout=15
+
+          # helper to perform a request with retries
+          retry() {
+            local tries=0
+            local max=3
+            local delay=2
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              tries=$((tries+1))
+              if [ "$tries" -ge "$max" ]; then
+                return 1
+              fi
+              sleep "$delay"
+            done
+          }
+
+          echo "Checking https://majiraniwetu.org ..."
+          retry bash -c 'status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$timeout" -H "Cache-Control: no-cache" https://majiraniwetu.org) && [ "$status" = "200" ]'
+
+          echo "Checking https://majiraniwetu.org/maps ..."
+          resp=$(curl -sS -I --max-time "$timeout" -H "Cache-Control: no-cache" -o - https://majiraniwetu.org/maps)
+          echo "$resp"
+          status=$(echo "$resp" | awk 'NR==1{print $2}')
+          location=$(echo "$resp" | awk -F': ' '/^Location:/ {print $2}' | tr -d '\r\n' || true)
+          if [[ "$status" != "301" && "$status" != "302" && "$status" != "308" ]]; then
+            echo "/maps did not return a redirect status; got: $status"
+            exit 1
+          fi
+          if [[ -z "$location" || "$location" != https://maps.majiraniwetu.org* ]]; then
+            echo "Unexpected Location header for /maps: $location"
+            exit 1
+          fi
+
+          echo "Checking https://maps.majiraniwetu.org ..."
+          retry bash -c 'status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$timeout" -H "Cache-Control: no-cache" https://maps.majiraniwetu.org) && [ "$status" = "200" ]'
+
+          echo "Smoke tests passed."
