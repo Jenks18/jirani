@@ -18,7 +18,7 @@ export default function ContactPage() {
 
           <ul className="space-y-3 text-sm text-gray-300">
             <li><strong>Email:</strong> <a href="mailto:hello@majiraniwetu.org" className="text-[--color-kenya-green-300]">hello@majiraniwetu.org</a></li>
-            <li><strong>WhatsApp:</strong> <a href="https://api.whatsapp.com/send?phone=YOUR_WHATSAPP_NUMBER" className="text-[--color-kenya-green-300]">Chat with Jirani</a></li>
+            <li><strong>WhatsApp:</strong> <a href="https://api.whatsapp.com/send?phone=254783045226" className="text-[--color-kenya-green-300]">+254 783 045226</a></li>
             <li><strong>Privacy:</strong> <a href="/privacy-policy.pdf" className="text-[--color-kenya-green-300]">Privacy Policy (PDF)</a></li>
           </ul>
         </section>

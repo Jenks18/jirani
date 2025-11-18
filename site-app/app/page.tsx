@@ -59,7 +59,7 @@ export default function LandingPage() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <a
-              href={`https://api.whatsapp.com/send?phone=YOUR_WHATSAPP_NUMBER&text=Hello%20Jirani`}
+              href={`https://api.whatsapp.com/send?phone=254783045226&text=Hello%20Jirani`}
               className="group bg-gradient-to-r from-green-600 to-green-500 text-white px-8 py-4 rounded-xl text-lg font-bold hover:from-green-700 hover:to-green-600 transition-all shadow-lg hover:shadow-[--shadow-kenya-green] inline-flex items-center justify-center gap-3"
             >
               <span>Chat with Jirani</span>
