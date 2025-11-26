@@ -4,6 +4,13 @@ import { extractCoordinates } from '../../../lib/locationUtils';
 import conversationManager from '../../../lib/whatsappConversation';
 import twilio from 'twilio';
 
+/*
+  This file intentionally uses some dynamic typing to handle both Twilio
+  (form-encoded) and Meta (JSON) webhook payloads. Disable the explicit any
+  rule here so we can parse unknown shapes without failing the build.
+*/
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // Twilio WhatsApp webhook handler
 export async function GET(req: NextRequest) {
   // Twilio doesn't use GET for verification
