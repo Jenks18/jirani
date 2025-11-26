@@ -21,25 +21,20 @@ export async function POST(req: NextRequest) {
   try {
     console.log('=== Twilio WhatsApp Webhook POST Request ===');
     
-    // Validate required environment variables
-    const requiredEnvVars = {
-      TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-      TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
-      TWILIO_WHATSAPP_NUMBER: process.env.TWILIO_WHATSAPP_NUMBER,
-    };
-    
-    for (const [key, value] of Object.entries(requiredEnvVars)) {
-      if (!value) {
-        console.error(`Missing required environment variable: ${key}`);
-        return NextResponse.json({ error: `${key} not configured` }, { status: 500 });
-      }
+    // Twilio configuration is optional — if messages are not sent from this deployment,
+    // we still want the webhook to process and store incidents. So only create the client
+    // if environment variables are present.
+    const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+    const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+    const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER;
+    const TWILIO_MESSAGING_SERVICE_SID = process.env.TWILIO_MESSAGING_SERVICE_SID;
+    const twilioConfigured = Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && (TWILIO_WHATSAPP_NUMBER || TWILIO_MESSAGING_SERVICE_SID));
+    let client: any = null;
+    if (twilioConfigured) {
+      client = twilio(TWILIO_ACCOUNT_SID!, TWILIO_AUTH_TOKEN!);
+    } else {
+      console.warn('Twilio not configured; webhook will process messages but not respond via Twilio.');
     }
-    
-    // Initialize Twilio client
-    const client = twilio(
-      process.env.TWILIO_ACCOUNT_SID!,
-      process.env.TWILIO_AUTH_TOKEN!
-    );
     
     // Try to parse incoming payload as JSON (Meta/Cloud API)
     let incoming: any = null;
@@ -140,10 +135,13 @@ export async function POST(req: NextRequest) {
         sendParams.from = process.env.TWILIO_WHATSAPP_NUMBER!;
       }
 
-      await client.messages.create(sendParams);
+      if (client) {
+        await client.messages.create(sendParams);
+        console.log('Twilio WhatsApp message sent successfully');
+      } else {
+        console.log('Skipping Twilio send because client is not configured');
+      }
 
-      console.log('Twilio WhatsApp message sent successfully');
-      
       // Return empty 200 response (Twilio requirement)
       return new NextResponse('', { status: 200 });
 
