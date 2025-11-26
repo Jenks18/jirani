@@ -168,13 +168,15 @@ export async function POST(req: NextRequest) {
           return new NextResponse('', { status: 200 });
         } catch (err) {
           lastErr = err;
-          console.warn(`Twilio send attempt ${attempt} failed:`, err?.message || err);
+          const errMsg = (err && typeof err === 'object' && 'message' in err) ? (err as any).message : String(err);
+          console.warn(`Twilio send attempt ${attempt} failed:`, errMsg);
           // small delay before retrying
           await new Promise(res => setTimeout(res, 300 * attempt));
         }
       }
 
-      console.error('Twilio API request failed after retries:', lastErr);
+      const lastErrMsg = (lastErr && typeof lastErr === 'object' && 'message' in lastErr) ? (lastErr as any).message : String(lastErr);
+      console.error('Twilio API request failed after retries:', lastErrMsg);
       // Still return 200 to acknowledge receipt to Twilio
       return new NextResponse('', { status: 200 });
 
