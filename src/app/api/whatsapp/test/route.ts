@@ -50,7 +50,22 @@ export async function POST(req: NextRequest) {
       }
 
       const client = twilio(TWILIO_ACCOUNT_SID!, TWILIO_AUTH_TOKEN!);
-      const sendParams: Record<string, unknown> = { body: result.response };
+
+      // Define a narrow type for the Twilio send params we use
+      type TwilioSendParams = {
+        body: string;
+        to: string;
+        messagingServiceSid?: string;
+        from?: string;
+      };
+
+      let toNumber = to;
+      if (!toNumber.startsWith('whatsapp:')) toNumber = `whatsapp:${toNumber}`;
+
+      const sendParams: TwilioSendParams = {
+        body: String(result.response || ''),
+        to: toNumber,
+      };
 
       if (TWILIO_MESSAGING_SERVICE_SID) {
         sendParams.messagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
@@ -58,13 +73,9 @@ export async function POST(req: NextRequest) {
         sendParams.from = TWILIO_WHATSAPP_NUMBER;
       }
 
-      let toNumber = to;
-      if (!toNumber.startsWith('whatsapp:')) toNumber = `whatsapp:${toNumber}`;
-      sendParams.to = toNumber;
-
       try {
-        const sent = await client.messages.create(sendParams as any);
-        const sid = sent && typeof sent === 'object' && 'sid' in sent ? (sent as any).sid : undefined;
+        const sent = await client.messages.create(sendParams as unknown as any);
+        const sid = sent && typeof sent === 'object' && 'sid' in sent ? (sent as { sid?: string }).sid : undefined;
         payload.twilio = { sent: true, sid };
       } catch (err) {
         const errMsg = getErrorMessage(err);
