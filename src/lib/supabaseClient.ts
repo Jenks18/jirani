@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -7,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 // Export a null client and a flag so callers can decide to fallback to file storage immediately.
 export const supabaseEnabled = Boolean(supabaseUrl && supabaseAnonKey);
 
-export const supabase = supabaseEnabled
+export const supabase: SupabaseClient | null = supabaseEnabled
 	? createClient(supabaseUrl as string, supabaseAnonKey as string)
 	: null;
 
@@ -45,28 +46,21 @@ export async function ensureSupabaseAvailable(): Promise<boolean> {
 	}
 
 	try {
-		// Light probe: attempt to select a single id from events.
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		// Light probe: attempt to select a single id from 'events'. If 'events' doesn't exist,
-		// try to probe for 'reports' (legacy schema). This allows deploying against older
-		// databases that still have the previous table.
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		let result: any;
+		// Try probing the `events` table first. If it succeeds (no error), select it.
 		try {
-			result = await (supabase as any).from('events').select('id').limit(1);
+			const probe = await supabase!.from('events').select('id').limit(1);
+			if (!probe?.error) {
+				supabaseAvailable = true;
+				supabaseTable = 'events';
+				return true;
+			}
 		} catch (e) {
-			result = { error: e };
-		}
-		if (!result?.error) {
-			supabaseAvailable = true;
-			supabaseTable = 'events';
-			return true;
+			// ignore and try legacy `reports` table
 		}
 
-		// If 'events' probe failed with PGRST205 (missing table), try 'reports'.
+		// If 'events' probe failed, try 'reports' (legacy schema).
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const reportsProbe = await (supabase as any).from('reports').select('id').limit(1);
+			const reportsProbe = await supabase!.from('reports').select('id').limit(1);
 			if (!reportsProbe?.error) {
 				supabaseAvailable = true;
 				supabaseTable = 'reports';
@@ -76,7 +70,8 @@ export async function ensureSupabaseAvailable(): Promise<boolean> {
 		} catch (e) {
 			// ignore
 		}
-		throw result?.error || new Error('supabase events probe failed');
+
+		throw new Error('supabase events probe failed');
 	} catch (err) {
 		// Likely missing table or permissions; disable supabase until next backoff.
 		supabaseAvailable = false;
