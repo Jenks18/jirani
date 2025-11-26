@@ -76,8 +76,11 @@ export async function ensureSupabaseAvailable(): Promise<boolean> {
 		// Likely missing table or permissions; disable supabase until next backoff.
 		supabaseAvailable = false;
 		supabaseDisabledAt = Date.now();
-		// eslint-disable-next-line no-console
-		console.warn('Supabase probe failed (events table inaccessible) - disabling Supabase integration temporarily. Error:', err?.message || err);
+				// eslint-disable-next-line no-console
+				console.warn(
+					'Supabase probe failed (events table inaccessible) - disabling Supabase integration temporarily. Error:',
+					(err as any)?.message ?? String(err)
+				);
 		return false;
 	}
 }
