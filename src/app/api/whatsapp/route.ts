@@ -26,12 +26,21 @@ export async function POST(req: NextRequest) {
     // if environment variables are present.
     const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
     const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-    const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER;
+    let TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER;
     const TWILIO_MESSAGING_SERVICE_SID = process.env.TWILIO_MESSAGING_SERVICE_SID;
+
+    // Normalize WhatsApp 'from' number if present: Twilio expects the 'from' to be
+    // in the form 'whatsapp:+<E.164 number>'. If the env var is just a number,
+    // prefix it.
+    if (TWILIO_WHATSAPP_NUMBER && !TWILIO_WHATSAPP_NUMBER.startsWith('whatsapp:')) {
+      TWILIO_WHATSAPP_NUMBER = `whatsapp:${TWILIO_WHATSAPP_NUMBER}`;
+    }
+
     const twilioConfigured = Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && (TWILIO_WHATSAPP_NUMBER || TWILIO_MESSAGING_SERVICE_SID));
     let client: any = null;
     if (twilioConfigured) {
       client = twilio(TWILIO_ACCOUNT_SID!, TWILIO_AUTH_TOKEN!);
+      console.log('Twilio client instantiated');
     } else {
       console.warn('Twilio not configured; webhook will process messages but not respond via Twilio.');
     }
@@ -129,25 +138,48 @@ export async function POST(req: NextRequest) {
       };
 
       // Prefer Messaging Service SID if configured (recommended)
-      if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
-        sendParams.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-      } else {
-        sendParams.from = process.env.TWILIO_WHATSAPP_NUMBER!;
+      if (TWILIO_MESSAGING_SERVICE_SID) {
+        sendParams.messagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
+        console.log('Using Twilio Messaging Service SID for sender');
+      } else if (TWILIO_WHATSAPP_NUMBER) {
+        sendParams.from = TWILIO_WHATSAPP_NUMBER;
+        console.log('Using Twilio WhatsApp from number for sender');
       }
 
-      if (client) {
-        await client.messages.create(sendParams);
-        console.log('Twilio WhatsApp message sent successfully');
-      } else {
+      if (!client) {
         console.log('Skipping Twilio send because client is not configured');
+        return new NextResponse('', { status: 200 });
       }
 
-      // Return empty 200 response (Twilio requirement)
+      // Ensure 'to' is normalized for WhatsApp (Twilio sends 'From' like 'whatsapp:+123')
+      let toNumber = from;
+      if (toNumber && !toNumber.startsWith('whatsapp:')) {
+        toNumber = `whatsapp:${toNumber}`;
+        sendParams.to = toNumber;
+      }
+
+      // Attempt send with a small retry for transient errors
+      let lastErr: any = null;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await client.messages.create(sendParams);
+          console.log('Twilio WhatsApp message sent successfully on attempt', attempt);
+          // Return empty 200 response (Twilio requirement)
+          return new NextResponse('', { status: 200 });
+        } catch (err) {
+          lastErr = err;
+          console.warn(`Twilio send attempt ${attempt} failed:`, err?.message || err);
+          // small delay before retrying
+          await new Promise(res => setTimeout(res, 300 * attempt));
+        }
+      }
+
+      console.error('Twilio API request failed after retries:', lastErr);
+      // Still return 200 to acknowledge receipt to Twilio
       return new NextResponse('', { status: 200 });
 
     } catch (error) {
-      console.error('Twilio API request failed:', error);
-      // Still return 200 to acknowledge receipt
+      console.error('Twilio send unexpected error:', error);
       return new NextResponse('', { status: 200 });
     }
 
