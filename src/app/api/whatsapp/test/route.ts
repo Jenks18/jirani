@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import conversationManager from '../../../../src/lib/whatsappConversation';
+import conversationManager from '../../../../lib/whatsappConversation';
 import twilio from 'twilio';
 
 /*
