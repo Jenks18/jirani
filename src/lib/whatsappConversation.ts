@@ -166,43 +166,61 @@ class WhatsAppConversationManager {
   }
 
   private async detectIncident(message: string): Promise<IncidentReport | null> {
-    const lowerMessage = message.toLowerCase();
-    
-    // Crime-related keywords with broader context
-    const crimeKeywords = ['stole', 'stolen', 'robbed', 'robbery', 'theft', 'mugged', 'attacked', 'knife', 'gun', 'weapon', 'threatened', 'assault', 'mugging'];
-    const hasCrimeKeyword = crimeKeywords.some(keyword => lowerMessage.includes(keyword));
-    
-    // Also check for phrases that indicate something bad happened
-    const incidentPhrases = ['somebody robbed', 'someone stole', 'got robbed', 'was robbed', 'they took', 'he took', 'she took'];
-    const hasIncidentPhrase = incidentPhrases.some(phrase => lowerMessage.includes(phrase));
-    
-    if (!hasCrimeKeyword && !hasIncidentPhrase && !lowerMessage.includes('incident')) {
+    // SIMPLIFIED: Let the AI tell us if this is an incident
+    try {
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
+      if (!GROQ_API_KEY) return null;
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'groq/compound',
+          messages: [{
+            role: 'system',
+            content: `Analyze if this message describes a safety incident (crime, threat, harassment, etc). 
+Reply with JSON only:
+{"isIncident": true/false, "type": "Theft/Robbery/Assault/Harassment/etc", "description": "brief anonymous summary", "location": "specific location or null", "severity": 1-5}
+
+If NOT an incident, reply: {"isIncident": false}`
+          }, {
+            role: 'user',
+            content: message
+          }],
+          temperature: 0.3
+        })
+      });
+
+      const data = await response.json();
+      const aiText = data.choices?.[0]?.message?.content?.trim();
+      
+      if (!aiText) return null;
+      
+      // Parse AI response
+      const parsed = JSON.parse(aiText);
+      
+      if (!parsed.isIncident) {
+        console.log('❌ AI says not an incident');
+        return null;
+      }
+
+      console.log('✅ AI detected incident:', parsed);
+
+      return {
+        type: parsed.type || 'General Incident',
+        description: parsed.description || message,
+        location: parsed.location || undefined,
+        timestamp: new Date().toISOString(),
+        severity: parsed.severity || 3,
+        confirmed: false
+      };
+    } catch (error) {
+      console.error('❌ AI incident detection failed:', error);
       return null;
     }
-
-    // Determine incident type with better context
-    let type = 'General Incident';
-    if (lowerMessage.match(/knife|gun|weapon|armed|pistol|blade/)) {
-      type = 'Armed Robbery';
-    } else if (lowerMessage.match(/stole|theft|robbed|robbery|took my|grabbed my|snatched/)) {
-      type = 'Theft/Robbery';
-    } else if (lowerMessage.match(/mugged|attacked|assault|beat|hit me|pushed me/)) {
-      type = 'Assault';
-    } else if (lowerMessage.match(/threatened|intimidat|scared|following me/)) {
-      type = 'Threat/Harassment';
-    }
-
-    // Use AI to extract location more intelligently
-    const specificLocation = await this.extractLocationWithAI(message);
-
-    return {
-      type,
-      description: message,
-      location: specificLocation,
-      timestamp: new Date().toISOString(),
-      severity: type.includes('Armed') ? 5 : type.includes('Assault') ? 4 : 3,
-      confirmed: false
-    };
   }
 
   private async extractLocationWithAI(message: string): Promise<string | undefined> {
@@ -435,23 +453,15 @@ Respond now as Jirani:`;
     
     console.log('💭 Generated response:', aiResponse);
     
-    // Check if the message indicates an incident
+    // Check if the message indicates an incident (AI does all the work now!)
     const detectedIncident = await this.detectIncident(userMessage);
     if (detectedIncident && !conversation.currentIncident) {
-      console.log('🚨 Incident detected:', detectedIncident);
+      console.log('🚨 Incident detected by AI:', JSON.stringify(detectedIncident));
       conversation.currentIncident = detectedIncident;
       conversation.conversationPhase = 'collecting';
-      await this.saveToSupabase(conversation); // Persist incident detection
-    }
-    
-    // If we have an active incident, continuously update location from new messages
-    if (conversation.currentIncident && conversation.conversationPhase === 'collecting') {
-      const locationFromMessage = await this.extractLocationWithAI(userMessage);
-      if (locationFromMessage && locationFromMessage !== 'NONE') {
-        console.log(`📍 Updating incident location: "${locationFromMessage}"`);
-        conversation.currentIncident.location = locationFromMessage;
-        await this.saveToSupabase(conversation); // Persist location update
-      }
+      console.log('💾 Saving incident to Supabase...');
+      await this.saveToSupabase(conversation);
+      console.log('✅ Incident saved to Supabase');
     }
     
     // Check if AI response asks for confirmation (indicates we have enough details)
