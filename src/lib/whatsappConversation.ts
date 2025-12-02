@@ -1,4 +1,6 @@
-// Robust WhatsApp Conversation Management System
+// Robust WhatsApp Conversation Management System with Supabase persistence
+import { supabase } from './supabaseClient';
+
 interface Message {
   id: string;
   timestamp: Date;
@@ -26,20 +28,68 @@ interface ConversationState {
 
 class WhatsAppConversationManager {
   private conversations = new Map<string, ConversationState>();
-  private readonly MAX_MESSAGES = 50; // Increased for better memory
-  private readonly CONVERSATION_TIMEOUT = 60 * 60 * 1000; // 60 minutes - longer sessions
+  private readonly MAX_MESSAGES = 50;
+  private readonly CONVERSATION_TIMEOUT = 60 * 60 * 1000;
 
   constructor() {
-    // Clean up old conversations every 5 minutes
-    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    // Note: setInterval doesn't work reliably in serverless, rely on per-request cleanup
   }
 
-  private cleanup(): void {
-    const now = new Date();
-    for (const [userId, conversation] of this.conversations.entries()) {
-      if (now.getTime() - conversation.lastActivity.getTime() > this.CONVERSATION_TIMEOUT) {
-        this.conversations.delete(userId);
+  private async loadFromSupabase(userId: string): Promise<ConversationState | null> {
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') { // Not found
+          return null;
+        }
+        console.error('❌ Error loading conversation from Supabase:', error);
+        return null;
       }
+
+      if (!data) return null;
+
+      // Parse the stored data
+      return {
+        userId: data.user_id,
+        messages: data.messages || [],
+        currentIncident: data.current_incident,
+        awaitingConfirmation: data.awaiting_confirmation || false,
+        conversationPhase: data.conversation_phase || 'greeting',
+        lastActivity: new Date(data.last_activity)
+      };
+    } catch (error) {
+      console.error('❌ Exception loading conversation:', error);
+      return null;
+    }
+  }
+
+  private async saveToSupabase(conversation: ConversationState): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .upsert({
+          user_id: conversation.userId,
+          messages: conversation.messages,
+          current_incident: conversation.currentIncident,
+          awaiting_confirmation: conversation.awaitingConfirmation,
+          conversation_phase: conversation.conversationPhase,
+          last_activity: conversation.lastActivity.toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('❌ Error saving conversation to Supabase:', error);
+      } else {
+        console.log('💾 Conversation saved to Supabase for', conversation.userId);
+      }
+    } catch (error) {
+      console.error('❌ Exception saving conversation:', error);
     }
   }
 
@@ -47,24 +97,46 @@ class WhatsAppConversationManager {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }
 
-  private getConversation(userId: string): ConversationState {
-    if (!this.conversations.has(userId)) {
-      this.conversations.set(userId, {
-        userId,
-        messages: [],
-        awaitingConfirmation: false,
-        conversationPhase: 'greeting',
-        lastActivity: new Date()
-      });
+  private async getConversation(userId: string): Promise<ConversationState> {
+    // Check memory cache first
+    if (this.conversations.has(userId)) {
+      const conversation = this.conversations.get(userId)!;
+      conversation.lastActivity = new Date();
+      return conversation;
     }
+
+    // Try to load from Supabase
+    console.log('🔍 Loading conversation from Supabase for', userId);
+    const stored = await this.loadFromSupabase(userId);
     
-    const conversation = this.conversations.get(userId)!;
-    conversation.lastActivity = new Date();
-    return conversation;
+    if (stored) {
+      console.log('✅ Found existing conversation:', {
+        phase: stored.conversationPhase,
+        hasIncident: !!stored.currentIncident,
+        awaitingConfirmation: stored.awaitingConfirmation,
+        messageCount: stored.messages.length
+      });
+      this.conversations.set(userId, stored);
+      stored.lastActivity = new Date();
+      return stored;
+    }
+
+    // Create new conversation
+    console.log('🆕 Creating new conversation for', userId);
+    const newConversation: ConversationState = {
+      userId,
+      messages: [],
+      awaitingConfirmation: false,
+      conversationPhase: 'greeting',
+      lastActivity: new Date()
+    };
+    
+    this.conversations.set(userId, newConversation);
+    return newConversation;
   }
 
-  private addMessage(userId: string, role: 'user' | 'assistant', content: string): void {
-    const conversation = this.getConversation(userId);
+  private async addMessage(userId: string, role: 'user' | 'assistant', content: string): Promise<void> {
+    const conversation = await this.getConversation(userId);
     const message: Message = {
       id: this.generateMessageId(),
       timestamp: new Date(),
@@ -74,10 +146,13 @@ class WhatsAppConversationManager {
 
     conversation.messages.push(message);
 
-    // Keep only the last MAX_MESSAGES messages
+    // Keep conversation window manageable
     if (conversation.messages.length > this.MAX_MESSAGES) {
       conversation.messages = conversation.messages.slice(-this.MAX_MESSAGES);
     }
+    
+    // Save to Supabase
+    await this.saveToSupabase(conversation);
   }
 
   private async detectIncident(message: string): Promise<IncidentReport | null> {
@@ -302,7 +377,7 @@ Respond now as Jirani:`;
   }
 
   private async generateResponse(userId: string, userMessage: string): Promise<string> {
-    const conversation = this.getConversation(userId);
+    const conversation = await this.getConversation(userId);
     const lowerMessage = userMessage.toLowerCase();
 
     console.log(`📱 Processing message from ${userId}: "${userMessage}"`);
@@ -325,12 +400,14 @@ Respond now as Jirani:`;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
         console.log('🎯 Current incident AFTER confirm:', JSON.stringify(conversation.currentIncident));
+        await this.saveToSupabase(conversation); // Persist the confirmation
         return "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?";
       } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n' || 
                  lowerMessage.includes('don\'t') || lowerMessage.includes('stop')) {
         conversation.currentIncident = undefined;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'greeting';
+        await this.saveToSupabase(conversation); // Persist the cancellation
         return "Sawa, no problem. I won't file anything. Anything else I can help with?";
       }
     }
@@ -354,6 +431,7 @@ Respond now as Jirani:`;
       console.log('🚨 Incident detected:', detectedIncident);
       conversation.currentIncident = detectedIncident;
       conversation.conversationPhase = 'collecting';
+      await this.saveToSupabase(conversation); // Persist incident detection
     }
     
     // If we have an active incident, continuously update location from new messages
@@ -362,35 +440,39 @@ Respond now as Jirani:`;
       if (locationFromMessage && locationFromMessage !== 'NONE') {
         console.log(`📍 Updating incident location: "${locationFromMessage}"`);
         conversation.currentIncident.location = locationFromMessage;
+        await this.saveToSupabase(conversation); // Persist location update
       }
     }
     
     // Check if AI response asks for confirmation (indicates we have enough details)
-    const asksForConfirmation = aiResponse.toLowerCase().includes('should i file') || 
-                                 aiResponse.toLowerCase().includes('confirm') ||
-                                 aiResponse.toLowerCase().includes('proceed with') ||
-                                 aiResponse.toLowerCase().includes('reply \'yes\'');
+    const lowerAI = aiResponse.toLowerCase();
+    const asksForConfirmation = lowerAI.includes('should i file') || 
+                                 lowerAI.includes('confirm') ||
+                                 lowerAI.includes('proceed with') ||
+                                 lowerAI.includes('reply') && (lowerAI.includes('yes') || lowerAI.includes('"yes"') || lowerAI.includes("'yes'")) ||
+                                 lowerAI.includes('pole sana');
     
     if (conversation.currentIncident && asksForConfirmation && !conversation.awaitingConfirmation) {
       console.log('✋ Setting awaiting confirmation to true');
       conversation.awaitingConfirmation = true;
       conversation.conversationPhase = 'confirming';
+      await this.saveToSupabase(conversation); // Persist awaiting confirmation state
     }
     
     return aiResponse;
   }
 
   public async processMessage(userId: string, message: string): Promise<{ response: string; incident?: IncidentReport }> {
-    const conversation = this.getConversation(userId);
+    const conversation = await this.getConversation(userId);
     
     // Add user message
-    this.addMessage(userId, 'user', message);
+    await this.addMessage(userId, 'user', message);
     
     // Generate response
     const response = await this.generateResponse(userId, message);
     
     // Add assistant response
-    this.addMessage(userId, 'assistant', response);
+    await this.addMessage(userId, 'assistant', response);
     
     // SIMPLE: If incident is confirmed, return it
     const shouldReturnIncident = conversation.currentIncident?.confirmed === true;
@@ -407,15 +489,24 @@ Respond now as Jirani:`;
     };
   }
 
-  public getConversationHistory(userId: string): string {
-    const conversation = this.getConversation(userId);
+  public async getConversationHistory(userId: string): Promise<string> {
+    const conversation = await this.getConversation(userId);
     return conversation.messages
       .map(msg => `${msg.role}: ${msg.content}`)
       .join('\n');
   }
 
-  public clearConversation(userId: string): void {
+  public async clearConversation(userId: string): Promise<void> {
     this.conversations.delete(userId);
+    // Also delete from Supabase
+    try {
+      await supabase
+        .from('conversations')
+        .delete()
+        .eq('user_id', userId);
+    } catch (error) {
+      console.error('Error clearing conversation from Supabase:', error);
+    }
   }
 }
 
