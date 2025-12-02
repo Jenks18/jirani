@@ -57,7 +57,8 @@ export async function GET() {
   return NextResponse.json({ 
     status: 'ok', 
     provider: 'Twilio WhatsApp',
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
+    version: '1.0.1'
   });
 }
 
