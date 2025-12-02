@@ -25,6 +25,7 @@ interface ConversationState {
   awaitingConfirmation: boolean;
   conversationPhase: 'greeting' | 'collecting' | 'confirming' | 'completed';
   lastActivity: Date;
+  lastStoredAt?: Date; // Timestamp of last stored incident to prevent re-detection
 }
 
 class WhatsAppConversationManager {
@@ -66,7 +67,8 @@ class WhatsAppConversationManager {
         currentIncident: data.current_incident,
         awaitingConfirmation: data.awaiting_confirmation || false,
         conversationPhase: data.conversation_phase || 'greeting',
-        lastActivity: new Date(data.last_activity)
+        lastActivity: new Date(data.last_activity),
+        lastStoredAt: data.last_stored_at ? new Date(data.last_stored_at) : undefined
       };
     } catch (error) {
       console.error('❌ Exception loading conversation:', error);
@@ -100,7 +102,8 @@ class WhatsAppConversationManager {
           current_incident: conversation.currentIncident,
           awaiting_confirmation: conversation.awaitingConfirmation,
           conversation_phase: conversation.conversationPhase,
-          last_activity: conversation.lastActivity.toISOString()
+          last_activity: conversation.lastActivity.toISOString(),
+          last_stored_at: conversation.lastStoredAt?.toISOString()
         }, {
           onConflict: 'user_id'
         })
@@ -506,8 +509,11 @@ Respond now as Jirani:`;
     console.log('💭 Generated response:', aiResponse);
     
     // Check if the message indicates an incident (Groq Compound AI detection)
-    // If there's already a confirmed incident, ignore it and detect new one
-    const shouldDetectNewIncident = !conversation.currentIncident || conversation.currentIncident.confirmed === true;
+    // Prevent re-detection if incident was stored in last 60 seconds
+    const recentlyStored = conversation.lastStoredAt && 
+                           (Date.now() - conversation.lastStoredAt.getTime()) < 60000;
+    
+    const shouldDetectNewIncident = !conversation.currentIncident && !recentlyStored;
     
     if (shouldDetectNewIncident) {
       const detectedIncident = await this.detectIncident(userMessage);
@@ -596,8 +602,9 @@ Respond now as Jirani:`;
     conversation.currentIncident = undefined;
     conversation.awaitingConfirmation = false;
     conversation.conversationPhase = 'greeting';
+    conversation.lastStoredAt = new Date(); // Prevent re-detection for 60 seconds
     await this.saveToSupabase(conversation);
-    console.log('✅ Cleared incident from conversation (ready for new reports)');
+    console.log('✅ Cleared incident from conversation (ready for new reports in 60s)');
   }
 
   public async clearConversation(userId: string): Promise<void> {
