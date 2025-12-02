@@ -221,9 +221,14 @@ export async function POST(req: NextRequest) {
     let result;
     try {
       result = await conversationManager.processMessage(from, message);
-      logInfo('AI response generated', { 
+      logInfo('📨 AI RESPONSE GENERATED', { 
         responseLength: result.response.length,
-        hasIncident: !!result.incident 
+        hasIncident: !!result.incident,
+        incidentDetails: result.incident ? {
+          type: result.incident.type,
+          location: result.incident.location,
+          confirmed: result.incident.confirmed
+        } : null
       });
     } catch (aiError) {
       logError('AI processing failed', aiError);
@@ -233,6 +238,8 @@ export async function POST(req: NextRequest) {
         incident: undefined
       };
     }
+    
+    logInfo('🔍 CHECKING IF INCIDENT EXISTS', { hasIncident: !!result.incident });
     
     // Store any confirmed incident (SIMPLIFIED - matching working version from 312c19e7)
     if (result.incident) {
