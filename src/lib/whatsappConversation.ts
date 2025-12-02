@@ -483,13 +483,20 @@ Respond now as Jirani:`;
     console.log('💭 Generated response:', aiResponse);
     
     // Check if the message indicates an incident (Groq Compound AI detection)
-    const detectedIncident = await this.detectIncident(userMessage);
-    if (detectedIncident && !conversation.currentIncident) {
-      console.log('🚨 Incident detected and saving:', JSON.stringify(detectedIncident));
-      conversation.currentIncident = detectedIncident;
-      conversation.conversationPhase = 'collecting';
-      await this.saveToSupabase(conversation);
-      console.log('✅ Incident saved to Supabase');
+    // If there's already a confirmed incident, ignore it and detect new one
+    const shouldDetectNewIncident = !conversation.currentIncident || conversation.currentIncident.confirmed === true;
+    
+    if (shouldDetectNewIncident) {
+      const detectedIncident = await this.detectIncident(userMessage);
+      if (detectedIncident) {
+        console.log('🚨 New incident detected and saving:', JSON.stringify(detectedIncident));
+        conversation.currentIncident = detectedIncident;
+        conversation.conversationPhase = 'collecting';
+        await this.saveToSupabase(conversation);
+        console.log('✅ Incident saved to Supabase');
+      }
+    } else {
+      console.log('⏭️ Skipping incident detection - current incident pending:', JSON.stringify(conversation.currentIncident));
     }
     
     // Check if AI response asks for confirmation (indicates we have enough details)

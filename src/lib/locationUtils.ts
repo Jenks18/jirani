@@ -98,36 +98,42 @@ export async function geocodeLocation(locationString: string): Promise<[number, 
 }
 
 export async function extractCoordinates(location: string): Promise<[number, number] | null> {
-  if (!location) return null;
+  if (!location) {
+    console.log('❌ extractCoordinates: No location provided');
+    return null;
+  }
   
   const lowerLocation = location.toLowerCase().trim();
+  console.log(`🔍 extractCoordinates called with: "${location}" (normalized: "${lowerLocation}")`);
   
   // Try direct match first (fast)
   if (KENYA_LOCATIONS[lowerLocation]) {
-    console.log(`✅ Found in cache: ${lowerLocation}`);
+    console.log(`✅ Found exact match in cache: "${lowerLocation}"`);
     return KENYA_LOCATIONS[lowerLocation];
   }
   
   // Try partial match (fast)
+  console.log(`🔍 Trying partial match against ${Object.keys(KENYA_LOCATIONS).length} locations...`);
   for (const [name, coords] of Object.entries(KENYA_LOCATIONS)) {
     if (lowerLocation.includes(name) || name.includes(lowerLocation)) {
-      console.log(`✅ Partial match in cache: ${name}`);
+      console.log(`✅ Partial match in cache: "${name}" matched "${lowerLocation}"`);
       return coords;
     }
   }
   
   // MUST use geocoding API - no defaults
-  console.log(`🔍 No cache match, trying geocoding for: "${location}"`);
+  console.log(`🔍 No cache match, trying Mapbox geocoding for: "${location}"`);
   const geocoded = await geocodeLocation(location);
   
   if (geocoded) {
     // Cache the result for future lookups
     KENYA_LOCATIONS[lowerLocation] = geocoded;
+    console.log(`✅ Geocoded and cached: "${location}" -> [${geocoded[0]}, ${geocoded[1]}]`);
     return geocoded;
   }
   
   // No default - return null if geocoding fails
-  console.error(`❌ Failed to geocode location: "${location}"`);
+  console.error(`❌ FAILED to geocode location: "${location}" (tried cache and Mapbox)`);
   return null;
 }
 
