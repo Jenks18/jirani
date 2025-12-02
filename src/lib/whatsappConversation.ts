@@ -75,12 +75,23 @@ class WhatsAppConversationManager {
 
   private async saveToSupabase(conversation: ConversationState): Promise<void> {
     if (!supabase) {
-      console.error('❌ Supabase client not available');
+      console.error('❌❌❌ CRITICAL: Supabase client is NULL - cannot save conversation!');
+      console.error('Check env vars: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
       return;
     }
     
     try {
-      const { error } = await supabase
+      console.log(`💾 Attempting to save conversation for ${conversation.userId}...`);
+      console.log('📊 Data to save:', {
+        user_id: conversation.userId,
+        messageCount: conversation.messages.length,
+        hasIncident: !!conversation.currentIncident,
+        incidentConfirmed: conversation.currentIncident?.confirmed,
+        awaitingConfirmation: conversation.awaitingConfirmation,
+        phase: conversation.conversationPhase
+      });
+      
+      const { data, error } = await supabase
         .from('conversations')
         .upsert({
           user_id: conversation.userId,
@@ -91,15 +102,23 @@ class WhatsAppConversationManager {
           last_activity: conversation.lastActivity.toISOString()
         }, {
           onConflict: 'user_id'
-        });
+        })
+        .select();
 
       if (error) {
-        console.error('❌ Error saving conversation to Supabase:', error);
+        console.error('❌❌❌ SAVE FAILED - Supabase error:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
       } else {
-        console.log('💾 Conversation saved to Supabase for', conversation.userId);
+        console.log('✅✅✅ Conversation SAVED successfully to Supabase!');
+        console.log('Saved data:', data);
       }
     } catch (error) {
-      console.error('❌ Exception saving conversation:', error);
+      console.error('❌❌❌ EXCEPTION during save:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     }
   }
 
