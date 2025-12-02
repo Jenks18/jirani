@@ -2,10 +2,22 @@
 // Run with: npx tsx test-supabase-insert.ts
 
 import { createClient } from '@supabase/supabase-js';
-import * as dotenv from 'dotenv';
+import { readFileSync } from 'fs';
 
-// Try to load .env.local if it exists
-dotenv.config({ path: '.env.local' });
+// Load .env.local manually
+try {
+  const envFile = readFileSync('.env.local', 'utf8');
+  envFile.split('\n').forEach(line => {
+    const match = line.match(/^([^=]+)=(.*)$/);
+    if (match) {
+      // Remove quotes if present
+      const value = match[2].replace(/^["']|["']$/g, '');
+      process.env[match[1]] = value;
+    }
+  });
+} catch (e) {
+  // .env.local doesn't exist, that's ok
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

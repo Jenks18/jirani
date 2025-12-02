@@ -309,14 +309,22 @@ Respond now as Jirani:`;
     console.log(`📊 Conversation phase: ${conversation.conversationPhase}`);
 
     // Handle confirmation responses first (these need immediate action)
+    console.log('🔍 Checking confirmation:', {
+      awaitingConfirmation: conversation.awaitingConfirmation,
+      hasCurrentIncident: !!conversation.currentIncident,
+      messageIsYes: lowerMessage.includes('yes')
+    });
+    
     if (conversation.awaitingConfirmation && conversation.currentIncident) {
       if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y' || 
           lowerMessage.includes('okay') || lowerMessage.includes('ok') || lowerMessage.includes('sure') ||
           lowerMessage.includes('do it') || lowerMessage.includes('file it') || lowerMessage.includes('proceed')) {
         console.log('✅✅✅ USER SAID YES - MARKING AS CONFIRMED ✅✅✅');
+        console.log('🎯 Current incident BEFORE confirm:', JSON.stringify(conversation.currentIncident));
         conversation.currentIncident.confirmed = true;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
+        console.log('🎯 Current incident AFTER confirm:', JSON.stringify(conversation.currentIncident));
         return "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?";
       } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n' || 
                  lowerMessage.includes('don\'t') || lowerMessage.includes('stop')) {

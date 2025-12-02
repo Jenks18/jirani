@@ -58,7 +58,9 @@ export async function GET() {
     status: 'ok', 
     provider: 'Twilio WhatsApp',
     timestamp: new Date().toISOString(),
-    version: '1.0.1'
+    version: '2.0-FIXED-DEC2',
+    hasNewLogging: true,
+    lastDeployed: '2025-12-02T07:08:00Z'
   });
 }
 
