@@ -94,17 +94,24 @@ class WhatsAppConversationManager {
         phase: conversation.conversationPhase
       });
       
+      // Prepare data with optional last_stored_at
+      const dataToSave: Record<string, any> = {
+        user_id: conversation.userId,
+        messages: conversation.messages,
+        current_incident: conversation.currentIncident,
+        awaiting_confirmation: conversation.awaitingConfirmation,
+        conversation_phase: conversation.conversationPhase,
+        last_activity: conversation.lastActivity.toISOString()
+      };
+      
+      // Only include last_stored_at if it exists (column might not exist in old schema)
+      if (conversation.lastStoredAt) {
+        dataToSave.last_stored_at = conversation.lastStoredAt.toISOString();
+      }
+      
       const { data, error } = await supabase
         .from('conversations')
-        .upsert({
-          user_id: conversation.userId,
-          messages: conversation.messages,
-          current_incident: conversation.currentIncident,
-          awaiting_confirmation: conversation.awaitingConfirmation,
-          conversation_phase: conversation.conversationPhase,
-          last_activity: conversation.lastActivity.toISOString(),
-          last_stored_at: conversation.lastStoredAt?.toISOString()
-        }, {
+        .upsert(dataToSave, {
           onConflict: 'user_id'
         })
         .select();
@@ -577,12 +584,18 @@ Respond now as Jirani:`;
     // SIMPLE: If incident is confirmed, return it
     const shouldReturnIncident = updatedConversation.currentIncident?.confirmed === true;
     
-    console.log('🔍 Incident check:', {
-      hasIncident: !!updatedConversation.currentIncident,
-      isConfirmed: updatedConversation.currentIncident?.confirmed,
-      hasCoordinates: !!updatedConversation.currentIncident?.coordinates,
-      willReturn: shouldReturnIncident
-    });
+    console.log('🔍🔍🔍 FINAL INCIDENT CHECK 🔍🔍🔍');
+    console.log('Has incident:', !!updatedConversation.currentIncident);
+    console.log('Incident details:', JSON.stringify(updatedConversation.currentIncident));
+    console.log('Is confirmed:', updatedConversation.currentIncident?.confirmed);
+    console.log('Has coordinates:', !!updatedConversation.currentIncident?.coordinates);
+    console.log('Will return to webhook:', shouldReturnIncident);
+    
+    if (shouldReturnIncident) {
+      console.log('✅✅✅ RETURNING CONFIRMED INCIDENT TO WEBHOOK ✅✅✅');
+    } else {
+      console.log('❌ NOT returning incident - either not confirmed or no incident');
+    }
     
     return {
       response,
