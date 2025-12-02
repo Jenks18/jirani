@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { supabase, supabaseEnabled, ensureSupabaseAvailable, supabaseTable } from './supabaseClient';
 import type { Database } from './database.types';
+import { extractCoordinates } from './locationUtils';
 
 // Simple in-memory storage for events (will be replaced with database)
 interface StoredEvent {
@@ -132,6 +133,19 @@ Return only the summary text.`;
 export async function storeEvent(event: EventData, from: string, images?: string[]): Promise<StoredEvent> {
   // Always sanitize and standardize the free-text description before saving
   const sanitizedDescription = await rewriteDescriptionWithGroq(event);
+  
+  // If coordinates not provided but location is, try to geocode it
+  let coordinates = event.coordinates;
+  if (!coordinates && event.location && event.location !== 'Unknown location' && event.location !== 'Location not specified') {
+    console.log(`🗺️  Attempting to geocode location: "${event.location}"`);
+    coordinates = await extractCoordinates(event.location);
+    if (coordinates) {
+      console.log(`✅ Geocoded to: [${coordinates[0]}, ${coordinates[1]}]`);
+    } else {
+      console.log(`⚠️  Failed to geocode, will use null coordinates`);
+    }
+  }
+  
   // Try Supabase first
   try {
     const supabaseReady = await ensureSupabaseAvailable();
@@ -146,8 +160,8 @@ export async function storeEvent(event: EventData, from: string, images?: string
       location: event.location || 'Unknown location',
       description: sanitizedDescription || 'No description provided',
       event_timestamp: event.timestamp || new Date().toISOString(),
-      longitude: event.coordinates ? event.coordinates[0] : null,
-      latitude: event.coordinates ? event.coordinates[1] : null,
+      longitude: coordinates ? coordinates[0] : null,
+      latitude: coordinates ? coordinates[1] : null,
       from_phone: from,
       images: images && images.length ? images : null,
       source: 'whatsapp'
@@ -184,9 +198,9 @@ export async function storeEvent(event: EventData, from: string, images?: string
       type: event.type || 'Unknown',
       severity: event.severity || 1,
       location: event.location || 'Unknown location',
-  description: sanitizedDescription || 'No description provided',
+      description: sanitizedDescription || 'No description provided',
       timestamp: event.timestamp || new Date().toISOString(),
-      coordinates: event.coordinates || null,
+      coordinates: coordinates || null,
       from,
       createdAt: new Date().toISOString(),
       images: images || []

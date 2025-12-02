@@ -107,20 +107,8 @@ class WhatsAppConversationManager {
       type = 'Threat/Harassment';
     }
 
-    // Better location extraction
-    const locationKeywords = ['near', 'at ', 'in ', 'on ', 'by ', 'westland', 'kikuyu', 'mall', 'road', 'street', 'avenue', 'around', 'outside'];
-    const hasLocation = locationKeywords.some(keyword => lowerMessage.includes(keyword));
-    
-    // Extract specific location if mentioned
-    let specificLocation = undefined;
-    if (hasLocation) {
-      const locationMatch = lowerMessage.match(/(near|at|in|on|by|around|outside)\s+([a-z\s]+?)(?:\.|,|$|\sand\s)/i);
-      if (locationMatch) {
-        specificLocation = locationMatch[0].trim();
-      } else {
-        specificLocation = 'Location mentioned in description';
-      }
-    }
+    // Use AI to extract location more intelligently
+    const specificLocation = await this.extractLocationWithAI(message);
 
     return {
       type,
@@ -130,6 +118,79 @@ class WhatsAppConversationManager {
       severity: type.includes('Armed') ? 5 : type.includes('Assault') ? 4 : 3,
       confirmed: false
     };
+  }
+
+  private async extractLocationWithAI(message: string): Promise<string | undefined> {
+    try {
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
+      if (!GROQ_API_KEY) {
+        console.log('⚠️  No GROQ_API_KEY, using fallback location extraction');
+        return this.fallbackLocationExtraction(message);
+      }
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: 'Extract ONLY the location from the user message. Return just the location name/place/area mentioned (e.g., "CBD near Archives", "Westlands Mall", "Kikuyu Road"). If no specific location is mentioned, return "NONE". Be concise - return only the location string, nothing else.'
+            },
+            {
+              role: 'user',
+              content: message
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 50
+        })
+      });
+
+      if (!response.ok) {
+        console.error('❌ Groq location extraction failed:', response.statusText);
+        return this.fallbackLocationExtraction(message);
+      }
+
+      const data = await response.json();
+      const extractedLocation = data.choices?.[0]?.message?.content?.trim();
+      
+      if (!extractedLocation || extractedLocation === 'NONE' || extractedLocation.length < 2) {
+        console.log('⚠️  AI found no location, using fallback');
+        return this.fallbackLocationExtraction(message);
+      }
+
+      console.log(`🎯 AI extracted location: "${extractedLocation}"`);
+      return extractedLocation;
+    } catch (error) {
+      console.error('❌ Error in AI location extraction:', error);
+      return this.fallbackLocationExtraction(message);
+    }
+  }
+
+  private fallbackLocationExtraction(message: string): string | undefined {
+    const lowerMessage = message.toLowerCase();
+    const locationKeywords = ['near', 'at ', 'in ', 'on ', 'by ', 'westland', 'kikuyu', 'mall', 'road', 'street', 'avenue', 'around', 'outside', 'cbd'];
+    const hasLocation = locationKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    if (!hasLocation) return undefined;
+    
+    // Try to extract location with regex
+    const locationMatch = lowerMessage.match(/(near|at|in|on|by|around|outside)\s+([a-z0-9\s'-]+?)(?:\s+(?:near|at|in|on|by|around|outside)|\.|,|$)/i);
+    if (locationMatch && locationMatch[2]) {
+      return locationMatch[2].trim();
+    }
+    
+    const fallbackMatch = lowerMessage.match(/(near|at|in|on|by|around|outside)\s+([a-z0-9\s'-]{3,30})/i);
+    if (fallbackMatch && fallbackMatch[2]) {
+      return fallbackMatch[2].trim();
+    }
+    
+    return 'Location mentioned in description';
   }
 
   private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {

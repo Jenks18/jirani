@@ -45,25 +45,69 @@ const KENYA_LOCATIONS: LocationCoords = {
   'moi avenue': [36.8219, -1.2864]
 };
 
-export function extractCoordinates(location: string): [number, number] | null {
+export async function geocodeLocation(locationString: string): Promise<[number, number] | null> {
+  // Use Mapbox Geocoding API (free tier: 100,000 requests/month)
+  const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  
+  if (!MAPBOX_TOKEN) {
+    console.error('❌ MAPBOX_TOKEN not configured');
+    return null;
+  }
+
+  try {
+    // Add "Kenya" to improve accuracy
+    const query = encodeURIComponent(`${locationString}, Kenya`);
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${MAPBOX_TOKEN}&limit=1&country=ke`;
+    
+    console.log(`🗺️  Geocoding: "${locationString}"`);
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.features && data.features.length > 0) {
+      const [lng, lat] = data.features[0].center;
+      console.log(`✅ Geocoded to: [${lng}, ${lat}] - ${data.features[0].place_name}`);
+      return [lng, lat];
+    }
+    
+    console.log(`⚠️  No geocoding results for: "${locationString}"`);
+    return null;
+  } catch (error) {
+    console.error(`❌ Geocoding error for "${locationString}":`, error);
+    return null;
+  }
+}
+
+export async function extractCoordinates(location: string): Promise<[number, number] | null> {
   if (!location) return null;
   
   const lowerLocation = location.toLowerCase().trim();
   
-  // Direct match
+  // Try direct match first (fast)
   if (KENYA_LOCATIONS[lowerLocation]) {
+    console.log(`✅ Found in cache: ${lowerLocation}`);
     return KENYA_LOCATIONS[lowerLocation];
   }
   
-  // Partial match
+  // Try partial match (fast)
   for (const [name, coords] of Object.entries(KENYA_LOCATIONS)) {
     if (lowerLocation.includes(name) || name.includes(lowerLocation)) {
+      console.log(`✅ Partial match in cache: ${name}`);
       return coords;
     }
   }
   
-  // Default to Nairobi if no match found
-  console.log(`Location '${location}' not found, defaulting to Nairobi`);
+  // Try geocoding API (slower, but handles any location)
+  console.log(`🔍 No cache match, trying geocoding for: "${location}"`);
+  const geocoded = await geocodeLocation(location);
+  
+  if (geocoded) {
+    // Cache the result for future lookups
+    KENYA_LOCATIONS[lowerLocation] = geocoded;
+    return geocoded;
+  }
+  
+  // Default to Nairobi CBD as last resort
+  console.log(`⚠️  Location '${location}' not found, defaulting to Nairobi CBD`);
   return KENYA_LOCATIONS['nairobi'];
 }
 
