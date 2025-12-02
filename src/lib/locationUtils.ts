@@ -16,8 +16,14 @@ export async function geocodeLocation(locationString: string): Promise<[number, 
     
     if (data.features && data.features.length > 0) {
       // Prioritize POI (point of interest) results for malls/landmarks
-      const poiResult = data.features.find((f: any) => f.place_type?.includes('poi'));
-      const feature = poiResult || data.features[0];
+      interface MapboxFeature {
+        place_type?: string[];
+        center: [number, number];
+        place_name?: string;
+      }
+      
+      const poiResult = data.features.find((f: MapboxFeature) => f.place_type?.includes('poi'));
+      const feature: MapboxFeature = poiResult || data.features[0];
       
       const [lng, lat] = feature.center;
       console.log(`✅ Geocoded to: [${lng}, ${lat}] - ${feature.place_name}`);
