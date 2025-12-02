@@ -237,7 +237,7 @@ NOT_INCIDENT`
 
       // Extract the pipe-separated line from potentially verbose response
       const lines = aiText.split('\n');
-      const incidentLine = lines.find(line => line.trim().startsWith('INCIDENT|'));
+      const incidentLine = lines.find((line: string) => line.trim().startsWith('INCIDENT|'));
       
       if (!incidentLine) {
         console.log('❌ No INCIDENT line found in response');
