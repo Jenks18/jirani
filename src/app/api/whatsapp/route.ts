@@ -234,50 +234,41 @@ export async function POST(req: NextRequest) {
       };
     }
     
-    // Store confirmed incident in database
-    logInfo('Checking if incident should be stored', { 
-      hasIncident: !!result.incident,
-      isConfirmed: result.incident?.confirmed,
-      incidentType: result.incident?.type,
-      incidentLocation: result.incident?.location
-    });
-    
-    if (result.incident && result.incident.confirmed) {
+    // Store any confirmed incident (SIMPLIFIED - matching working version from 312c19e7)
+    if (result.incident) {
       try {
-        logInfo('🎯 STORING CONFIRMED INCIDENT TO SUPABASE', { 
+        logInfo('🎯🎯🎯 STORING INCIDENT TO SUPABASE', { 
           type: result.incident.type,
           severity: result.incident.severity,
           location: result.incident.location,
+          confirmed: result.incident.confirmed,
           from: from
         });
         
         const eventData = {
           type: result.incident.type,
           severity: result.incident.severity,
-          location: result.incident.location || 'Nairobi, Kenya',
+          location: result.incident.location || 'Location not specified',
           description: result.incident.description,
           timestamp: result.incident.timestamp,
-          coordinates: await extractCoordinates(result.incident.location || 'Nairobi')
+          coordinates: result.incident.location ? await extractCoordinates(result.incident.location) : undefined
         };
         
-        logInfo('📍 Geocoded coordinates', { coordinates: eventData.coordinates });
+        logInfo('📍 Coordinates:', { coordinates: eventData.coordinates });
         
         const storedEvent = await storeEvent(eventData, from, []);
-        logInfo('✅ INCIDENT SUCCESSFULLY STORED IN SUPABASE', { 
+        logInfo('✅✅✅ INCIDENT STORED SUCCESSFULLY', { 
           eventId: storedEvent.id,
           location: storedEvent.location,
           coordinates: storedEvent.coordinates
         });
         
       } catch (storageError) {
-        logError('❌ FAILED TO STORE INCIDENT - continuing with response', storageError);
+        logError('❌ STORAGE FAILED', storageError);
         // Don't block webhook response if storage fails
       }
     } else {
-      logInfo('⏭️ Skipping storage - incident not confirmed or not present', {
-        hasIncident: !!result.incident,
-        isConfirmed: result.incident?.confirmed
-      });
+      logInfo('⏭️ No incident to store');
     }
 
     // Send response via Twilio API
