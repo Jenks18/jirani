@@ -23,5 +23,13 @@
       "has": [ { "type": "host", "value": "majiraniwetu.org" } ],
       "dest": "/site/$1"
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/whatsapp/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/whatsapp/test/route.ts": {
+      "maxDuration": 30
+    }
+  }
 }
