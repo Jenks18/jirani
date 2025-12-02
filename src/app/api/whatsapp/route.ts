@@ -281,7 +281,8 @@ export async function POST(req: NextRequest) {
         // Use direct coordinates from location pin if available, otherwise geocode
         let coordinates = result.incident.coordinates;
         if (!coordinates && result.incident.location) {
-          coordinates = await extractCoordinates(result.incident.location);
+          const geocoded = await extractCoordinates(result.incident.location);
+          coordinates = geocoded || undefined;
         }
         
         const eventData = {
