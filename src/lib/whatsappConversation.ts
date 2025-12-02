@@ -236,7 +236,7 @@ INSTRUCTIONS:
 
 Respond now as Jirani:`;
 
-      console.log('🌐 Calling Groq API...');
+      console.log('🌐 Calling Groq Compound AI...');
       
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -245,7 +245,7 @@ Respond now as Jirani:`;
           'Authorization': `Bearer ${GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile', // Fast, high-quality model
+          model: 'groq/compound',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage }

@@ -55,3 +55,4 @@ test_*.bat
 
 # HAR files
 *.har
+site-app/node_modules/

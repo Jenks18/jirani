@@ -245,10 +245,10 @@ export async function POST(req: NextRequest) {
         const eventData = {
           type: result.incident.type,
           severity: result.incident.severity,
-          location: result.incident.location || 'Location not specified',
+          location: result.incident.location || 'Nairobi, Kenya',
           description: result.incident.description,
           timestamp: result.incident.timestamp,
-          coordinates: result.incident.location ? extractCoordinates(result.incident.location) : undefined
+          coordinates: extractCoordinates(result.incident.location || 'Nairobi')
         };
         
         const storedEvent = await storeEvent(eventData, from, []);
