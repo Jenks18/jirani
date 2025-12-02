@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { supabase, supabaseEnabled, ensureSupabaseAvailable, supabaseTable } from './supabaseClient';
-import type { Database } from './database.types';
+import { supabase, supabaseEnabled, ensureSupabaseAvailable } from './supabaseClient';
 import { extractCoordinates } from './locationUtils';
 
 // Simple in-memory storage for events (will be replaced with database)
