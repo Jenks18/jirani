@@ -483,22 +483,26 @@ Respond now as Jirani:`;
     if (conversation.awaitingConfirmation && conversation.currentIncident) {
       if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y' || 
           lowerMessage.includes('okay') || lowerMessage.includes('ok') || lowerMessage.includes('sure') ||
-          lowerMessage.includes('do it') || lowerMessage.includes('file it') || lowerMessage.includes('proceed')) {
-        console.log('✅✅✅ USER SAID YES - MARKING AS CONFIRMED ✅✅✅');
-        console.log('🎯 Current incident BEFORE confirm:', JSON.stringify(conversation.currentIncident));
+          lowerMessage.includes('ndio') || lowerMessage.includes('sawa')) {
+        console.log('✅✅✅ USER CONFIRMED - FILING REPORT ✅✅✅');
         conversation.currentIncident.confirmed = true;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
-        console.log('🎯 Current incident AFTER confirm:', JSON.stringify(conversation.currentIncident));
-        await this.saveToSupabase(conversation); // Persist the confirmation
-        return "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?";
+        await this.saveToSupabase(conversation);
+        return "✅ Report filed! Stay safe!";
       } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n' || 
-                 lowerMessage.includes('don\'t') || lowerMessage.includes('stop')) {
+                 lowerMessage.includes('hapana')) {
         conversation.currentIncident = undefined;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'greeting';
-        await this.saveToSupabase(conversation); // Persist the cancellation
-        return "Sawa, no problem. I won't file anything. Anything else I can help with?";
+        await this.saveToSupabase(conversation);
+        return "Sawa, canceled. Anything else I can help with?";
+      } else {
+        // User said something else while we're waiting for confirmation
+        // Don't process it as a new message - just remind them
+        console.log('⚠️ User said something other than yes/no during confirmation');
+        const summary = `${conversation.currentIncident.type} at ${conversation.currentIncident.location || 'provided location'}`;
+        return `I'm waiting for your confirmation. ${summary}. Reply "yes" to file or "no" to cancel.`;
       }
     }
 
