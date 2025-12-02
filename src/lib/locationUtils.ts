@@ -58,30 +58,35 @@ const KENYA_LOCATIONS: LocationCoords = {
 };
 
 export async function geocodeLocation(locationString: string): Promise<[number, number] | null> {
-  // Use Mapbox Geocoding API (free tier: 100,000 requests/month)
-  const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  // Use Google Maps Geocoding API
+  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
   
-  if (!MAPBOX_TOKEN) {
-    console.error('❌ MAPBOX_TOKEN not configured');
+  if (!GOOGLE_API_KEY) {
+    console.error('❌ GOOGLE_API_KEY not configured');
     return null;
   }
 
   try {
-    // Add "Kenya" to improve accuracy
-    const query = encodeURIComponent(`${locationString}, Kenya`);
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${MAPBOX_TOKEN}&limit=1&country=ke`;
+    // Add "Nairobi, Kenya" to improve accuracy if not already present
+    const searchQuery = locationString.includes('Kenya') || locationString.includes('Nairobi')
+      ? locationString
+      : `${locationString}, Nairobi, Kenya`;
     
-    console.log(`🗺️  Geocoding: "${locationString}"`);
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${GOOGLE_API_KEY}`;
+    
+    console.log(`🗺️  Geocoding with Google Maps: "${searchQuery}"`);
     const response = await fetch(url);
     const data = await response.json();
     
-    if (data.features && data.features.length > 0) {
-      const [lng, lat] = data.features[0].center;
-      console.log(`✅ Geocoded to: [${lng}, ${lat}] - ${data.features[0].place_name}`);
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      const lng = location.lng;
+      const lat = location.lat;
+      console.log(`✅ Geocoded to: [${lng}, ${lat}] - ${data.results[0].formatted_address}`);
       return [lng, lat];
     }
     
-    console.log(`⚠️  No geocoding results for: "${locationString}"`);
+    console.log(`⚠️  Google Maps returned: ${data.status} for "${locationString}"`);
     return null;
   } catch (error) {
     console.error(`❌ Geocoding error for "${locationString}":`, error);
