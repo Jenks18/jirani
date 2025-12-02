@@ -248,7 +248,7 @@ export async function POST(req: NextRequest) {
           location: result.incident.location || 'Nairobi, Kenya',
           description: result.incident.description,
           timestamp: result.incident.timestamp,
-          coordinates: extractCoordinates(result.incident.location || 'Nairobi')
+          coordinates: await extractCoordinates(result.incident.location || 'Nairobi')
         };
         
         const storedEvent = await storeEvent(eventData, from, []);
