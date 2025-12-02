@@ -250,11 +250,11 @@ function ReportsPanel({ collapsed, setCollapsed, sidebarCollapsed, onEventClick,
     fetchEvents();
   }, []);
 
-  // Set up polling for new events every 10 seconds
+  // Set up polling for new events every 60 seconds (reduced from 10s to save resources)
   useEffect(() => {
     const interval = setInterval(() => {
       fetchEvents();
-    }, 10000); // Poll every 10 seconds
+    }, 60000); // Poll every 60 seconds
 
     return () => clearInterval(interval);
   }, []);

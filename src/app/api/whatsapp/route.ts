@@ -272,6 +272,10 @@ export async function POST(req: NextRequest) {
           coordinates: storedEvent.coordinates
         });
         
+        // Clear the incident from conversation to prevent duplicate storage
+        await conversationManager.clearConversation(from);
+        logInfo('🧹 Cleared conversation after storing incident');
+        
       } catch (storageError) {
         logError('❌ STORAGE FAILED', storageError);
         // Don't block webhook response if storage fails

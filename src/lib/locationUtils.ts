@@ -7,6 +7,9 @@ interface LocationCoords {
 const KENYA_LOCATIONS: LocationCoords = {
   // Nairobi areas
   'nairobi': [36.8219, -1.2921],
+  'cbd': [36.8219, -1.2873],
+  'cbd roundabout': [36.8219, -1.2873],
+  'uhuru highway roundabout': [36.8167, -1.2833],
   'westlands': [36.8097, -1.2676],
   'karen': [36.6855, -1.3197],
   'ngong': [36.6678, -1.3524],
@@ -16,6 +19,15 @@ const KENYA_LOCATIONS: LocationCoords = {
   'kawangware': [36.7440, -1.2835],
   'dandora': [36.8945, -1.2544],
   'mathare': [36.8583, -1.2594],
+  
+  // Malls & landmarks
+  'junction mall': [36.8219, -1.2921],
+  'sarit centre': [36.7870, -1.2634],
+  'yaya centre': [36.7884, -1.2895],
+  'westgate mall': [36.8065, -1.2674],
+  'village market': [36.8065, -1.2343],
+  'two rivers mall': [36.8844, -1.2283],
+  'thika road mall': [36.8844, -1.2283],
   
   // Major cities
   'mombasa': [39.6682, -4.0435],
