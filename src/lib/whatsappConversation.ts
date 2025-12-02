@@ -544,6 +544,15 @@ Respond now as Jirani:`;
       .join('\n');
   }
 
+  public async clearIncident(userId: string): Promise<void> {
+    const conversation = await this.getConversation(userId);
+    conversation.currentIncident = undefined;
+    conversation.awaitingConfirmation = false;
+    conversation.conversationPhase = 'greeting';
+    await this.saveToSupabase(conversation);
+    console.log('✅ Cleared incident from conversation (ready for new reports)');
+  }
+
   public async clearConversation(userId: string): Promise<void> {
     this.conversations.delete(userId);
     // Also delete from Supabase
