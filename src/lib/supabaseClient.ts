@@ -46,32 +46,33 @@ export async function ensureSupabaseAvailable(): Promise<boolean> {
 	}
 
 	try {
-		// Try probing the `events` table first. If it succeeds (no error), select it.
-		try {
-			const probe = await supabase!.from('events').select('id').limit(1);
-			if (!probe?.error) {
-				supabaseAvailable = true;
-				supabaseTable = 'events';
-				return true;
-			}
-		} catch (e) {
-			// ignore and try legacy `reports` table
-		}
-
-		// If 'events' probe failed, try 'reports' (legacy schema).
+		// Try probing the `reports` table FIRST (preferred schema with POINT coordinates).
 		try {
 			const reportsProbe = await supabase!.from('reports').select('id').limit(1);
 			if (!reportsProbe?.error) {
 				supabaseAvailable = true;
 				supabaseTable = 'reports';
-				console.warn('Supabase table `events` missing; using `reports` table for compatibility.');
+				console.log('✅ Using Supabase `reports` table');
+				return true;
+			}
+		} catch (e) {
+			// ignore and try legacy `events` table
+		}
+
+		// Fallback: try 'events' table (legacy schema with longitude/latitude columns).
+		try {
+			const probe = await supabase!.from('events').select('id').limit(1);
+			if (!probe?.error) {
+				supabaseAvailable = true;
+				supabaseTable = 'events';
+				console.warn('⚠️ Supabase table `reports` missing; using legacy `events` table.');
 				return true;
 			}
 		} catch (e) {
 			// ignore
 		}
 
-		throw new Error('supabase events probe failed');
+		throw new Error('supabase table probe failed - neither reports nor events table found');
 	} catch (err: unknown) {
 		// Likely missing table or permissions; disable supabase until next backoff.
 		supabaseAvailable = false;
