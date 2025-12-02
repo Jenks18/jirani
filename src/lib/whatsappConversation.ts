@@ -95,7 +95,7 @@ class WhatsAppConversationManager {
       });
       
       // Prepare data with optional last_stored_at
-      const dataToSave: Record<string, any> = {
+      const dataToSave: Record<string, string | Message[] | IncidentReport | boolean | undefined> = {
         user_id: conversation.userId,
         messages: conversation.messages,
         current_incident: conversation.currentIncident,
