@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureSupabaseAvailable, supabaseTable, supabaseAvailable } from '@/lib/supabaseClient';
+import { ensureSupabaseAvailable, supabaseAvailable } from '@/lib/supabaseClient';
 
 export async function GET(req: Request) {
   try {
@@ -8,12 +8,10 @@ export async function GET(req: Request) {
     const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
     // Perform a lightweight supabase probe but don't block too long
-    let table: string | null = supabaseTable;
     let supabaseReady = supabaseAvailable;
     try {
       // call probe but don't fail if it errors
       supabaseReady = await ensureSupabaseAvailable();
-      table = supabaseTable;
     } catch (e) {
       // ignore
     }
@@ -26,7 +24,7 @@ export async function GET(req: Request) {
       groqConfigured,
       supabaseConfigured,
       supabaseReady,
-      supabaseTable: table
+      supabaseTable: 'reports'
     };
 
     if (adminToken && provided === adminToken) {

@@ -19,16 +19,13 @@ if (!supabaseEnabled) {
 	console.warn('Supabase disabled: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set. Using file fallback.');
 }
 
-// Runtime availability and schema check for specific tables.
-// Some deployed Supabase instances may exist but not have been migrated with `events`.
-// We'll offer a utility to perform a lightweight probe and avoid repeated failures.
+// Runtime availability check for reports table only
 export let supabaseAvailable = Boolean(supabase && supabaseEnabled);
 let supabaseDisabledAt = 0;
 const SUPABASE_DISABLED_BACKOFF_MS = 60_000;
 
-export let supabaseTable: string | null = null; // Exposed selected table name (events or reports)
 /**
- * Ensure the events table is present and Supabase is usable.
+ * Ensure the reports table is present and Supabase is usable.
  * Returns true if Supabase is available for reads/writes.
  */
 export async function ensureSupabaseAvailable(): Promise<boolean> {
@@ -46,43 +43,24 @@ export async function ensureSupabaseAvailable(): Promise<boolean> {
 	}
 
 	try {
-		// Try probing the `reports` table FIRST (preferred schema with POINT coordinates).
-		try {
-			const reportsProbe = await supabase!.from('reports').select('id').limit(1);
-			if (!reportsProbe?.error) {
-				supabaseAvailable = true;
-				supabaseTable = 'reports';
-				console.log('✅ Using Supabase `reports` table');
-				return true;
-			}
-		} catch (e) {
-			// ignore and try legacy `events` table
+		// Probe the reports table only
+		const reportsProbe = await supabase!.from('reports').select('id').limit(1);
+		if (reportsProbe?.error) {
+			throw new Error(`reports table probe failed: ${reportsProbe.error.message}`);
 		}
-
-		// Fallback: try 'events' table (legacy schema with longitude/latitude columns).
-		try {
-			const probe = await supabase!.from('events').select('id').limit(1);
-			if (!probe?.error) {
-				supabaseAvailable = true;
-				supabaseTable = 'events';
-				console.warn('⚠️ Supabase table `reports` missing; using legacy `events` table.');
-				return true;
-			}
-		} catch (e) {
-			// ignore
-		}
-
-		throw new Error('supabase table probe failed - neither reports nor events table found');
+		supabaseAvailable = true;
+		console.log('✅ Supabase reports table available');
+		return true;
 	} catch (err: unknown) {
 		// Likely missing table or permissions; disable supabase until next backoff.
 		supabaseAvailable = false;
 		supabaseDisabledAt = Date.now();
-				// eslint-disable-next-line no-console
-								const msg = err instanceof Error ? err.message : String(err);
-								console.warn(
-									'Supabase probe failed (events table inaccessible) - disabling Supabase integration temporarily. Error:',
-									msg
-								);
+		// eslint-disable-next-line no-console
+		const msg = err instanceof Error ? err.message : String(err);
+		console.warn(
+			'Supabase probe failed (reports table inaccessible) - disabling Supabase integration temporarily. Error:',
+			msg
+		);
 		return false;
 	}
 }
