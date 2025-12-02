@@ -36,6 +36,11 @@ class WhatsAppConversationManager {
   }
 
   private async loadFromSupabase(userId: string): Promise<ConversationState | null> {
+    if (!supabase) {
+      console.error('❌ Supabase client not available');
+      return null;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('conversations')
@@ -69,6 +74,11 @@ class WhatsAppConversationManager {
   }
 
   private async saveToSupabase(conversation: ConversationState): Promise<void> {
+    if (!supabase) {
+      console.error('❌ Supabase client not available');
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('conversations')
@@ -499,13 +509,15 @@ Respond now as Jirani:`;
   public async clearConversation(userId: string): Promise<void> {
     this.conversations.delete(userId);
     // Also delete from Supabase
-    try {
-      await supabase
-        .from('conversations')
-        .delete()
-        .eq('user_id', userId);
-    } catch (error) {
-      console.error('Error clearing conversation from Supabase:', error);
+    if (supabase) {
+      try {
+        await supabase
+          .from('conversations')
+          .delete()
+          .eq('user_id', userId);
+      } catch (error) {
+        console.error('Error clearing conversation from Supabase:', error);
+      }
     }
   }
 }
