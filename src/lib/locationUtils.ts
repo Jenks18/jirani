@@ -96,7 +96,7 @@ export async function extractCoordinates(location: string): Promise<[number, num
     }
   }
   
-  // Try geocoding API (slower, but handles any location)
+  // MUST use geocoding API - no defaults
   console.log(`🔍 No cache match, trying geocoding for: "${location}"`);
   const geocoded = await geocodeLocation(location);
   
@@ -106,9 +106,9 @@ export async function extractCoordinates(location: string): Promise<[number, num
     return geocoded;
   }
   
-  // Default to Nairobi CBD as last resort
-  console.log(`⚠️  Location '${location}' not found, defaulting to Nairobi CBD`);
-  return KENYA_LOCATIONS['nairobi'];
+  // No default - return null if geocoding fails
+  console.error(`❌ Failed to geocode location: "${location}"`);
+  return null;
 }
 
 export function addLocation(name: string, coordinates: [number, number]) {

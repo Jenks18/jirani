@@ -124,10 +124,11 @@ class WhatsAppConversationManager {
     try {
       const GROQ_API_KEY = process.env.GROQ_API_KEY;
       if (!GROQ_API_KEY) {
-        console.log('⚠️  No GROQ_API_KEY, using fallback location extraction');
-        return this.fallbackLocationExtraction(message);
+        console.log('⚠️  No GROQ_API_KEY, extraction failed');
+        return undefined;
       }
 
+      // Use Groq Compound (agentic AI) for intelligent location extraction
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -135,63 +136,62 @@ class WhatsAppConversationManager {
           'Authorization': `Bearer ${GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'groq/compound',
           messages: [
             {
               role: 'system',
-              content: 'Extract ONLY the location from the user message. Return just the location name/place/area mentioned (e.g., "CBD near Archives", "Westlands Mall", "Kikuyu Road"). If no specific location is mentioned, return "NONE". Be concise - return only the location string, nothing else.'
+              content: `You are a location extraction expert for Kenya. Extract the EXACT location mentioned by the user, preserving original phrasing.
+
+Rules:
+- Extract location EXACTLY as stated (e.g., "CBD near Archives", "Westlands Mall", "Yaya Centre Kilimani")
+- Include landmarks and descriptors (e.g., "near", "outside", "at")
+- Keep Kenyan place names accurate
+- If NO location mentioned, return null
+
+Return JSON: {"location": "exact location string" or null}`
             },
             {
               role: 'user',
               content: message
             }
           ],
-          temperature: 0.1,
-          max_tokens: 50
+          response_format: { type: 'json_object' },
+          temperature: 0.0,
+          max_tokens: 100
         })
       });
 
       if (!response.ok) {
-        console.error('❌ Groq location extraction failed:', response.statusText);
-        return this.fallbackLocationExtraction(message);
+        const errorText = await response.text();
+        console.error('❌ Groq location extraction failed:', response.statusText, errorText);
+        return undefined;
       }
 
       const data = await response.json();
-      const extractedLocation = data.choices?.[0]?.message?.content?.trim();
+      const content = data.choices?.[0]?.message?.content?.trim();
       
-      if (!extractedLocation || extractedLocation === 'NONE' || extractedLocation.length < 2) {
-        console.log('⚠️  AI found no location, using fallback');
-        return this.fallbackLocationExtraction(message);
+      if (!content) {
+        console.log('⚠️  No response from AI');
+        return undefined;
+      }
+
+      const parsed = JSON.parse(content);
+      const extractedLocation = parsed.location;
+      
+      if (!extractedLocation || typeof extractedLocation !== 'string' || extractedLocation.length < 2) {
+        console.log('⚠️  No location found in message');
+        return undefined;
       }
 
       console.log(`🎯 AI extracted location: "${extractedLocation}"`);
       return extractedLocation;
     } catch (error) {
       console.error('❌ Error in AI location extraction:', error);
-      return this.fallbackLocationExtraction(message);
+      return undefined;
     }
   }
 
-  private fallbackLocationExtraction(message: string): string | undefined {
-    const lowerMessage = message.toLowerCase();
-    const locationKeywords = ['near', 'at ', 'in ', 'on ', 'by ', 'westland', 'kikuyu', 'mall', 'road', 'street', 'avenue', 'around', 'outside', 'cbd'];
-    const hasLocation = locationKeywords.some(keyword => lowerMessage.includes(keyword));
-    
-    if (!hasLocation) return undefined;
-    
-    // Try to extract location with regex
-    const locationMatch = lowerMessage.match(/(near|at|in|on|by|around|outside)\s+([a-z0-9\s'-]+?)(?:\s+(?:near|at|in|on|by|around|outside)|\.|,|$)/i);
-    if (locationMatch && locationMatch[2]) {
-      return locationMatch[2].trim();
-    }
-    
-    const fallbackMatch = lowerMessage.match(/(near|at|in|on|by|around|outside)\s+([a-z0-9\s'-]{3,30})/i);
-    if (fallbackMatch && fallbackMatch[2]) {
-      return fallbackMatch[2].trim();
-    }
-    
-    return 'Location mentioned in description';
-  }
+
 
   private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
     try {

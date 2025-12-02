@@ -134,15 +134,15 @@ export async function storeEvent(event: EventData, from: string, images?: string
   // Always sanitize and standardize the free-text description before saving
   const sanitizedDescription = await rewriteDescriptionWithGroq(event);
   
-  // If coordinates not provided but location is, try to geocode it
+  // If coordinates not provided but location is, MUST geocode it
   let coordinates = event.coordinates;
   if (!coordinates && event.location && event.location !== 'Unknown location' && event.location !== 'Location not specified') {
-    console.log(`🗺️  Attempting to geocode location: "${event.location}"`);
+    console.log(`🗺️  Geocoding location: "${event.location}"`);
     coordinates = await extractCoordinates(event.location);
     if (coordinates) {
       console.log(`✅ Geocoded to: [${coordinates[0]}, ${coordinates[1]}]`);
     } else {
-      console.log(`⚠️  Failed to geocode, will use null coordinates`);
+      console.error(`❌ Geocoding failed for: "${event.location}" - report will have null coordinates`);
     }
   }
   
