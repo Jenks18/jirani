@@ -207,11 +207,13 @@ class WhatsAppConversationManager {
             content: `Analyze this message: "${message}"
 
 Is this a safety incident (crime, theft, assault, etc)?
-If YES: Extract type (Theft/Robbery/Assault/Harassment/Other), location (specific place name or null), and severity (1-5).
+If YES: Extract the EXACT FULL location name as stated (e.g., "Thika Road Mall", "Sarit Centre", "Junction Mall"), incident type (Theft/Robbery/Assault/Harassment/Other), and severity (1-5).
 If NO: Just say "NOT_INCIDENT"
 
+IMPORTANT: Keep the complete location name - do NOT shorten "Thika Road Mall" to "Thika Road" or "Sarit Centre" to "Sarit".
+
 Reply in this EXACT format:
-INCIDENT|Theft|CBD Roundabout|4
+INCIDENT|Theft|Thika Road Mall|4
 OR
 NOT_INCIDENT`
           }],
