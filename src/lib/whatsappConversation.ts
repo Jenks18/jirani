@@ -340,7 +340,7 @@ Respond now as Jirani:`;
     console.log('💭 Generated response:', aiResponse);
     
     // Check if the message indicates an incident
-    const detectedIncident = this.detectIncident(userMessage);
+    const detectedIncident = await this.detectIncident(userMessage);
     if (detectedIncident && !conversation.currentIncident) {
       console.log('🚨 Incident detected:', detectedIncident);
       conversation.currentIncident = detectedIncident;
