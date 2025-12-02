@@ -2,6 +2,10 @@
   "version": 2,
   "routes": [
     {
+      "src": "^/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
       "src": "^/maps$",
       "has": [ { "type": "host", "value": "majiraniwetu.org" } ],
       "status": 308,
