@@ -12,7 +12,7 @@ export async function GET() {
         type: event.type,
         severity: event.severity,
         location: event.location,
-        description: event.description,
+        summary: event.summary,
         timestamp: event.timestamp,
         coordinates: event.coordinates ? [event.coordinates[1], event.coordinates[0]] : null, // [lat, lng]
         latitude: event.coordinates?.[1] || null,
@@ -23,7 +23,7 @@ export async function GET() {
       reports: events.map(event => ({
         id: event.id,
         title: `${event.type} Report`,
-        description: event.description,
+        summary: event.summary,
         category: 'Security',
         location: event.location,
         coordinates: event.coordinates ? [event.coordinates[1], event.coordinates[0]] : null,
