@@ -272,9 +272,8 @@ export async function POST(req: NextRequest) {
           coordinates: storedEvent.coordinates
         });
         
-        // Clear the incident from conversation to prevent duplicate storage
-        await conversationManager.clearConversation(from);
-        logInfo('🧹 Cleared conversation after storing incident');
+        // NOTE: Don't clear conversation - it's needed for history
+        // The incident is already marked as confirmed so won't be stored again
         
       } catch (storageError) {
         logError('❌ STORAGE FAILED', storageError);
