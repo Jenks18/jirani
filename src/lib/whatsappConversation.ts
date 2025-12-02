@@ -80,7 +80,7 @@ class WhatsAppConversationManager {
     }
   }
 
-  private detectIncident(message: string): IncidentReport | null {
+  private async detectIncident(message: string): Promise<IncidentReport | null> {
     const lowerMessage = message.toLowerCase();
     
     // Crime-related keywords with broader context
