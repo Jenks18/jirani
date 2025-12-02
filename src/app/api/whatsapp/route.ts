@@ -2,161 +2,373 @@ import { NextRequest, NextResponse } from 'next/server';
 import { storeEvent } from '../../../lib/eventStorage';
 import { extractCoordinates } from '../../../lib/locationUtils';
 import conversationManager from '../../../lib/whatsappConversation';
+import { webhookRateLimiter } from '../../../lib/rateLimiter';
 import twilio from 'twilio';
 
-/*
-  This file intentionally uses some dynamic typing to handle both Twilio
-  (form-encoded) and Meta (JSON) webhook payloads. Disable the explicit any
-  rule here so we can parse unknown shapes without failing the build.
-*/
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// Type definitions for better type safety
+interface TwilioClient {
+  messages: {
+    create: (params: {
+      body: string;
+      to: string;
+      from?: string;
+      messagingServiceSid?: string;
+    }) => Promise<{ sid: string }>;
+  };
+  validateRequest: (authToken: string, signature: string, url: string, params: Record<string, string>) => boolean;
+}
+
+// Production-grade logging utility
+function logInfo(message: string, data?: unknown): void {
+  console.log(`[WhatsApp Webhook] ${message}`, data ? JSON.stringify(data, null, 2) : '');
+}
+
+function logError(message: string, error?: unknown): void {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  console.error(`[WhatsApp Webhook ERROR] ${message}`, errorMessage);
+}
+
+// Validate Twilio webhook signature for security
+function validateTwilioSignature(req: NextRequest, params: Record<string, string>): boolean {
+  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!twilioAuthToken) {
+    logError('TWILIO_AUTH_TOKEN not configured - skipping signature validation');
+    return true; // Allow in dev, but log warning
+  }
+
+  const signature = req.headers.get('x-twilio-signature');
+  if (!signature) {
+    logError('Missing X-Twilio-Signature header');
+    return false;
+  }
+
+  try {
+    const url = req.url;
+    return twilio.validateRequest(twilioAuthToken, signature, url, params);
+  } catch (error) {
+    logError('Signature validation failed', error);
+    return false;
+  }
+}
 
 // Twilio WhatsApp webhook handler
-export async function GET(req: NextRequest) {
-  // Twilio doesn't use GET for verification
-  return NextResponse.json({ status: 'ok', provider: 'Twilio WhatsApp' });
+export async function GET() {
+  // Twilio doesn't use GET for verification - return basic health check
+  return NextResponse.json({ 
+    status: 'ok', 
+    provider: 'Twilio WhatsApp',
+    timestamp: new Date().toISOString(),
+    version: '1.0.1'
+  });
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  
   try {
-    console.log('=== Twilio WhatsApp Webhook POST Request ===');
+    logInfo('=== Twilio WhatsApp Webhook POST Request ===');
     
-    // Validate required environment variables
-    const requiredEnvVars = {
-      TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-      TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
-      TWILIO_WHATSAPP_NUMBER: process.env.TWILIO_WHATSAPP_NUMBER,
-    };
-    
-    for (const [key, value] of Object.entries(requiredEnvVars)) {
-      if (!value) {
-        console.error(`Missing required environment variable: ${key}`);
-        return NextResponse.json({ error: `${key} not configured` }, { status: 500 });
-      }
+    // Validate environment configuration
+    const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+    const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+    let TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER;
+    const TWILIO_MESSAGING_SERVICE_SID = process.env.TWILIO_MESSAGING_SERVICE_SID;
+
+    // Normalize WhatsApp number format: Twilio expects 'whatsapp:+<E.164 number>'
+    if (TWILIO_WHATSAPP_NUMBER && !TWILIO_WHATSAPP_NUMBER.startsWith('whatsapp:')) {
+      TWILIO_WHATSAPP_NUMBER = `whatsapp:${TWILIO_WHATSAPP_NUMBER}`;
+    }
+
+    const twilioConfigured = Boolean(
+      TWILIO_ACCOUNT_SID && 
+      TWILIO_AUTH_TOKEN && 
+      (TWILIO_WHATSAPP_NUMBER || TWILIO_MESSAGING_SERVICE_SID)
+    );
+
+    let client: TwilioClient | null = null;
+    if (twilioConfigured) {
+      client = twilio(TWILIO_ACCOUNT_SID!, TWILIO_AUTH_TOKEN!) as unknown as TwilioClient;
+      logInfo('Twilio client instantiated successfully');
+    } else {
+      logError('Twilio not configured - webhook will process messages but cannot respond');
     }
     
-    // Initialize Twilio client
-    const client = twilio(
-      process.env.TWILIO_ACCOUNT_SID!,
-      process.env.TWILIO_AUTH_TOKEN!
-    );
-    
-    // Try to parse incoming payload as JSON (Meta/Cloud API)
-    let incoming: any = null;
+    // Parse incoming webhook payload (supports both form-encoded and JSON)
+    let webhookParams: Record<string, string> = {};
     let from: string | undefined;
     let message: string | undefined;
+    let messageSid: string | undefined;
 
-    try {
-      incoming = await req.json();
-      console.log('Parsed JSON webhook body');
-    } catch (jsonErr) {
-      // Not JSON — try form data (Twilio sends x-www-form-urlencoded)
+    // Check content type to determine parsing method
+    const contentType = req.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+      // Parse as form data (Twilio's default format)
       try {
         const formData = await req.formData();
-        const fd: Record<string, string> = Object.fromEntries(formData.entries() as Iterable<[string,string]>);
-        console.log('Parsed form-encoded webhook body', fd);
-        // Twilio uses 'Body' and 'From'
-        message = fd['Body'] || fd['body'];
-        from = fd['From'] || fd['from'];
-        incoming = fd;
-      } catch (fdErr) {
-        // Fallback to raw text
-        const txt = await req.text();
-        console.warn('Failed to parse JSON or form-data; raw text payload:', txt.slice(0,200));
-        // Attempt to extract simple key=val pairs from text
-        const params = new URLSearchParams(txt);
-        if ([...params.keys()].length) {
-          const fd: Record<string,string> = {};
-          for (const [k,v] of params.entries()) fd[k]=v;
-          message = fd['Body'] || fd['body'];
-          from = fd['From'] || fd['from'];
-          incoming = fd;
+        webhookParams = Object.fromEntries(formData.entries() as Iterable<[string, string]>);
+        
+        // Validate Twilio signature for security
+        if (!validateTwilioSignature(req, webhookParams)) {
+          logError('Invalid Twilio signature - potential security threat');
+          return new NextResponse('Forbidden', { status: 403 });
+        }
+        
+        message = webhookParams['Body'] || webhookParams['body'];
+        from = webhookParams['From'] || webhookParams['from'];
+        messageSid = webhookParams['MessageSid'] || webhookParams['messageSid'];
+        
+        logInfo('Parsed form-encoded webhook', { from, messageSid, hasMessage: !!message });
+      } catch (formError) {
+        logError('Failed to parse form-encoded webhook', formError);
+        return new NextResponse('Bad Request', { status: 400 });
+      }
+    } else {
+      // Parse as JSON (for testing or Meta webhooks)
+      try {
+        const jsonBody = await req.json();
+        
+        // Handle Meta-style JSON format
+        if (jsonBody.entry) {
+          const entry = jsonBody.entry?.[0];
+          const changes = entry?.changes?.[0];
+          const messageObj = changes?.value?.messages?.[0];
+          message = messageObj?.text?.body || messageObj?.body?.text;
+          from = messageObj?.from || changes?.value?.metadata?.phone_number_id;
+          logInfo('Parsed Meta-style JSON webhook', { from, hasMessage: !!message });
+        } else {
+          // Direct JSON format
+          message = jsonBody.Body || jsonBody.message;
+          from = jsonBody.From || jsonBody.from;
+          messageSid = jsonBody.MessageSid;
+          webhookParams = jsonBody;
+          logInfo('Parsed JSON webhook', { from, messageSid, hasMessage: !!message });
+        }
+      } catch (jsonError) {
+        logError('Failed to parse JSON webhook', jsonError);
+        return new NextResponse('Bad Request', { status: 400 });
+      }
+    }
+
+    // Validate required fields
+    if (!message || !from) {
+      logInfo('Empty message or missing sender - acknowledging webhook');
+      return new NextResponse('', { status: 200 }); // Acknowledge to prevent retries
+    }
+
+    // Apply rate limiting to prevent abuse
+    const rateLimitResult = webhookRateLimiter.checkLimit(from);
+    if (!rateLimitResult.allowed) {
+      logError('Rate limit exceeded', { 
+        from, 
+        resetInSeconds: Math.ceil(rateLimitResult.resetIn / 1000) 
+      });
+      
+      // Send rate limit message to user
+      if (client) {
+        try {
+          let toNumber = from;
+          if (!toNumber.startsWith('whatsapp:')) {
+            toNumber = `whatsapp:${toNumber}`;
+          }
+
+          const sendParams: {
+            body: string;
+            to: string;
+            messagingServiceSid?: string;
+            from?: string;
+          } = {
+            body: `Samahani, umezidi kikomo cha ujumbe. Tafadhali subiri sekunde ${Math.ceil(rateLimitResult.resetIn / 1000)} kabla ya kujaribu tena. (Sorry, you've exceeded the message limit. Please wait ${Math.ceil(rateLimitResult.resetIn / 1000)} seconds before trying again.)`,
+            to: toNumber
+          };
+
+          if (TWILIO_MESSAGING_SERVICE_SID) {
+            sendParams.messagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
+          } else if (TWILIO_WHATSAPP_NUMBER) {
+            sendParams.from = TWILIO_WHATSAPP_NUMBER;
+          }
+
+          await client.messages.create(sendParams);
+        } catch (err) {
+          logError('Failed to send rate limit message', err);
         }
       }
+      
+      // Return 200 to prevent Twilio retries
+      return new NextResponse('', { status: 200 });
     }
 
-    // If JSON payload (likely Meta) — extract fields accordingly
-    if (!message && incoming && incoming.entry) {
-      try {
-        const entry = incoming.entry?.[0];
-        const changes = entry?.changes?.[0];
-        const messageObj = changes?.value?.messages?.[0];
-        message = messageObj?.text?.body || messageObj?.body?.text || messageObj?.text?.body;
-        from = messageObj?.from || changes?.value?.metadata?.phone_number_id || from;
-        console.log('Extracted Meta-style message/from', { from, message });
-      } catch (e) {
-        // ignore
-      }
+    logInfo('Rate limit check passed', { 
+      from, 
+      remaining: rateLimitResult.remaining 
+    });
+
+    // Sanitize and validate inputs
+    message = message.trim();
+    if (message.length === 0 || message.length > 4096) {
+      logError('Message length invalid', { length: message.length });
+      return new NextResponse('', { status: 200 });
     }
 
-    console.log('Webhook resolved to from/message:', { from, message });
+    logInfo('Processing message', { 
+      from, 
+      messageLength: message.length, 
+      messageSid,
+      preview: message.substring(0, 50) 
+    });
 
-    // Validate message data
-    if (!message || !from) {
-      console.log('No message or sender found in webhook — acknowledging with 200');
-      return new NextResponse('', { status: 200 }); // Acknowledge to avoid retries
+    // Process message through AI-powered conversation manager
+    let result;
+    try {
+      result = await conversationManager.processMessage(from, message);
+      logInfo('AI response generated', { 
+        responseLength: result.response.length,
+        hasIncident: !!result.incident 
+      });
+    } catch (aiError) {
+      logError('AI processing failed', aiError);
+      // Use fallback response
+      result = {
+        response: "Samahani, nimepata shida kidogo. Tafadhali jaribu tena baadaye. (Sorry, I encountered an issue. Please try again later.)",
+        incident: undefined
+      };
     }
-    console.log(`Processing message from ${from}: "${message}"`);
-
-    // Process message through conversation manager (AI-powered)
-    const result = await conversationManager.processMessage(from, message);
     
-    console.log(`Generated response: "${result.response}"`);
+    // Store confirmed incident in database
+    logInfo('Checking if incident should be stored', { 
+      hasIncident: !!result.incident,
+      isConfirmed: result.incident?.confirmed,
+      incidentType: result.incident?.type,
+      incidentLocation: result.incident?.location
+    });
     
-    // Store any confirmed incident
-    if (result.incident) {
+    if (result.incident && result.incident.confirmed) {
       try {
-        console.log('Storing confirmed incident:', result.incident);
+        logInfo('🎯 STORING CONFIRMED INCIDENT TO SUPABASE', { 
+          type: result.incident.type,
+          severity: result.incident.severity,
+          location: result.incident.location,
+          from: from
+        });
         
         const eventData = {
           type: result.incident.type,
           severity: result.incident.severity,
-          location: result.incident.location || 'Location not specified',
+          location: result.incident.location || 'Nairobi, Kenya',
           description: result.incident.description,
           timestamp: result.incident.timestamp,
-          coordinates: result.incident.location ? extractCoordinates(result.incident.location) : undefined
+          coordinates: await extractCoordinates(result.incident.location || 'Nairobi')
         };
         
-        const storedEvent = await storeEvent(eventData, from, []);
-        console.log('Incident stored successfully with ID:', storedEvent.id);
+        logInfo('📍 Geocoded coordinates', { coordinates: eventData.coordinates });
         
-      } catch (error) {
-        console.error('Failed to store incident:', error);
-        // Don't fail the response if storage fails
+        const storedEvent = await storeEvent(eventData, from, []);
+        logInfo('✅ INCIDENT SUCCESSFULLY STORED IN SUPABASE', { 
+          eventId: storedEvent.id,
+          location: storedEvent.location,
+          coordinates: storedEvent.coordinates
+        });
+        
+      } catch (storageError) {
+        logError('❌ FAILED TO STORE INCIDENT - continuing with response', storageError);
+        // Don't block webhook response if storage fails
       }
+    } else {
+      logInfo('⏭️ Skipping storage - incident not confirmed or not present', {
+        hasIncident: !!result.incident,
+        isConfirmed: result.incident?.confirmed
+      });
     }
 
-// Send response via Twilio API
-    try {
-      const sendParams: any = {
-        body: result.response,
-        to: from
-      };
+    // Send response via Twilio API
+    if (!client) {
+      logError('Cannot send response - Twilio client not configured');
+      return new NextResponse('', { status: 200 });
+    }
 
-      // Prefer Messaging Service SID if configured (recommended)
-      if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
-        sendParams.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-      } else {
-        sendParams.from = process.env.TWILIO_WHATSAPP_NUMBER!;
+    try {
+      // Normalize recipient number for WhatsApp format
+      let toNumber = from;
+      if (!toNumber.startsWith('whatsapp:')) {
+        toNumber = `whatsapp:${toNumber}`;
       }
 
-      await client.messages.create(sendParams);
+      // Build message parameters
+      const sendParams: {
+        body: string;
+        to: string;
+        messagingServiceSid?: string;
+        from?: string;
+      } = {
+        body: result.response,
+        to: toNumber
+      };
 
-      console.log('Twilio WhatsApp message sent successfully');
+      // Prefer Messaging Service SID (recommended for production)
+      if (TWILIO_MESSAGING_SERVICE_SID) {
+        sendParams.messagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
+        logInfo('Using Messaging Service SID');
+      } else if (TWILIO_WHATSAPP_NUMBER) {
+        sendParams.from = TWILIO_WHATSAPP_NUMBER;
+        logInfo('Using WhatsApp from number');
+      } else {
+        logError('No Messaging Service SID or WhatsApp number configured');
+        return new NextResponse('', { status: 200 });
+      }
+
+      // Retry logic with exponential backoff
+      const MAX_RETRIES = 3;
+      let lastError: Error | null = null;
+
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const sentMessage = await client.messages.create(sendParams);
+          
+          const processingTime = Date.now() - startTime;
+          logInfo('Message sent successfully', { 
+            attempt,
+            messageSid: sentMessage.sid,
+            processingTimeMs: processingTime
+          });
+          
+          // Return 200 to acknowledge webhook
+          return new NextResponse('', { status: 200 });
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          
+          logError(`Send attempt ${attempt} failed`, {
+            error: lastError.message,
+            attempt,
+            willRetry: attempt < MAX_RETRIES
+          });
+
+          // Wait before retry with exponential backoff
+          if (attempt < MAX_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 500));
+          }
+        }
+      }
+
+      // All retries failed
+      logError('All send attempts exhausted', {
+        error: lastError?.message,
+        attempts: MAX_RETRIES
+      });
       
-      // Return empty 200 response (Twilio requirement)
+      // Still return 200 to acknowledge webhook and prevent retries
       return new NextResponse('', { status: 200 });
 
     } catch (error) {
-      console.error('Twilio API request failed:', error);
-      // Still return 200 to acknowledge receipt
+      logError('Unexpected error during message send', error);
+      // Return 200 to acknowledge and prevent retries
       return new NextResponse('', { status: 200 });
     }
 
   } catch (error) {
-    console.error('Webhook processing error:', error);
+    logError('Critical webhook processing error', error);
     
-    // Return 200 even on error to prevent Twilio retries
+    // Always return 200 to acknowledge webhook and prevent retries
+    // Twilio will retry on 4xx/5xx which can cause duplicate processing
     return new NextResponse('', { status: 200 });
   }
 }

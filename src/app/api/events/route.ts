@@ -9,11 +9,11 @@ export async function GET() {
       type: event.type,
       severity: event.severity,
       location: event.location,
-      description: event.description,
+      summary: event.summary,
       timestamp: event.timestamp,
       coordinates: event.coordinates,
       createdAt: event.createdAt,
-      hasImages: (event.images?.length || 0) > 0
+      images: event.images || []
     }));
     return NextResponse.json({
       events: mapEvents,

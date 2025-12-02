@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { storeEvent } from '@/lib/eventStorage';
 import type { Database } from '@/lib/database.types';
 
 export async function POST(req: NextRequest) {
@@ -35,17 +35,21 @@ export async function POST(req: NextRequest) {
 
     // Temporary any cast to bypass Supabase typing mismatch - TODO: update Database types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from('events')
-      .insert([insertPayload])
-      .select()
-      .single();
-    if (error) {
-      console.error('Supabase insert error:', error);
-      return NextResponse.json({ error: error.message, details: error }, { status: 500 });
+    // Use storeEvent's robust storage which falls back to file if Supabase is unavailable.
+    try {
+      const stored = await storeEvent({
+        type: insertPayload.type,
+        severity: insertPayload.severity,
+        location: insertPayload.location,
+        description: insertPayload.description,
+        timestamp: insertPayload.event_timestamp,
+        coordinates: insertPayload.longitude != null && insertPayload.latitude != null ? [insertPayload.longitude, insertPayload.latitude] : undefined
+      }, insertPayload.from_phone || 'api', insertPayload.images || undefined);
+      return NextResponse.json({ status: 'stored', event: stored });
+    } catch (err) {
+      console.error('Store via storeEvent failed:', err);
+      return NextResponse.json({ error: 'Failed to store report' }, { status: 500 });
     }
-
-    return NextResponse.json({ status: 'stored', event: data });
   } catch (err) {
     console.error('Store report error:', err);
     const e = err as Error;

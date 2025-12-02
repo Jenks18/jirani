@@ -1,4 +1,13 @@
-# WhatsApp Cloud API Setup Guide
+# WhatsApp Integration Setup Guide
+
+> **Note:** This project now uses **Twilio WhatsApp API** for improved reliability and production features.
+> See [TWILIO_PRODUCTION_SETUP.md](./TWILIO_PRODUCTION_SETUP.md) for the complete production guide.
+
+---
+
+## Legacy: WhatsApp Cloud API Setup
+
+This guide is kept for reference. **For new deployments, use Twilio instead.**
 
 ## Step 1: WhatsApp Business API Setup
 

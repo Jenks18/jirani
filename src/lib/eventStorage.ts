@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { supabase, supabaseEnabled } from './supabaseClient';
-import type { Database } from './database.types';
+import { supabase, supabaseEnabled, ensureSupabaseAvailable } from './supabaseClient';
+import { extractCoordinates } from './locationUtils';
 
 // Simple in-memory storage for events (will be replaced with database)
 interface StoredEvent {
@@ -9,7 +9,7 @@ interface StoredEvent {
   type: string;
   severity: number;
   location: string;
-  description: string;
+  summary: string;  // Using 'summary' instead of 'description' to match reports table
   timestamp: string;
   coordinates: [number, number] | null;
   from: string;
@@ -101,7 +101,7 @@ Return only the summary text.`;
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'groq/compound',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userContent }
@@ -132,31 +132,57 @@ Return only the summary text.`;
 export async function storeEvent(event: EventData, from: string, images?: string[]): Promise<StoredEvent> {
   // Always sanitize and standardize the free-text description before saving
   const sanitizedDescription = await rewriteDescriptionWithGroq(event);
+  
+  // If coordinates not provided but location is, MUST geocode it
+  let coordinates = event.coordinates;
+  if (!coordinates && event.location && event.location !== 'Unknown location' && event.location !== 'Location not specified') {
+    console.log(`🗺️  Geocoding location: "${event.location}"`);
+    coordinates = await extractCoordinates(event.location);
+    if (coordinates) {
+      console.log(`✅ Geocoded to: [${coordinates[0]}, ${coordinates[1]}]`);
+    } else {
+      console.error(`❌ Geocoding failed for: "${event.location}" - report will have null coordinates`);
+    }
+  }
+  
   // Try Supabase first
   try {
-    const insertPayload: Database['public']['Tables']['events']['Insert'] = {
+    const supabaseReady = await ensureSupabaseAvailable();
+    if (!supabaseReady) {
+      throw new Error('Supabase temporarily disabled by server (probe)');
+    }
+    // If we've previously flagged Supabase as unavailable due to schema errors or other problems,
+    // only attempt again after backoff expires.
+    const insertPayload = {
       type: event.type || 'Unknown',
       severity: event.severity || 1,
       location: event.location || 'Unknown location',
-      description: sanitizedDescription || 'No description provided',
+      summary: sanitizedDescription || 'No description provided',
       event_timestamp: event.timestamp || new Date().toISOString(),
-      longitude: event.coordinates ? event.coordinates[0] : null,
-      latitude: event.coordinates ? event.coordinates[1] : null,
+      longitude: coordinates ? coordinates[0] : null,
+      latitude: coordinates ? coordinates[1] : null,
       from_phone: from,
       images: images && images.length ? images : null,
       source: 'whatsapp'
     };
 
+    console.log('📤 Inserting to Supabase reports:', { type: insertPayload.type, location: insertPayload.location, coords: [insertPayload.longitude, insertPayload.latitude] });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).from('events').insert(insertPayload).select('*').single();
-    if (error) throw error;
+    const { data, error } = await (supabase as any).from('reports').insert(insertPayload).select('*').single();
+    if (error) {
+      console.error('❌ Supabase insert error:', error);
+      throw error;
+    }
+
+    console.log('✅ Supabase insert successful:', data.id);
 
     const storedEvent: StoredEvent = {
       id: data.id,
       type: data.type,
       severity: data.severity,
       location: data.location,
-      description: data.description,
+      summary: data.summary,
       timestamp: data.event_timestamp,
       coordinates: data.longitude != null && data.latitude != null ? [data.longitude, data.latitude] : null,
       from: data.from_phone || from,
@@ -166,6 +192,10 @@ export async function storeEvent(event: EventData, from: string, images?: string
     console.log('Event stored in Supabase:', storedEvent.id);
     return storedEvent;
   } catch (dbError) {
+    // `ensureSupabaseAvailable()` is responsible for detecting schema errors and
+    // toggling availability. Ensure we attempt another probe on the next call.
+    try { /* noop - leaving for compatibility */ } catch (e) { /* noop */ }
+
     console.error('Supabase insert failed, falling back to file storage:', dbError);
     // Fallback to file system path
     await initializeEvents();
@@ -174,9 +204,9 @@ export async function storeEvent(event: EventData, from: string, images?: string
       type: event.type || 'Unknown',
       severity: event.severity || 1,
       location: event.location || 'Unknown location',
-  description: sanitizedDescription || 'No description provided',
+      summary: sanitizedDescription || 'No description provided',
       timestamp: event.timestamp || new Date().toISOString(),
-      coordinates: event.coordinates || null,
+      coordinates: coordinates || null,
       from,
       createdAt: new Date().toISOString(),
       images: images || []
@@ -194,10 +224,17 @@ export async function getEvents(): Promise<StoredEvent[]> {
     await initializeEvents();
     return events;
   }
+  // Check whether Supabase has the expected schema and is available right now.
+  const supabaseReady = await ensureSupabaseAvailable();
+  if (!supabaseReady) {
+    console.warn('Supabase not enabled - returning file-stored events');
+    await initializeEvents();
+    return events;
+  }
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).from('events').select('*').order('event_timestamp', { ascending: false }).limit(500);
+    const { data, error} = await (supabase as any).from('reports').select('*').order('event_timestamp', { ascending: false }).limit(500);
     if (error) throw error;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (data || []).map((row: any) => ({
@@ -205,7 +242,7 @@ export async function getEvents(): Promise<StoredEvent[]> {
       type: row.type,
       severity: row.severity,
       location: row.location,
-      description: row.description,
+      summary: row.summary,
       timestamp: row.event_timestamp,
       coordinates: row.longitude != null && row.latitude != null ? [row.longitude, row.latitude] : null,
       from: row.from_phone || 'unknown',
@@ -213,6 +250,7 @@ export async function getEvents(): Promise<StoredEvent[]> {
       images: row.images || []
     }));
   } catch (err) {
+    // Delegate schema detection to ensureSupabaseAvailable; log and fallback.
     console.error('Supabase fetch failed, using file fallback:', err);
     await initializeEvents();
     return events;
@@ -221,8 +259,10 @@ export async function getEvents(): Promise<StoredEvent[]> {
 
 export async function getEventById(id: string): Promise<StoredEvent | undefined> {
   try {
+    const supabaseReady = await ensureSupabaseAvailable();
+    if (!supabaseReady) throw new Error('Supabase temporarily disabled by server (probe)');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).from('events').select('*').eq('id', id).single();
+    const { data, error } = await (supabase as any).from('reports').select('*').eq('id', id).single();
     if (error) throw error;
     if (!data) return undefined;
     return {
@@ -230,7 +270,7 @@ export async function getEventById(id: string): Promise<StoredEvent | undefined>
       type: data.type,
       severity: data.severity,
       location: data.location,
-      description: data.description,
+      summary: data.summary,
       timestamp: data.event_timestamp,
       coordinates: data.longitude != null && data.latitude != null ? [data.longitude, data.latitude] : null,
       from: data.from_phone || 'unknown',

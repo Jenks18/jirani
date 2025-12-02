@@ -80,7 +80,7 @@ class WhatsAppConversationManager {
     }
   }
 
-  private detectIncident(message: string): IncidentReport | null {
+  private async detectIncident(message: string): Promise<IncidentReport | null> {
     const lowerMessage = message.toLowerCase();
     
     // Crime-related keywords with broader context
@@ -107,20 +107,8 @@ class WhatsAppConversationManager {
       type = 'Threat/Harassment';
     }
 
-    // Better location extraction
-    const locationKeywords = ['near', 'at ', 'in ', 'on ', 'by ', 'westland', 'kikuyu', 'mall', 'road', 'street', 'avenue', 'around', 'outside'];
-    const hasLocation = locationKeywords.some(keyword => lowerMessage.includes(keyword));
-    
-    // Extract specific location if mentioned
-    let specificLocation = undefined;
-    if (hasLocation) {
-      const locationMatch = lowerMessage.match(/(near|at|in|on|by|around|outside)\s+([a-z\s]+?)(?:\.|,|$|\sand\s)/i);
-      if (locationMatch) {
-        specificLocation = locationMatch[0].trim();
-      } else {
-        specificLocation = 'Location mentioned in description';
-      }
-    }
+    // Use AI to extract location more intelligently
+    const specificLocation = await this.extractLocationWithAI(message);
 
     return {
       type,
@@ -131,6 +119,79 @@ class WhatsAppConversationManager {
       confirmed: false
     };
   }
+
+  private async extractLocationWithAI(message: string): Promise<string | undefined> {
+    try {
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
+      if (!GROQ_API_KEY) {
+        console.log('⚠️  No GROQ_API_KEY, extraction failed');
+        return undefined;
+      }
+
+      // Use Groq Compound (agentic AI) for intelligent location extraction
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'groq/compound',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a location extraction expert for Kenya. Extract the EXACT location mentioned by the user, preserving original phrasing.
+
+Rules:
+- Extract location EXACTLY as stated (e.g., "CBD near Archives", "Westlands Mall", "Yaya Centre Kilimani")
+- Include landmarks and descriptors (e.g., "near", "outside", "at")
+- Keep Kenyan place names accurate
+- If NO location mentioned, return null
+
+Return JSON: {"location": "exact location string" or null}`
+            },
+            {
+              role: 'user',
+              content: message
+            }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.0,
+          max_tokens: 100
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Groq location extraction failed:', response.statusText, errorText);
+        return undefined;
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content?.trim();
+      
+      if (!content) {
+        console.log('⚠️  No response from AI');
+        return undefined;
+      }
+
+      const parsed = JSON.parse(content);
+      const extractedLocation = parsed.location;
+      
+      if (!extractedLocation || typeof extractedLocation !== 'string' || extractedLocation.length < 2) {
+        console.log('⚠️  No location found in message');
+        return undefined;
+      }
+
+      console.log(`🎯 AI extracted location: "${extractedLocation}"`);
+      return extractedLocation;
+    } catch (error) {
+      console.error('❌ Error in AI location extraction:', error);
+      return undefined;
+    }
+  }
+
+
 
   private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
     try {
@@ -175,7 +236,7 @@ INSTRUCTIONS:
 
 Respond now as Jirani:`;
 
-      console.log('🌐 Calling Groq API...');
+      console.log('🌐 Calling Groq Compound AI...');
       
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -184,7 +245,7 @@ Respond now as Jirani:`;
           'Authorization': `Bearer ${GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile', // Fast, high-quality model
+          model: 'groq/compound',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage }
@@ -240,7 +301,7 @@ Respond now as Jirani:`;
     }
   }
 
-  private async generateResponse(userId: string, userMessage: string): Promise<string> {
+  private async generateResponse(userId: string, userMessage: string): Promise<{ response: string; shouldStore: boolean }> {
     const conversation = this.getConversation(userId);
     const lowerMessage = userMessage.toLowerCase();
 
@@ -255,13 +316,20 @@ Respond now as Jirani:`;
         conversation.currentIncident.confirmed = true;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
-        return "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?";
+        console.log('✅ USER CONFIRMED - INCIDENT WILL BE STORED');
+        return { 
+          response: "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?",
+          shouldStore: true
+        };
       } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n' || 
                  lowerMessage.includes('don\'t') || lowerMessage.includes('stop')) {
         conversation.currentIncident = undefined;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'greeting';
-        return "Sawa, no problem. I won't file anything. Anything else I can help with?";
+        return { 
+          response: "Sawa, no problem. I won't file anything. Anything else I can help with?",
+          shouldStore: false
+        };
       }
     }
 
@@ -279,11 +347,20 @@ Respond now as Jirani:`;
     console.log('💭 Generated response:', aiResponse);
     
     // Check if the message indicates an incident
-    const detectedIncident = this.detectIncident(userMessage);
+    const detectedIncident = await this.detectIncident(userMessage);
     if (detectedIncident && !conversation.currentIncident) {
       console.log('🚨 Incident detected:', detectedIncident);
       conversation.currentIncident = detectedIncident;
       conversation.conversationPhase = 'collecting';
+    }
+    
+    // If we have an active incident, continuously update location from new messages
+    if (conversation.currentIncident && conversation.conversationPhase === 'collecting') {
+      const locationFromMessage = await this.extractLocationWithAI(userMessage);
+      if (locationFromMessage && locationFromMessage !== 'NONE') {
+        console.log(`📍 Updating incident location: "${locationFromMessage}"`);
+        conversation.currentIncident.location = locationFromMessage;
+      }
     }
     
     // Check if AI response asks for confirmation (indicates we have enough details)
@@ -298,7 +375,7 @@ Respond now as Jirani:`;
       conversation.conversationPhase = 'confirming';
     }
     
-    return aiResponse;
+    return { response: aiResponse, shouldStore: false };
   }
 
   public async processMessage(userId: string, message: string): Promise<{ response: string; incident?: IncidentReport }> {
@@ -308,15 +385,15 @@ Respond now as Jirani:`;
     this.addMessage(userId, 'user', message);
     
     // Generate response
-    const response = await this.generateResponse(userId, message);
+    const result = await this.generateResponse(userId, message);
     
     // Add assistant response
-    this.addMessage(userId, 'assistant', response);
+    this.addMessage(userId, 'assistant', result.response);
     
-    // Return response and any confirmed incident
+    // Return response and incident if it should be stored
     return {
-      response,
-      incident: conversation.currentIncident?.confirmed ? conversation.currentIncident : undefined
+      response: result.response,
+      incident: (result.shouldStore && conversation.currentIncident?.confirmed) ? conversation.currentIncident : undefined
     };
   }
 
