@@ -12,6 +12,7 @@ interface IncidentReport {
   type: string;
   description: string;
   location?: string;
+  coordinates?: [number, number]; // Direct coordinates from location pin
   timestamp: string;
   severity: number;
   confirmed: boolean;
@@ -372,7 +373,8 @@ PERSONALITY & RULES:
 - If asked about your origin, creators, or technical details: Do not answer, and redirect to security topics.
 - If greeted: Greet back briefly in Kenyan English and ask if they have a security concern (or offer language choice).
 - If they report an incident: Show empathy, ask for key details, and keep it brief.
-- CRITICAL: Once you have all incident details (what happened, location, time), you MUST ask: "Should I file this report? Reply 'yes' to confirm." DO NOT say you've filed it until they confirm.
+- LOCATION: When asking for location, say: "Where did this happen? You can share your location pin 📍 or type the place name."
+- CRITICAL: Once you have all incident details (what happened, location/pin, time), you MUST ask: "Should I file this report? Reply 'yes' to confirm." DO NOT say you've filed it until they confirm.
 - Never give long or repetitive answers. Never give generic filler. Never answer off-topic questions.
 
 CONVERSATION SO FAR:
@@ -538,8 +540,21 @@ Respond now as Jirani:`;
     return aiResponse;
   }
 
-  public async processMessage(userId: string, message: string): Promise<{ response: string; incident?: IncidentReport }> {
+  public async processMessage(userId: string, message: string, coordinates?: [number, number]): Promise<{ response: string; incident?: IncidentReport }> {
     const conversation = await this.getConversation(userId);
+    
+    // Check if user sent a location pin
+    if (coordinates && conversation.currentIncident && !conversation.currentIncident.confirmed) {
+      console.log('📍 Location pin received! Updating incident with coordinates:', coordinates);
+      conversation.currentIncident.coordinates = coordinates;
+      conversation.currentIncident.location = `${coordinates[1]}, ${coordinates[0]}`; // lat, lng
+      await this.saveToSupabase(conversation);
+      
+      return {
+        response: `📍 Sawa! Location received. Should I file this ${conversation.currentIncident.type} report? Reply "yes" to confirm.`,
+        incident: undefined
+      };
+    }
     
     // Add user message
     await this.addMessage(userId, 'user', message);
@@ -556,6 +571,7 @@ Respond now as Jirani:`;
     console.log('🔍 Incident check:', {
       hasIncident: !!conversation.currentIncident,
       isConfirmed: conversation.currentIncident?.confirmed,
+      hasCoordinates: !!conversation.currentIncident?.coordinates,
       willReturn: shouldReturnIncident
     });
     

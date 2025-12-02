@@ -120,7 +120,17 @@ export async function POST(req: NextRequest) {
         from = webhookParams['From'] || webhookParams['from'];
         messageSid = webhookParams['MessageSid'] || webhookParams['messageSid'];
         
-        logInfo('Parsed form-encoded webhook', { from, messageSid, hasMessage: !!message });
+        // Check for location pin (Latitude/Longitude from WhatsApp location share)
+        const latitude = webhookParams['Latitude'];
+        const longitude = webhookParams['Longitude'];
+        
+        if (latitude && longitude) {
+          // User shared a location pin - treat it as location confirmation
+          message = `📍 Location shared: ${latitude}, ${longitude}`;
+          logInfo('📍 Location pin received', { latitude, longitude, from });
+        }
+        
+        logInfo('Parsed form-encoded webhook', { from, messageSid, hasMessage: !!message, hasLocation: !!(latitude && longitude) });
       } catch (formError) {
         logError('Failed to parse form-encoded webhook', formError);
         return new NextResponse('Bad Request', { status: 400 });
@@ -219,10 +229,24 @@ export async function POST(req: NextRequest) {
       preview: message.substring(0, 50) 
     });
 
+    // Extract location coordinates if user sent a pin
+    let locationCoordinates: [number, number] | undefined;
+    const latitude = webhookParams['Latitude'];
+    const longitude = webhookParams['Longitude'];
+    
+    if (latitude && longitude) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        locationCoordinates = [lng, lat]; // [longitude, latitude] format
+        logInfo('📍 Location coordinates extracted', { longitude: lng, latitude: lat });
+      }
+    }
+
     // Process message through AI-powered conversation manager
     let result;
     try {
-      result = await conversationManager.processMessage(from, message);
+      result = await conversationManager.processMessage(from, message, locationCoordinates);
       logInfo('📨 AI RESPONSE GENERATED', { 
         responseLength: result.response.length,
         hasIncident: !!result.incident,
@@ -254,13 +278,19 @@ export async function POST(req: NextRequest) {
           from: from
         });
         
+        // Use direct coordinates from location pin if available, otherwise geocode
+        let coordinates = result.incident.coordinates;
+        if (!coordinates && result.incident.location) {
+          coordinates = await extractCoordinates(result.incident.location);
+        }
+        
         const eventData = {
           type: result.incident.type,
           severity: result.incident.severity,
           location: result.incident.location || 'Location not specified',
           description: result.incident.description,
           timestamp: result.incident.timestamp,
-          coordinates: result.incident.location ? await extractCoordinates(result.incident.location) : undefined
+          coordinates
         };
         
         logInfo('📍 Coordinates:', { coordinates: eventData.coordinates });
