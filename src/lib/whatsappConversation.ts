@@ -301,7 +301,7 @@ Respond now as Jirani:`;
     }
   }
 
-  private async generateResponse(userId: string, userMessage: string): Promise<string> {
+  private async generateResponse(userId: string, userMessage: string): Promise<{ response: string; shouldStore: boolean }> {
     const conversation = this.getConversation(userId);
     const lowerMessage = userMessage.toLowerCase();
 
@@ -316,13 +316,20 @@ Respond now as Jirani:`;
         conversation.currentIncident.confirmed = true;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
-        return "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?";
+        console.log('✅ USER CONFIRMED - INCIDENT WILL BE STORED');
+        return { 
+          response: "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?",
+          shouldStore: true
+        };
       } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n' || 
                  lowerMessage.includes('don\'t') || lowerMessage.includes('stop')) {
         conversation.currentIncident = undefined;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'greeting';
-        return "Sawa, no problem. I won't file anything. Anything else I can help with?";
+        return { 
+          response: "Sawa, no problem. I won't file anything. Anything else I can help with?",
+          shouldStore: false
+        };
       }
     }
 
@@ -368,7 +375,7 @@ Respond now as Jirani:`;
       conversation.conversationPhase = 'confirming';
     }
     
-    return aiResponse;
+    return { response: aiResponse, shouldStore: false };
   }
 
   public async processMessage(userId: string, message: string): Promise<{ response: string; incident?: IncidentReport }> {
@@ -378,15 +385,15 @@ Respond now as Jirani:`;
     this.addMessage(userId, 'user', message);
     
     // Generate response
-    const response = await this.generateResponse(userId, message);
+    const result = await this.generateResponse(userId, message);
     
     // Add assistant response
-    this.addMessage(userId, 'assistant', response);
+    this.addMessage(userId, 'assistant', result.response);
     
-    // Return response and any confirmed incident
+    // Return response and incident if it should be stored
     return {
-      response,
-      incident: conversation.currentIncident?.confirmed ? conversation.currentIncident : undefined
+      response: result.response,
+      incident: (result.shouldStore && conversation.currentIncident?.confirmed) ? conversation.currentIncident : undefined
     };
   }
 

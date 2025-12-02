@@ -235,11 +235,20 @@ export async function POST(req: NextRequest) {
     }
     
     // Store confirmed incident in database
+    logInfo('Checking if incident should be stored', { 
+      hasIncident: !!result.incident,
+      isConfirmed: result.incident?.confirmed,
+      incidentType: result.incident?.type,
+      incidentLocation: result.incident?.location
+    });
+    
     if (result.incident && result.incident.confirmed) {
       try {
-        logInfo('Storing confirmed incident', { 
+        logInfo('🎯 STORING CONFIRMED INCIDENT TO SUPABASE', { 
           type: result.incident.type,
-          severity: result.incident.severity 
+          severity: result.incident.severity,
+          location: result.incident.location,
+          from: from
         });
         
         const eventData = {
@@ -251,13 +260,24 @@ export async function POST(req: NextRequest) {
           coordinates: await extractCoordinates(result.incident.location || 'Nairobi')
         };
         
+        logInfo('📍 Geocoded coordinates', { coordinates: eventData.coordinates });
+        
         const storedEvent = await storeEvent(eventData, from, []);
-        logInfo('Incident stored successfully', { eventId: storedEvent.id });
+        logInfo('✅ INCIDENT SUCCESSFULLY STORED IN SUPABASE', { 
+          eventId: storedEvent.id,
+          location: storedEvent.location,
+          coordinates: storedEvent.coordinates
+        });
         
       } catch (storageError) {
-        logError('Failed to store incident - continuing with response', storageError);
+        logError('❌ FAILED TO STORE INCIDENT - continuing with response', storageError);
         // Don't block webhook response if storage fails
       }
+    } else {
+      logInfo('⏭️ Skipping storage - incident not confirmed or not present', {
+        hasIncident: !!result.incident,
+        isConfirmed: result.incident?.confirmed
+      });
     }
 
     // Send response via Twilio API
