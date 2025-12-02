@@ -56,18 +56,12 @@ const KENYA_LOCATIONS: LocationCoords = {
   'tom mboya street': [36.8234, -1.2884],
   'moi avenue': [36.8219, -1.2864],
   
-  // Malls
+  // Mall shortcuts
   'junction': [36.8219, -1.2921],
-  'junction mall': [36.8219, -1.2921],
-  'sarit centre': [36.7870, -1.2634],
   'sarit': [36.7870, -1.2634],
-  'yaya centre': [36.7884, -1.2895],
   'yaya': [36.7884, -1.2895],
   'westgate': [36.8065, -1.2674],
-  'westgate mall': [36.8065, -1.2674],
-  'village market': [36.8065, -1.2343],
-  'two rivers': [36.8844, -1.2283],
-  'two rivers mall': [36.8844, -1.2283]
+  'two rivers': [36.8844, -1.2283]
 };
 
 export async function geocodeLocation(locationString: string): Promise<[number, number] | null> {
