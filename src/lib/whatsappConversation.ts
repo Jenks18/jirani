@@ -347,6 +347,15 @@ Respond now as Jirani:`;
       conversation.conversationPhase = 'collecting';
     }
     
+    // If we have an active incident, continuously update location from new messages
+    if (conversation.currentIncident && conversation.conversationPhase === 'collecting') {
+      const locationFromMessage = await this.extractLocationWithAI(userMessage);
+      if (locationFromMessage && locationFromMessage !== 'NONE') {
+        console.log(`📍 Updating incident location: "${locationFromMessage}"`);
+        conversation.currentIncident.location = locationFromMessage;
+      }
+    }
+    
     // Check if AI response asks for confirmation (indicates we have enough details)
     const asksForConfirmation = aiResponse.toLowerCase().includes('should i file') || 
                                  aiResponse.toLowerCase().includes('confirm') ||
