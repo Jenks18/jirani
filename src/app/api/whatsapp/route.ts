@@ -98,24 +98,32 @@ export async function POST(req: NextRequest) {
     let message: string | undefined;
     let messageSid: string | undefined;
 
-    // Try form data first (Twilio's default format)
-    try {
-      const formData = await req.formData();
-      webhookParams = Object.fromEntries(formData.entries() as Iterable<[string, string]>);
-      
-      // Validate Twilio signature for security
-      if (!validateTwilioSignature(req, webhookParams)) {
-        logError('Invalid Twilio signature - potential security threat');
-        return new NextResponse('Forbidden', { status: 403 });
+    // Check content type to determine parsing method
+    const contentType = req.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+      // Parse as form data (Twilio's default format)
+      try {
+        const formData = await req.formData();
+        webhookParams = Object.fromEntries(formData.entries() as Iterable<[string, string]>);
+        
+        // Validate Twilio signature for security
+        if (!validateTwilioSignature(req, webhookParams)) {
+          logError('Invalid Twilio signature - potential security threat');
+          return new NextResponse('Forbidden', { status: 403 });
+        }
+        
+        message = webhookParams['Body'] || webhookParams['body'];
+        from = webhookParams['From'] || webhookParams['from'];
+        messageSid = webhookParams['MessageSid'] || webhookParams['messageSid'];
+        
+        logInfo('Parsed form-encoded webhook', { from, messageSid, hasMessage: !!message });
+      } catch (formError) {
+        logError('Failed to parse form-encoded webhook', formError);
+        return new NextResponse('Bad Request', { status: 400 });
       }
-      
-      message = webhookParams['Body'] || webhookParams['body'];
-      from = webhookParams['From'] || webhookParams['from'];
-      messageSid = webhookParams['MessageSid'] || webhookParams['messageSid'];
-      
-      logInfo('Parsed form-encoded webhook', { from, messageSid, hasMessage: !!message });
-    } catch (formError) {
-      // Fallback to JSON parsing (for testing or alternative formats)
+    } else {
+      // Parse as JSON (for testing or Meta webhooks)
       try {
         const jsonBody = await req.json();
         
@@ -136,7 +144,7 @@ export async function POST(req: NextRequest) {
           logInfo('Parsed JSON webhook', { from, messageSid, hasMessage: !!message });
         }
       } catch (jsonError) {
-        logError('Failed to parse webhook payload as form-data or JSON', { formError, jsonError });
+        logError('Failed to parse JSON webhook', jsonError);
         return new NextResponse('Bad Request', { status: 400 });
       }
     }
