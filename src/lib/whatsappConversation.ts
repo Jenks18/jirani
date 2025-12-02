@@ -216,8 +216,17 @@ NOT_INCIDENT`
         return null;
       }
 
+      // Extract the pipe-separated line from potentially verbose response
+      const lines = aiText.split('\n');
+      const incidentLine = lines.find(line => line.trim().startsWith('INCIDENT|'));
+      
+      if (!incidentLine) {
+        console.log('❌ No INCIDENT line found in response');
+        return null;
+      }
+
       // Parse the response: INCIDENT|Type|Location|Severity
-      const parts = aiText.split('|');
+      const parts = incidentLine.trim().split('|');
       if (parts[0] !== 'INCIDENT' || parts.length < 4) {
         console.log('❌ Invalid response format');
         return null;
