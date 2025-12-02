@@ -1,11 +1,25 @@
 "use client";
 import { useState } from 'react';
 
+interface TestResult {
+  error?: string;
+  response?: string;
+  incident?: unknown;
+  twilio?: {
+    sent: boolean;
+    sid?: string;
+    reason?: string;
+    error?: string;
+  };
+  processingTimeMs?: number;
+  [key: string]: unknown;
+}
+
 export default function WhatsAppTestPage() {
   const [to, setTo] = useState('');
   const [message, setMessage] = useState('I was robbed near the mall');
   const [send, setSend] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<TestResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function runTest(e: React.FormEvent) {

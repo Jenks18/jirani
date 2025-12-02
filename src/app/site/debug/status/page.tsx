@@ -1,8 +1,13 @@
 "use client";
 import { useEffect, useState } from 'react';
 
+interface StatusData {
+  error?: string;
+  [key: string]: unknown;
+}
+
 export default function StatusPage() {
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function fetchStatus() {
@@ -23,7 +28,7 @@ export default function StatusPage() {
   return (
     <div style={{ padding: 20 }}>
       <h2>Runtime Status</h2>
-      <p>This page calls `/api/status` and displays the response. If your status endpoint requires an admin token, the response will be limited unless you're authenticated.</p>
+      <p>This page calls `/api/status` and displays the response. If your status endpoint requires an admin token, the response will be limited unless you&apos;re authenticated.</p>
       <button onClick={fetchStatus} disabled={loading} style={{ marginBottom: 12 }}>{loading ? 'Refreshing…' : 'Refresh'}</button>
       <pre style={{ whiteSpace: 'pre-wrap', background: '#f6f6f6', padding: 12 }}>{JSON.stringify(status, null, 2)}</pre>
     </div>
