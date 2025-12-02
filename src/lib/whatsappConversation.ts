@@ -301,7 +301,7 @@ Respond now as Jirani:`;
     }
   }
 
-  private async generateResponse(userId: string, userMessage: string): Promise<{ response: string; shouldStore: boolean }> {
+  private async generateResponse(userId: string, userMessage: string): Promise<string> {
     const conversation = this.getConversation(userId);
     const lowerMessage = userMessage.toLowerCase();
 
@@ -313,23 +313,17 @@ Respond now as Jirani:`;
       if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y' || 
           lowerMessage.includes('okay') || lowerMessage.includes('ok') || lowerMessage.includes('sure') ||
           lowerMessage.includes('do it') || lowerMessage.includes('file it') || lowerMessage.includes('proceed')) {
+        console.log('✅✅✅ USER SAID YES - MARKING AS CONFIRMED ✅✅✅');
         conversation.currentIncident.confirmed = true;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
-        console.log('✅ USER CONFIRMED - INCIDENT WILL BE STORED');
-        return { 
-          response: "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?",
-          shouldStore: true
-        };
+        return "✅ Sawa, report filed! The incident has been recorded and shared with authorities. Stay safe, uko sawa?";
       } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n' || 
                  lowerMessage.includes('don\'t') || lowerMessage.includes('stop')) {
         conversation.currentIncident = undefined;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'greeting';
-        return { 
-          response: "Sawa, no problem. I won't file anything. Anything else I can help with?",
-          shouldStore: false
-        };
+        return "Sawa, no problem. I won't file anything. Anything else I can help with?";
       }
     }
 
@@ -375,7 +369,7 @@ Respond now as Jirani:`;
       conversation.conversationPhase = 'confirming';
     }
     
-    return { response: aiResponse, shouldStore: false };
+    return aiResponse;
   }
 
   public async processMessage(userId: string, message: string): Promise<{ response: string; incident?: IncidentReport }> {
@@ -385,15 +379,23 @@ Respond now as Jirani:`;
     this.addMessage(userId, 'user', message);
     
     // Generate response
-    const result = await this.generateResponse(userId, message);
+    const response = await this.generateResponse(userId, message);
     
     // Add assistant response
-    this.addMessage(userId, 'assistant', result.response);
+    this.addMessage(userId, 'assistant', response);
     
-    // Return response and incident if it should be stored
+    // SIMPLE: If incident is confirmed, return it
+    const shouldReturnIncident = conversation.currentIncident?.confirmed === true;
+    
+    console.log('🔍 Incident check:', {
+      hasIncident: !!conversation.currentIncident,
+      isConfirmed: conversation.currentIncident?.confirmed,
+      willReturn: shouldReturnIncident
+    });
+    
     return {
-      response: result.response,
-      incident: (result.shouldStore && conversation.currentIncident?.confirmed) ? conversation.currentIncident : undefined
+      response,
+      incident: shouldReturnIncident ? conversation.currentIncident : undefined
     };
   }
 
