@@ -153,33 +153,29 @@ export async function storeEvent(event: EventData, from: string, images?: string
     }
     // If we've previously flagged Supabase as unavailable due to schema errors or other problems,
     // only attempt again after backoff expires.
-    // Format coordinates as PostGIS POINT string: "POINT(longitude latitude)"
-    const coordinatesPoint = coordinates ? `POINT(${coordinates[0]} ${coordinates[1]})` : null;
-    
     const insertPayload = {
       type: event.type || 'Unknown',
       severity: event.severity || 1,
       location: event.location || 'Unknown location',
       summary: sanitizedDescription || 'No description provided',
       event_timestamp: event.timestamp || new Date().toISOString(),
-      coordinates: coordinatesPoint,
+      longitude: coordinates ? coordinates[0] : null,
+      latitude: coordinates ? coordinates[1] : null,
       from_phone: from,
       images: images && images.length ? images : null,
       source: 'whatsapp'
     };
 
+    console.log('📤 Inserting to Supabase reports:', { type: insertPayload.type, location: insertPayload.location, coords: [insertPayload.longitude, insertPayload.latitude] });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any).from('reports').insert(insertPayload).select('*').single();
-    if (error) throw error;
-
-    // Parse POINT string back to coordinates array
-    let parsedCoords: [number, number] | null = null;
-    if (data.coordinates) {
-      const match = data.coordinates.match(/POINT\(([^ ]+) ([^)]+)\)/);
-      if (match) {
-        parsedCoords = [parseFloat(match[1]), parseFloat(match[2])];
-      }
+    if (error) {
+      console.error('❌ Supabase insert error:', error);
+      throw error;
     }
+
+    console.log('✅ Supabase insert successful:', data.id);
 
     const storedEvent: StoredEvent = {
       id: data.id,
@@ -188,7 +184,7 @@ export async function storeEvent(event: EventData, from: string, images?: string
       location: data.location,
       summary: data.summary,
       timestamp: data.event_timestamp,
-      coordinates: parsedCoords,
+      coordinates: data.longitude != null && data.latitude != null ? [data.longitude, data.latitude] : null,
       from: data.from_phone || from,
       createdAt: data.created_at,
       images: data.images || []
@@ -238,32 +234,21 @@ export async function getEvents(): Promise<StoredEvent[]> {
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).from('reports').select('*').order('event_timestamp', { ascending: false }).limit(500);
+    const { data, error} = await (supabase as any).from('reports').select('*').order('event_timestamp', { ascending: false }).limit(500);
     if (error) throw error;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data || []).map((row: any) => {
-      // Parse POINT string to coordinates array
-      let coords: [number, number] | null = null;
-      if (row.coordinates) {
-        const match = row.coordinates.match(/POINT\(([^ ]+) ([^)]+)\)/);
-        if (match) {
-          coords = [parseFloat(match[1]), parseFloat(match[2])];
-        }
-      }
-      
-      return {
-        id: row.id,
-        type: row.type,
-        severity: row.severity,
-        location: row.location,
-        summary: row.summary,
-        timestamp: row.event_timestamp,
-        coordinates: coords,
-        from: row.from_phone || 'unknown',
-        createdAt: row.created_at,
-        images: row.images || []
-      };
-    });
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      type: row.type,
+      severity: row.severity,
+      location: row.location,
+      summary: row.summary,
+      timestamp: row.event_timestamp,
+      coordinates: row.longitude != null && row.latitude != null ? [row.longitude, row.latitude] : null,
+      from: row.from_phone || 'unknown',
+      createdAt: row.created_at,
+      images: row.images || []
+    }));
   } catch (err) {
     // Delegate schema detection to ensureSupabaseAvailable; log and fallback.
     console.error('Supabase fetch failed, using file fallback:', err);
@@ -280,16 +265,6 @@ export async function getEventById(id: string): Promise<StoredEvent | undefined>
     const { data, error } = await (supabase as any).from('reports').select('*').eq('id', id).single();
     if (error) throw error;
     if (!data) return undefined;
-    
-    // Parse POINT string to coordinates array
-    let coords: [number, number] | null = null;
-    if (data.coordinates) {
-      const match = data.coordinates.match(/POINT\(([^ ]+) ([^)]+)\)/);
-      if (match) {
-        coords = [parseFloat(match[1]), parseFloat(match[2])];
-      }
-    }
-    
     return {
       id: data.id,
       type: data.type,
@@ -297,7 +272,7 @@ export async function getEventById(id: string): Promise<StoredEvent | undefined>
       location: data.location,
       summary: data.summary,
       timestamp: data.event_timestamp,
-      coordinates: coords,
+      coordinates: data.longitude != null && data.latitude != null ? [data.longitude, data.latitude] : null,
       from: data.from_phone || 'unknown',
       createdAt: data.created_at,
       images: data.images || []

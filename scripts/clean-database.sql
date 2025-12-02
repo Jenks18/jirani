@@ -5,14 +5,15 @@
 DROP TABLE IF EXISTS public.events CASCADE;
 DROP TABLE IF EXISTS public.reports CASCADE;
 
--- 2. Create reports table with proper schema
+-- 2. Create reports table with proper schema (using longitude/latitude columns)
 CREATE TABLE public.reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type TEXT NOT NULL,
   severity INTEGER NOT NULL DEFAULT 1,
   summary TEXT NOT NULL,
   location TEXT NOT NULL,
-  coordinates POINT,
+  longitude DOUBLE PRECISION,
+  latitude DOUBLE PRECISION,
   event_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   from_phone TEXT,
   images TEXT[],
@@ -25,7 +26,7 @@ CREATE INDEX idx_reports_created_at ON public.reports(created_at DESC);
 CREATE INDEX idx_reports_event_timestamp ON public.reports(event_timestamp DESC);
 CREATE INDEX idx_reports_location ON public.reports(location);
 CREATE INDEX idx_reports_type ON public.reports(type);
-CREATE INDEX idx_reports_coordinates ON public.reports USING GIST(coordinates);
+CREATE INDEX idx_reports_coordinates ON public.reports(longitude, latitude);
 
 -- 4. Enable Row Level Security
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
