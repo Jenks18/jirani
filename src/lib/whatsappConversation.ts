@@ -559,25 +559,28 @@ Respond now as Jirani:`;
     // Add user message
     await this.addMessage(userId, 'user', message);
     
-    // Generate response
+    // Generate response (this may modify the conversation state, e.g., confirming incident)
     const response = await this.generateResponse(userId, message);
     
     // Add assistant response
     await this.addMessage(userId, 'assistant', response);
     
+    // RE-FETCH conversation to get updated state after generateResponse modified it
+    const updatedConversation = await this.getConversation(userId);
+    
     // SIMPLE: If incident is confirmed, return it
-    const shouldReturnIncident = conversation.currentIncident?.confirmed === true;
+    const shouldReturnIncident = updatedConversation.currentIncident?.confirmed === true;
     
     console.log('🔍 Incident check:', {
-      hasIncident: !!conversation.currentIncident,
-      isConfirmed: conversation.currentIncident?.confirmed,
-      hasCoordinates: !!conversation.currentIncident?.coordinates,
+      hasIncident: !!updatedConversation.currentIncident,
+      isConfirmed: updatedConversation.currentIncident?.confirmed,
+      hasCoordinates: !!updatedConversation.currentIncident?.coordinates,
       willReturn: shouldReturnIncident
     });
     
     return {
       response,
-      incident: shouldReturnIncident ? conversation.currentIncident : undefined
+      incident: shouldReturnIncident ? updatedConversation.currentIncident : undefined
     };
   }
 
