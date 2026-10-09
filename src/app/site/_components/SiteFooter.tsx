@@ -8,6 +8,7 @@ const cols = [
     links: [
       { href: org.mapsUrl, label: "Live map", external: true },
       { href: "/how-it-works", label: "How it works" },
+      { href: "/safety-net", label: "Safety net" },
       { href: "/safety", label: "Safety & responsible use" },
     ],
   },

@@ -6,6 +6,7 @@ import ReportsPanel from '../ReportsPanel';
 import MapComponent from '../MapComponent';
 import { useReports } from './useReports';
 import { whatsappLink } from '@/config/org';
+import MobileNav from './_components/MobileNav';
 import { DEFAULT_FILTERS, filterReports, type Filters } from '@/lib/reports';
 
 const SIDEBAR_OPEN = 256;
@@ -62,6 +63,18 @@ export default function MapPage() {
     if (id && reports.some((r) => r.id === id)) select(id);
   }, [status, reports, deepLinked, select]);
 
+  // Deep link to a place: /#ll=lat,lng,zoom (from the Areas page)
+  const [focus, setFocus] = useState<{ lat: number; lng: number; zoom: number; seq: number } | null>(null);
+  useEffect(() => {
+    const read = () => {
+      const m = /(?:^|&)ll=(-?[\d.]+),(-?[\d.]+),(\d+(?:\.\d+)?)/.exec(location.hash.slice(1));
+      if (m) setFocus({ lat: +m[1], lng: +m[2], zoom: +m[3], seq: Date.now() });
+    };
+    read();
+    window.addEventListener('hashchange', read);
+    return () => window.removeEventListener('hashchange', read);
+  }, []);
+
   // Escape clears selection
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && select(null);
@@ -113,7 +126,7 @@ export default function MapPage() {
       )}
 
       <main className="relative h-full min-w-0 flex-1">
-        <MapComponent reports={visible} selectedId={selectedId} selectSeq={selectSeq} onSelect={select} insets={insets} />
+        <MapComponent reports={visible} selectedId={selectedId} selectSeq={selectSeq} onSelect={select} insets={insets} focus={focus} />
 
         {!panelOpen && (
           <button
@@ -125,6 +138,7 @@ export default function MapPage() {
           </button>
         )}
 
+        {!desktop && <MobileNav className="absolute left-3 top-3 z-30" />}
         {!desktop && (
           <a
             href={whatsappLink}

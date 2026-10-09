@@ -3,6 +3,8 @@ import { storeEvent } from '@/lib/eventStorage';
 import { extractCoordinates } from '@/lib/locationUtils';
 import conversationManager from '@/lib/whatsappConversation';
 import { webhookRateLimiter } from '@/lib/rateLimiter';
+import { handleCommand } from '@/lib/commands';
+import { dispatchAlerts } from '@/lib/alerts';
 import { extractMessages, markRead, sendText, verifySignature, type InboundMessage } from '@/lib/whatsappCloud';
 
 export const runtime = 'nodejs';
@@ -71,6 +73,22 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
   }
   if (text.length > MAX_MESSAGE_LENGTH) text = text.slice(0, MAX_MESSAGE_LENGTH);
 
+  // Explicit commands (safety net, alerts, communities, news) are handled before the AI.
+  try {
+    const reply = await handleCommand({
+      phone: from,
+      text: msg.location ? undefined : text,
+      location: msg.location ? { lat: msg.location.latitude, lng: msg.location.longitude } : undefined,
+    });
+    if (reply) {
+      await sendText(from, reply);
+      return;
+    }
+  } catch (err) {
+    // e.g. platform migration not applied yet: fall through to the normal reporting flow
+    console.error('[whatsapp] command handling failed', err);
+  }
+
   let result: Awaited<ReturnType<typeof conversationManager.processMessage>>;
   try {
     result = await conversationManager.processMessage(from, text, coords);
@@ -80,6 +98,7 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
     return;
   }
 
+  let alert: Parameters<typeof dispatchAlerts>[0] | null = null;
   if (result.incident) {
     try {
       let coordinates = result.incident.coordinates;
@@ -99,6 +118,13 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
         []
       );
       log('incident stored', { eventId: stored.id });
+      alert = {
+        type: stored.type,
+        severity: stored.severity,
+        location: stored.location,
+        summary: stored.summary,
+        coordinates: stored.coordinates,
+      };
       await conversationManager.clearIncident(from);
     } catch (err) {
       console.error('[whatsapp] failed to store incident', err);
@@ -106,6 +132,8 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
   }
 
   await sendText(from, result.response);
+  // Alert nearby subscribers after the reporter has their reply.
+  if (alert) await dispatchAlerts(alert, from);
 }
 
 export async function POST(req: NextRequest) {

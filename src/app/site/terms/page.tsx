@@ -48,6 +48,14 @@ export default function Page() {
       </ul>
       <p>We may remove reports, rate-limit, or block phone numbers that violate these terms, without notice where needed to protect people.</p>
 
+      <h2>4a. Safety net</h2>
+      <p>
+        The safety net (trusted contacts, check-ins and SOS) is a convenience, not a guarantee. Alerts depend on WhatsApp, mobile
+        networks and our scheduler, and may be delayed or fail. You may only add people who would reasonably expect to hear from
+        you, and you must not use SOS or check-in features to harass, mislead or falsely alarm others. We may suspend access for
+        misuse. Never rely on the safety net in place of emergency services.
+      </p>
+
       <h2>5. Your reports</h2>
       <p>
         You retain ownership of what you submit. By confirming a report, you grant {org.legalName} a worldwide, non-exclusive,

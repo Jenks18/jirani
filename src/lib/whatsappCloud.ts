@@ -79,12 +79,22 @@ async function graphPost(path: string, body: unknown): Promise<Response> {
   });
 }
 
-/** Send a text message with retry on transient (5xx / 429) failures. */
+export interface SendResult {
+  ok: boolean;
+  /** Meta error code, e.g. 131047 = outside the 24h customer-service window (a template is required). */
+  errorCode?: number;
+}
+
+/** Send a free-form text message with retry on transient (5xx / 429) failures. */
 export async function sendText(to: string, body: string): Promise<boolean> {
+  return (await sendTextDetailed(to, body)).ok;
+}
+
+export async function sendTextDetailed(to: string, body: string): Promise<SendResult> {
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!phoneId || !process.env.WHATSAPP_ACCESS_TOKEN) {
     console.error('[whatsapp] WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN not configured');
-    return false;
+    return { ok: false };
   }
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
@@ -95,15 +105,58 @@ export async function sendText(to: string, body: string): Promise<boolean> {
         type: 'text',
         text: { body: body.slice(0, 4096), preview_url: false },
       });
-      if (res.ok) return true;
-      const detail = await res.text();
-      console.error(`[whatsapp] send failed (${res.status}) attempt ${attempt}`, detail);
-      if (res.status < 500 && res.status !== 429) return false;
+      if (res.ok) return { ok: true };
+      const detail = (await res.json().catch(() => ({}))) as { error?: { code?: number } };
+      const errorCode = detail.error?.code;
+      console.error(`[whatsapp] send failed (${res.status}, code ${errorCode}) attempt ${attempt}`);
+      if (res.status < 500 && res.status !== 429) return { ok: false, errorCode };
     } catch (err) {
       console.error(`[whatsapp] send error attempt ${attempt}`, err);
     }
     await new Promise((r) => setTimeout(r, 2 ** attempt * 400));
   }
+  return { ok: false };
+}
+
+/** Send an approved message template (required to start a conversation outside the 24h window). */
+export async function sendTemplate(to: string, name: string, params: string[], language = 'en'): Promise<SendResult> {
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!phoneId || !process.env.WHATSAPP_ACCESS_TOKEN) return { ok: false };
+  try {
+    const res = await graphPost(`${phoneId}/messages`, {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name,
+        language: { code: language },
+        components: params.length
+          ? [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text: text.slice(0, 500) })) }]
+          : [],
+      },
+    });
+    if (res.ok) return { ok: true };
+    const detail = (await res.json().catch(() => ({}))) as { error?: { code?: number } };
+    console.error(`[whatsapp] template ${name} failed (${res.status}, code ${detail.error?.code})`);
+    return { ok: false, errorCode: detail.error?.code };
+  } catch (err) {
+    console.error('[whatsapp] template error', err);
+    return { ok: false };
+  }
+}
+
+/**
+ * Message someone who may not have written to us recently: try free-form text first (works inside
+ * the 24h window), then fall back to the approved template.
+ */
+export async function notify(
+  to: string,
+  text: string,
+  template?: { name: string; params: string[] }
+): Promise<boolean> {
+  const first = await sendTextDetailed(to, text);
+  if (first.ok) return true;
+  if (template) return (await sendTemplate(to, template.name, template.params)).ok;
   return false;
 }
 

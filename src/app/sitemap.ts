@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { org } from "@/config/org";
 
-const pages = ["", "/how-it-works", "/safety", "/about", "/contact", "/privacy", "/terms", "/cookies", "/data-deletion", "/accessibility"];
+const pages = ["", "/how-it-works", "/safety", "/safety-net", "/about", "/contact", "/privacy", "/terms", "/cookies", "/data-deletion", "/accessibility"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();

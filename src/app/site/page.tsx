@@ -211,6 +211,31 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Safety net */}
+      <section className="bg-card py-24">
+        <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center">
+          <div>
+            <Eyebrow>Safety net</Eyebrow>
+            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+              The people who love you, one message away.
+            </h2>
+            <p className="mt-5 leading-relaxed text-ink-2">
+              Add trusted contacts on WhatsApp. Set a check-in when you travel home late. If you don&apos;t reply, or you send an SOS,
+              they hear from us with your last shared location. Contacts always opt in, and you control how it behaves.
+            </p>
+            <div className="mt-8">
+              <Button href="/safety-net">How the safety net works</Button>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-line bg-paper p-8 font-mono text-sm leading-relaxed text-ink-2">
+            <p><span className="text-forest-700">you</span> ADD Mum +254712345678</p>
+            <p className="mt-2"><span className="text-forest-700">you</span> CHECKIN 30</p>
+            <p className="mt-2 text-ink-3">… 30 min, no reply …</p>
+            <p className="mt-2"><span className="text-clay-600">Mum</span> ⚠️ Wanjiru missed a safety check-in. Last known location: maps link</p>
+          </div>
+        </div>
+      </section>
+
       {/* Program */}
       <section className="bg-paper py-24">
         <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center">

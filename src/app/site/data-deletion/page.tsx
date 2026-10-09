@@ -34,12 +34,19 @@ export default function Page() {
       <h2>What we delete</h2>
       <ul>
         <li>your conversation history with Jirani,</li>
+        <li>your trusted contacts, check-ins, SOS history, alert subscriptions and community memberships,</li>
         <li>the link between your phone number and any reports you made,</li>
         <li>any report you ask us to remove from the public map.</li>
       </ul>
       <p>
         Anonymized reports you did not ask us to remove may remain on the map, since they no longer identify you. We may keep a
         minimal record of your request as proof that we handled it, and anything we are legally required to keep.
+      </p>
+
+      <h2>If you are someone&apos;s trusted contact</h2>
+      <p>
+        Reply <strong>STOP</strong> to any message from Jirani and you are removed immediately. To have your number erased from our
+        records, email us from the same address with the number to remove.
       </p>
 
       <h2>How long it takes</h2>

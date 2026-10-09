@@ -14,6 +14,8 @@ interface Props {
   onSelect: (id: string | null) => void;
   /** Pixels covered by UI on each side; the camera keeps the selected point clear of them. */
   insets: { left: number; bottom: number };
+  /** Fly to a place (e.g. from the Areas page). `seq` re-triggers for the same place. */
+  focus?: { lat: number; lng: number; zoom: number; seq: number } | null;
 }
 
 const SOURCE = 'reports';
@@ -66,7 +68,7 @@ function buildPopup(report: Report): HTMLElement {
   return root;
 }
 
-export default function MapComponent({ reports, selectedId, selectSeq, onSelect, insets }: Props) {
+export default function MapComponent({ reports, selectedId, selectSeq, onSelect, insets, focus }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
@@ -265,6 +267,21 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, selectSeq, ready]);
+
+  // Fly to a requested place
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !focus) return;
+    fittedRef.current = true; // an explicit destination wins over auto-fitting to the data
+    map.stop();
+    map.easeTo({
+      center: [focus.lng, focus.lat],
+      zoom: focus.zoom,
+      duration: 900,
+      padding: { left: insetsRef.current.left + 24, right: 24, top: 24, bottom: insetsRef.current.bottom + 24 },
+      essential: true,
+    });
+  }, [focus, ready]);
 
   return (
     <div className="absolute inset-0">

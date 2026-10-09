@@ -54,6 +54,16 @@ export default function Page() {
             <td>Incident type, severity, summary, place, coordinates and time, shown anonymously on the public map.</td>
           </tr>
           <tr>
+            <td><strong>Safety net data</strong></td>
+            <td>If you use trusted contacts, check-ins or SOS</td>
+            <td>Your trusted contacts&apos; names and phone numbers (which you provide), your name if you set one, check-in times and outcomes, SOS events and the location you shared, and your settings, so the feature can alert the right people.</td>
+          </tr>
+          <tr>
+            <td><strong>Alerts, community and account data</strong></td>
+            <td>If you subscribe to alerts or join a community</td>
+            <td>Your phone number acts as your account. We store your alert areas or the pin you gave, your communities and your role in them, and your most recent shared location (to place alerts and SOS updates).</td>
+          </tr>
+          <tr>
             <td><strong>Technical data</strong></td>
             <td>When you visit the website or map</td>
             <td>IP address, browser and device type, and request logs, for security, reliability and debugging.</td>
@@ -66,9 +76,17 @@ export default function Page() {
         </tbody>
       </table>
       <p>
-        We do not have user accounts or passwords. Jirani currently reads text messages and shared locations only; it does not
+        We do not use passwords or email accounts: your verified WhatsApp number identifies you. Jirani currently reads text messages and shared locations only; it does not
         process photos, voice notes or documents. We do not knowingly collect sensitive categories of data, so please do not include
         health, religion, ethnicity or similar details about anyone in your reports.
+      </p>
+
+      <h2>3a. People you add as trusted contacts</h2>
+      <p>
+        If you add someone as a trusted contact, you give us their name and phone number. We contact them once to ask whether they
+        agree, and we only message them about you if they reply YES. They can reply STOP at any time and we will remove them and stop
+        messaging them. If you are a trusted contact and want to know what we hold, or want your number removed, email us at the
+        address above. Please only add people who would expect to hear from you.
       </p>
 
       <h2>3. What is public</h2>
@@ -85,6 +103,7 @@ export default function Page() {
 
       <h2>4. How we use data, and our legal bases</h2>
       <ul>
+        <li><strong>Safety net, alerts and communities</strong> (message your trusted contacts when you ask for help or miss a check-in, send area alerts you subscribed to, and run community features). Basis: your consent, and the contacts&apos; own acceptance.</li>
         <li><strong>Provide Jirani</strong> (receive your report, converse, create the map entry). Basis: your consent, given by messaging us and confirming the report, and the performance of the service you request.</li>
         <li><strong>Security, abuse prevention and rate limiting.</strong> Basis: our legitimate interests in protecting the service and its users.</li>
         <li><strong>Improve reliability and quality</strong> using logs and aggregated, anonymized report data. Basis: legitimate interests.</li>

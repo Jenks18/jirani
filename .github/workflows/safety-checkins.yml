@@ -1,0 +1,17 @@
+name: Safety check-ins
+
+# Nudges people whose check-in is due and alerts their trusted contacts after the grace period.
+# Needs repository secrets: CRON_SECRET (same value as in Vercel).
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process due check-ins
+        run: |
+          curl -fsS --max-time 50 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://jirani.the625movement.com/api/cron/safety

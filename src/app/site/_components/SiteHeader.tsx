@@ -4,6 +4,7 @@ import { org } from "@/config/org";
 
 const nav = [
   { href: "/how-it-works", label: "How it works" },
+  { href: "/safety-net", label: "Safety net" },
   { href: "/safety", label: "Safety" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
