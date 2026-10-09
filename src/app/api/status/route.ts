@@ -4,7 +4,12 @@ import { ensureSupabaseAvailable, supabaseAvailable } from '@/lib/supabaseClient
 export async function GET(req: Request) {
   try {
     const groqConfigured = Boolean(process.env.GROQ_API_KEY);
-    const twilioConfigured = Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && (process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_MESSAGING_SERVICE_SID));
+    const whatsappConfigured = Boolean(
+      process.env.WHATSAPP_ACCESS_TOKEN &&
+      process.env.WHATSAPP_PHONE_NUMBER_ID &&
+      process.env.WHATSAPP_VERIFY_TOKEN &&
+      process.env.WHATSAPP_APP_SECRET
+    );
     const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
     // Perform a lightweight supabase probe but don't block too long
@@ -17,7 +22,7 @@ export async function GET(req: Request) {
     }
 
     // Admin token gating to avoid exposing raw envs. Provide minimal info otherwise.
-    const adminToken = process.env.ADMIN_STATUS_TOKEN || '';
+    const adminToken = process.env.ADMIN_API_TOKEN || '';
     const provided = req.headers.get('x-admin-token') || '';
 
     const body: Record<string, unknown> = {
@@ -28,9 +33,7 @@ export async function GET(req: Request) {
     };
 
     if (adminToken && provided === adminToken) {
-      // reveal Twilio configured flag and masked values
-      body['twilioConfigured'] = twilioConfigured;
-      body['twilioFrom'] = process.env.TWILIO_WHATSAPP_NUMBER ? process.env.TWILIO_WHATSAPP_NUMBER.replace(/(.+).(.{4})$/, '***$2') : null;
+      body['whatsappConfigured'] = whatsappConfigured;
       body['groqKeyPresent'] = groqConfigured;
     }
 

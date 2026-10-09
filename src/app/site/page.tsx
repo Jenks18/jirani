@@ -1,114 +1,294 @@
-"use client";
-import Link from "next/link";
-import { useState } from "react";
+import type { Metadata } from "next";
+import { Button, Eyebrow } from "./_components/ui";
+import { org, whatsappLink } from "@/config/org";
 
-export default function LandingPage() {
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
+export const metadata: Metadata = {
+  title: { absolute: "Jirani — community safety, by neighbors" },
+  description:
+    "Report a safety incident over WhatsApp in under a minute and see what's happening on a live community map. No app to download. A Majirani Wetu program of The 6.25 Movement.",
+  alternates: { canonical: "/" },
+};
 
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubscribed(true);
-    setTimeout(() => {
-      setEmail("");
-      setSubscribed(false);
-    }, 3000);
+const steps = [
+  {
+    n: "01",
+    title: "Message Jirani",
+    body: "Say hello on WhatsApp and tell us what you saw, in English or Kiswahili. Share a location pin if you can.",
+  },
+  {
+    n: "02",
+    title: "Confirm your report",
+    body: "Jirani asks a couple of friendly questions, then reads the report back so you can confirm before anything is recorded.",
+  },
+  {
+    n: "03",
+    title: "See it on the map",
+    body: "Your neighbors see a short, anonymized summary on the live map. Your phone number is never shown.",
+  },
+];
+
+const principles = [
+  {
+    title: "Your number stays private",
+    body: "Reports on the map show what and where, never who. Your phone number is never published, and you can ask us to delete your data at any time.",
+  },
+  {
+    title: "Facts, not accusations",
+    body: "Jirani strips names, plate numbers and other identifying details from summaries, and asks people to describe incidents, not accuse individuals.",
+  },
+  {
+    title: "Built for real phones",
+    body: "Everything runs inside WhatsApp. No app, no account, no password, and it works on the phone you already have.",
+  },
+];
+
+const faqs = [
+  {
+    q: "Is Jirani free?",
+    a: "Yes. Jirani is free to use. Standard WhatsApp data charges from your mobile provider may apply.",
+  },
+  {
+    q: "Is Jirani an emergency service?",
+    a: "No. Jirani does not dispatch police, ambulance or fire services and reports are not monitored in real time. In an emergency in Kenya, call 999 or 112.",
+  },
+  {
+    q: "Who can see my report?",
+    a: "Anyone can see the anonymized report on the public map: the type of incident, a general location and the time. Your phone number and the original messages are never published.",
+  },
+  {
+    q: "How do I delete my data?",
+    a: "Email us at any time, or follow the steps on our data deletion page. We will remove your conversation history and unlink your phone number from your reports.",
+  },
+  {
+    q: "Who runs Jirani?",
+    a: "Jirani is a Majirani Wetu (“our neighbors”) program of The 6.25 Movement, a U.S.-based nonprofit founded by young Kenyans in the Washington D.C., Maryland and Virginia area.",
+  },
+];
+
+function PhoneMock() {
+  return (
+    <div className="relative mx-auto w-full max-w-[340px]" aria-hidden="true">
+      <div className="absolute -inset-6 rounded-[3rem] bg-gradient-to-br from-forest-100 via-sun-100 to-paper-2 blur-2xl" />
+      <div className="relative rounded-[2.4rem] border border-ink/10 bg-card p-3 shadow-lift">
+        <div className="overflow-hidden rounded-[1.8rem] bg-[#ece5d8]">
+          <div className="flex items-center gap-3 bg-forest-800 px-4 py-3 text-white">
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 font-serif text-sm font-semibold">J</div>
+            <div className="leading-tight">
+              <div className="text-sm font-semibold">Jirani</div>
+              <div className="text-[11px] text-white/70">online</div>
+            </div>
+          </div>
+          <div className="space-y-2.5 px-3 py-4 text-[13px] leading-snug">
+            <div className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">
+              Jambo, there was a phone snatching near the Kikuyu stage around 6pm
+            </div>
+            <div className="w-fit max-w-[84%] rounded-2xl rounded-tl-md bg-white px-3.5 py-2.5 text-ink shadow-sm">
+              Pole sana. Are you safe? Could you share the exact spot with a location pin?
+            </div>
+            <div className="ml-auto w-fit max-w-[60%] rounded-2xl rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">📍 Location shared</div>
+            <div className="w-fit max-w-[88%] rounded-2xl rounded-tl-md bg-white px-3.5 py-2.5 text-ink shadow-sm">
+              Let me confirm: <strong>phone theft</strong> near Kikuyu stage at about 6pm. Shall I add this to the community map?
+            </div>
+            <div className="ml-auto w-fit rounded-2xl rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">Yes</div>
+          </div>
+        </div>
+        <div className="absolute -bottom-5 -right-3 w-44 rounded-2xl border border-line bg-card p-3 shadow-lift sm:-right-8">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-clay-600" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-3">Just now</span>
+          </div>
+          <p className="mt-1.5 text-[13px] font-medium leading-snug text-ink">Phone theft reported near Kikuyu around 6pm</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: org.legalName,
+        url: org.parentUrl,
+        email: org.email,
+        sameAs: [org.social.x, org.social.instagram],
+      },
+      {
+        "@type": "WebSite",
+        name: "Jirani",
+        url: org.mainUrl,
+        publisher: { "@type": "Organization", name: org.legalName },
+      },
+    ],
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-md shadow-lg border-b border-[--color-kenya-green-600]/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[--color-kenya-green-600] via-[--color-kenya-red-600] to-white rounded-lg shadow-lg"></div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-white via-[--color-kenya-green-400] to-[--color-kenya-red-400] bg-clip-text text-transparent">Majira Ni Wetu</span>
-            </div>
-            <div className="hidden md:flex items-center space-x-6">
-              <a
-                href="https://maps.majiraniwetu.org"
-                className="bg-gradient-to-r from-[--color-kenya-green-600] to-[--color-kenya-green-500] text-white px-6 py-2 rounded-lg hover:from-[--color-kenya-green-700] hover:to-[--color-kenya-green-600] transition-all shadow-lg hover:shadow-[--shadow-kenya-green]"
-              >
-                Open Map
-              </a>
-              <a href="/site/about" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">About</a>
-              <a href="/site/team" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">Team</a>
-              <a href="/site/contact" className="text-gray-300 hover:text-[--color-kenya-green-400] transition">Contact</a>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="relative max-w-7xl mx-auto text-center z-10">
-          <div className="inline-block mb-4 px-6 py-2 bg-gradient-to-r from-[--color-kenya-green-600]/20 to-[--color-kenya-red-600]/20 border border-[--color-kenya-green-500]/50 rounded-full backdrop-blur-sm">
-            <span className="text-[--color-kenya-green-400] font-semibold">🇰🇪 Empowering Kenyan Communities</span>
-          </div>
-          
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
-            <span className="text-white">Your Neighborhood —</span>
-            <br />
-            <span className="bg-gradient-to-r from-[--color-kenya-green-400] via-[--color-kenya-green-500] to-[--color-kenya-red-500] bg-clip-text text-transparent">
-              Safer Together
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-paper">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.5]"
+          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #d9d2c0 1px, transparent 0)", backgroundSize: "28px 28px" }}
+          aria-hidden="true"
+        />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-5 pb-24 pt-16 md:grid-cols-[1.15fr_1fr] md:pt-24">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-forest-700/20 bg-forest-50 px-4 py-1.5 text-xs font-semibold text-forest-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-forest-600" /> A Majirani Wetu program of The 6.25 Movement
             </span>
-            <span className="sr-only"> (landing updated)</span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
-            AI-powered community safety platform enabling real-time incident reporting and tracking through WhatsApp. 
-            <strong className="text-[--color-kenya-green-400]"> No app download required.</strong>
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <a
-              href={`https://api.whatsapp.com/send?phone=254783045226&text=Hello%20Jirani`}
-              className="group bg-gradient-to-r from-green-600 to-green-500 text-white px-8 py-4 rounded-xl text-lg font-bold hover:from-green-700 hover:to-green-600 transition-all shadow-lg hover:shadow-[--shadow-kenya-green] inline-flex items-center justify-center gap-3"
-            >
-              <span>Chat with Jirani</span>
-            </a>
-            
-            <a
-              href="https://maps.majiraniwetu.org"
-              className="bg-white text-[--color-kenya-green-700] border-2 border-[--color-kenya-green-600] px-8 py-4 rounded-xl text-lg font-bold hover:bg-[--color-kenya-green-50] transition-all shadow-md"
-            >
-              View Live Map →
-            </a>
+            <h1 className="mt-6 font-serif text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-ink md:text-6xl">
+              Safer streets start with <span className="italic text-forest-700">neighbors</span> who speak up.
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-2">
+              Report an incident over WhatsApp in under a minute and see what&apos;s happening around you on a live community map.
+              No app to download, no account to create.
+            </p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Button href={whatsappLink} external>
+                Message Jirani on WhatsApp
+              </Button>
+              <Button href={org.mapsUrl} variant="secondary" external>
+                Explore the live map →
+              </Button>
+            </div>
+            <ul className="mt-10 flex flex-wrap gap-x-7 gap-y-2 text-sm text-ink-3">
+              <li>✓ Free to use</li>
+              <li>✓ English &amp; Kiswahili</li>
+              <li>✓ Phone numbers never public</li>
+            </ul>
+          </div>
+          <PhoneMock />
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="bg-card py-24">
+        <div className="mx-auto max-w-6xl px-5">
+          <div className="max-w-2xl">
+            <Eyebrow>How it works</Eyebrow>
+            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+              From &ldquo;I saw something&rdquo; to a shared picture of your neighborhood.
+            </h2>
+          </div>
+          <ol className="mt-14 grid gap-6 md:grid-cols-3">
+            {steps.map((s) => (
+              <li key={s.n} className="rounded-3xl border border-line bg-paper p-8">
+                <span className="font-serif text-3xl font-semibold text-forest-600">{s.n}</span>
+                <h3 className="mt-5 text-lg font-semibold text-ink">{s.title}</h3>
+                <p className="mt-2 leading-relaxed text-ink-2">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Principles */}
+      <section className="bg-forest-900 py-24 text-white">
+        <div className="mx-auto max-w-6xl px-5">
+          <div className="max-w-2xl">
+            <Eyebrow light>Designed with care</Eyebrow>
+            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight md:text-4xl">
+              Community safety only works when people feel safe taking part.
+            </h2>
+          </div>
+          <div className="mt-14 grid gap-px overflow-hidden rounded-3xl bg-white/10 md:grid-cols-3">
+            {principles.map((p) => (
+              <div key={p.title} className="bg-forest-900 p-8">
+                <h3 className="text-lg font-semibold">{p.title}</h3>
+                <p className="mt-3 leading-relaxed text-forest-100/80">{p.body}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10">
+            <Button href="/safety" variant="ghost-light">
+              Read our safety principles
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer id="contact" className="bg-black text-gray-300 py-16 px-4 sm:px-6 lg:px-8 border-t border-[--color-kenya-green-600]/20">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-[--color-kenya-green-600] via-[--color-kenya-red-600] to-white rounded-lg"></div>
-                <h3 className="text-white font-bold text-xl">Majira Ni Wetu</h3>
-              </div>
-              <p className="text-gray-400 max-w-md leading-relaxed">Empowering Kenyan communities through accessible safety technology.</p>
+      {/* Program */}
+      <section className="bg-paper py-24">
+        <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center">
+          <div>
+            <Eyebrow>Majirani Wetu</Eyebrow>
+            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+              &ldquo;Our neighbors.&rdquo; A program for community, by community.
+            </h2>
+            <p className="mt-5 leading-relaxed text-ink-2">
+              Majirani Wetu is The 6.25 Movement&apos;s program for practical, community-led tools. Jirani is its first: a way for
+              residents to look out for each other with the technology already in their pockets.
+            </p>
+            <p className="mt-4 leading-relaxed text-ink-2">
+              The 6.25 Movement is a U.S.-based nonprofit founded in January 2025 by young Kenyans in the DMV, advocating for the
+              rights, dignity and wellbeing of Kenyans and the African diaspora.
+            </p>
+            <div className="mt-8 flex gap-3">
+              <Button href="/about" variant="secondary">
+                About the program
+              </Button>
             </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Product</h4>
-              <ul className="space-y-3 text-sm">
-                <li>
-                  <a href="https://maps.majiraniwetu.org" className="text-gray-400 hover:text-[--color-kenya-green-400] transition">Live Map</a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Company</h4>
-              <ul className="space-y-3 text-sm">
-                <li>
-                  <a href="/privacy-policy.pdf" className="text-gray-400 hover:text-[--color-kenya-green-400] transition">Privacy Policy</a>
-                </li>
-              </ul>
+          </div>
+          <div className="rounded-3xl border border-line bg-card p-8 shadow-soft">
+            <h3 className="font-serif text-xl font-semibold text-ink">Jirani is not an emergency service</h3>
+            <p className="mt-3 leading-relaxed text-ink-2">
+              Reports are community information, not a dispatch. If someone is in danger, contact emergency services first.
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {["999", "112"].map((n) => (
+                <div key={n} className="rounded-2xl bg-clay-50 px-5 py-4 text-center">
+                  <div className="font-serif text-3xl font-semibold text-clay-700">{n}</div>
+                  <div className="text-xs text-clay-700/80">Kenya emergency</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      </footer>
-    </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="bg-card py-24">
+        <div className="mx-auto max-w-3xl px-5">
+          <Eyebrow>Questions</Eyebrow>
+          <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">Good to know</h2>
+          <div className="mt-10 divide-y divide-line border-y border-line">
+            {faqs.map((f) => (
+              <details key={f.q} className="group py-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-lg font-medium text-ink [&::-webkit-details-marker]:hidden">
+                  {f.q}
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line text-ink-3 transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 leading-relaxed text-ink-2">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="bg-paper py-20">
+        <div className="mx-auto max-w-4xl rounded-[2rem] bg-forest-800 px-8 py-16 text-center text-white shadow-lift">
+          <h2 className="font-serif text-3xl font-semibold tracking-tight md:text-4xl">Say hello to your Jirani.</h2>
+          <p className="mx-auto mt-4 max-w-xl text-forest-100/85">
+            Open WhatsApp, send &ldquo;Hello&rdquo; to {org.whatsappDisplay}, and you&apos;re set.
+          </p>
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <a
+              href={whatsappLink}
+              className="inline-flex items-center justify-center rounded-full bg-white px-7 py-3.5 text-[15px] font-semibold text-forest-900 transition hover:bg-forest-50"
+            >
+              Message Jirani
+            </a>
+            <Button href={org.mapsUrl} variant="ghost-light" external>
+              View the map
+            </Button>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

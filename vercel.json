@@ -1,38 +1,7 @@
 {
   "version": 2,
-  "routes": [
-    {
-      "src": "^/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "^/maps$",
-      "has": [ { "type": "host", "value": "majiraniwetu.org" } ],
-      "status": 308,
-      "dest": "https://maps.majiraniwetu.org"
-    },
-    {
-      "src": "^/maps/(.*)$",
-      "has": [ { "type": "host", "value": "majiraniwetu.org" } ],
-      "status": 308,
-      "dest": "https://maps.majiraniwetu.org/$1"
-    },
-    {
-      "src": "^/(.*)$",
-      "has": [ { "type": "host", "value": "maps.majiraniwetu.org" } ],
-      "dest": "/maps/$1"
-    },
-    {
-      "src": "^/(.*)$",
-      "has": [ { "type": "host", "value": "majiraniwetu.org" } ],
-      "dest": "/site/$1"
-    }
-  ],
   "functions": {
     "src/app/api/whatsapp/route.ts": {
-      "maxDuration": 30
-    },
-    "src/app/api/whatsapp/test/route.ts": {
       "maxDuration": 30
     }
   }

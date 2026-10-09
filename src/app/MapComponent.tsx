@@ -1,426 +1,291 @@
 'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { KENYA_BOUNDS, MAPBOX_TOKEN, NAIROBI } from '@/lib/mapConfig';
+import { SEVERITIES, formatWhen, type Report } from '@/lib/reports';
 
-interface Report {
-  id: string;
-  title: string;
-  description: string;
-  location: string;
-  coordinates: [number, number];
-  latitude: number;
-  longitude: number;
-  severity: string;
-  priority: string;
-  created_at: string;
+interface Props {
+  reports: Report[];
+  selectedId: string | null;
+  /** Bumps on every selection so re-selecting the same report recenters again. */
+  selectSeq: number;
+  onSelect: (id: string | null) => void;
+  /** Pixels covered by UI on each side; the camera keeps the selected point clear of them. */
+  insets: { left: number; bottom: number };
 }
 
-interface RawEvent {
-  id: string | number;
-  type?: string;
-  title?: string;
-  description?: string;
-  summary?: string;
-  location?: string;
-  coordinates?: [number, number];
-  latitude?: number;
-  longitude?: number;
-  severity?: string | number;
-  priority?: string | number;
-  timestamp?: string;
-  createdAt?: string;
-  created_at?: string;
-  dateTime?: string;
+const SOURCE = 'reports';
+const severityColorExpr: mapboxgl.ExpressionSpecification = [
+  'match',
+  ['get', 'severity'],
+  1, SEVERITIES[1].color,
+  2, SEVERITIES[2].color,
+  3, SEVERITIES[3].color,
+  4, SEVERITIES[4].color,
+  5, SEVERITIES[5].color,
+  SEVERITIES[3].color,
+];
+
+function toGeoJSON(reports: Report[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  return {
+    type: 'FeatureCollection',
+    features: reports
+      .filter((r) => r.latitude != null && r.longitude != null)
+      .map((r) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [r.longitude as number, r.latitude as number] },
+        properties: { id: r.id, severity: r.severity },
+      })),
+  };
 }
 
-interface MapComponentProps {
-  highlightedEventId?: string | null;
-  highlightSeq?: number; // increments each selection even if same id
-  sidebarCollapsed?: boolean;
-  reportsPanelCollapsed?: boolean;
-  onMarkerClick?: (eventId: string) => void;
+/** Popup content is built with DOM APIs (textContent), so report text can never inject markup. */
+function buildPopup(report: Report): HTMLElement {
+  const root = document.createElement('div');
+  root.className = 'jirani-popup';
+
+  const head = document.createElement('div');
+  head.className = 'jirani-popup-head';
+  const dot = document.createElement('span');
+  dot.className = 'jirani-popup-dot';
+  dot.style.background = SEVERITIES[report.severity].color;
+  const title = document.createElement('strong');
+  title.textContent = report.type;
+  head.append(dot, title);
+
+  const body = document.createElement('p');
+  body.textContent = report.summary;
+
+  const meta = document.createElement('div');
+  meta.className = 'jirani-popup-meta';
+  meta.textContent = `${SEVERITIES[report.severity].label} · ${report.location} · ${formatWhen(report.createdAt)}`;
+
+  root.append(head, body, meta);
+  return root;
 }
 
-const getSeverityColor = (severity: string): string => {
-  switch (severity.toLowerCase()) {
-    case 'low':
-      return '#4ade80';
-    case 'medium':
-      return '#fb923c';
-    case 'high':
-      return '#ef4444';
-    default:
-      return '#ef4444';
-  }
-};
-
-export default function MapComponent({
-  highlightedEventId,
-  highlightSeq,
-  sidebarCollapsed,
-  reportsPanelCollapsed,
-  onMarkerClick,
-}: MapComponentProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [reports, setReports] = useState<Report[]>([]);
+export default function MapComponent({ reports, selectedId, selectSeq, onSelect, insets }: Props) {
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
-  const [isStyleLoaded, setIsStyleLoaded] = useState(false);
-  const prevHighlightedIdRef = useRef<string | null>(null);
+  const [ready, setReady] = useState(false);
 
-  // Initialize map
+  // Latest values for handlers that are registered once.
+  const onSelectRef = useRef(onSelect);
+  const reportsRef = useRef(reports);
+  const insetsRef = useRef(insets);
+  const fittedRef = useRef(false);
+  const prevSelectedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    onSelectRef.current = onSelect;
+    reportsRef.current = reports;
+    insetsRef.current = insets;
+  });
 
-    mapboxgl.accessToken = 'pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw';
+  // Create the map once.
+  useEffect(() => {
+    if (!container.current) return;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
+    const map = new mapboxgl.Map({
+      container: container.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [36.8219, -1.2921],
+      center: NAIROBI,
       zoom: 10,
-      attributionControl: true
+      maxBounds: [
+        [KENYA_BOUNDS[0][0] - 8, KENYA_BOUNDS[0][1] - 8],
+        [KENYA_BOUNDS[1][0] + 8, KENYA_BOUNDS[1][1] + 8],
+      ],
+      attributionControl: false,
+      cooperativeGestures: false,
     });
+    mapRef.current = map;
 
-    const nav = new mapboxgl.NavigationControl({
-      visualizePitch: true,
-      showCompass: true
-    });
-    map.current.addControl(nav, 'right');
-
-    map.current.addControl(
-      new mapboxgl.ScaleControl({
-        maxWidth: 80,
-        unit: 'metric'
-      }),
-      'bottom-right'
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+    map.addControl(
+      new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false }),
+      'top-right'
     );
+    map.addControl(new mapboxgl.ScaleControl({ maxWidth: 80, unit: 'metric' }), 'bottom-left');
 
-    map.current.on('load', () => {
-      console.log('Map loaded');
-      setIsStyleLoaded(true);
-      fetchReports();
+    map.on('load', () => {
+      map.addSource(SOURCE, {
+        type: 'geojson',
+        data: toGeoJSON([]),
+        promoteId: 'id',
+        cluster: true,
+        clusterRadius: 48,
+        clusterMaxZoom: 13,
+      });
+
+      map.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: SOURCE,
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': '#0a3d26',
+          'circle-opacity': 0.92,
+          'circle-radius': ['step', ['get', 'point_count'], 16, 10, 20, 50, 26],
+          'circle-stroke-width': 3,
+          'circle-stroke-color': 'rgba(255,255,255,0.9)',
+        },
+      });
+      map.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: SOURCE,
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': ['get', 'point_count_abbreviated'],
+          'text-font': ['DIN Pro Medium', 'Arial Unicode MS Bold'],
+          'text-size': 13,
+        },
+        paint: { 'text-color': '#ffffff' },
+      });
+      map.addLayer({
+        id: 'report-halo',
+        type: 'circle',
+        source: SOURCE,
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-radius': ['case', ['boolean', ['feature-state', 'selected'], false], 22, 0],
+          'circle-color': severityColorExpr,
+          'circle-opacity': 0.28,
+          'circle-blur': 0.5,
+        },
+      });
+      map.addLayer({
+        id: 'report-points',
+        type: 'circle',
+        source: SOURCE,
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-radius': ['case', ['boolean', ['feature-state', 'selected'], false], 11, 7],
+          'circle-color': severityColorExpr,
+          'circle-stroke-width': ['case', ['boolean', ['feature-state', 'selected'], false], 3, 2],
+          'circle-stroke-color': '#ffffff',
+        },
+      });
+
+      map.on('click', 'clusters', (e) => {
+        const feature = map.queryRenderedFeatures(e.point, { layers: ['clusters'] })[0];
+        const clusterId = feature?.properties?.cluster_id as number | undefined;
+        if (clusterId == null) return;
+        (map.getSource(SOURCE) as mapboxgl.GeoJSONSource).getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err || zoom == null) return;
+          map.easeTo({ center: (feature.geometry as GeoJSON.Point).coordinates as [number, number], zoom: zoom + 0.5 });
+        });
+      });
+      map.on('click', 'report-points', (e) => {
+        const id = e.features?.[0]?.properties?.id;
+        if (id != null) onSelectRef.current(String(id));
+      });
+      // Clicking empty map clears the selection.
+      map.on('click', (e) => {
+        const hit = map.queryRenderedFeatures(e.point, { layers: ['clusters', 'report-points'] });
+        if (hit.length === 0) onSelectRef.current(null);
+      });
+      for (const layer of ['clusters', 'report-points']) {
+        map.on('mouseenter', layer, () => (map.getCanvas().style.cursor = 'pointer'));
+        map.on('mouseleave', layer, () => (map.getCanvas().style.cursor = ''));
+      }
+
+      setReady(true);
     });
+
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(container.current);
 
     return () => {
-      map.current?.remove();
+      ro.disconnect();
+      popupRef.current?.remove();
+      map.remove();
+      mapRef.current = null;
+      fittedRef.current = false;
+      setReady(false);
     };
   }, []);
 
-  // Fetch events (Supabase) with fallback to legacy /api/reports
-  const fetchReports = async () => {
-    const normalizeSeverity = (sev: unknown): string => {
-      if (typeof sev === 'string') return sev.toLowerCase();
-      if (typeof sev === 'number') {
-        if (sev <= 2) return 'low';
-        if (sev === 3) return 'medium';
-        return 'high';
-      }
-      return 'medium';
-    };
-    try {
-      const response = await fetch('/api/events');
-      if (!response.ok) throw new Error('events endpoint failed');
-      const data = await response.json();
-      const incoming = (data.events || []) as RawEvent[];
-      if (!Array.isArray(incoming)) throw new Error('Invalid events shape');
-  const normalized: Report[] = incoming.map(ev => {
-        const idStr = String(ev.id);
-        const coords = Array.isArray(ev.coordinates) ? ev.coordinates : null; // [lng,lat]
-        const longitude = coords ? coords[0] : (typeof ev.longitude === 'number' ? ev.longitude : undefined);
-        const latitude = coords ? coords[1] : (typeof ev.latitude === 'number' ? ev.latitude : undefined);
-        return {
-          id: idStr,
-          title: ev.type || ev.title || 'Incident',
-          description: ev.description || ev.summary || 'No description provided',
-          location: ev.location || 'Unknown location',
-          coordinates: (longitude != null && latitude != null ? [longitude, latitude] : [0,0]) as [number, number],
-          latitude: (latitude ?? 0) as number,
-          longitude: (longitude ?? 0) as number,
-          severity: normalizeSeverity(ev.severity),
-          priority: normalizeSeverity(ev.severity),
-          created_at: ev.timestamp || ev.createdAt || new Date().toISOString()
-        };
-      }).filter(r => r.longitude !== 0 || r.latitude !== 0);
-      console.log('[Map] Loaded events:', normalized.length, normalized.slice(0,3));
-      setReports(normalized);
-    } catch (eventsErr) {
-      console.warn('[Map] Falling back to /api/reports:', eventsErr);
-      try {
-        const response2 = await fetch('/api/reports');
-        if (!response2.ok) throw new Error('Failed to fetch legacy reports');
-        const data2 = await response2.json();
-        const legacy = (data2.reports || []) as RawEvent[];
-  const normalizedLegacy: Report[] = legacy.map(r => {
-          const idStr = String(r.id);
-          const latitude = typeof r.latitude === 'number' ? r.latitude : (Array.isArray(r.coordinates) ? r.coordinates[0] : undefined);
-          const longitude = typeof r.longitude === 'number' ? r.longitude : (Array.isArray(r.coordinates) ? r.coordinates[1] : undefined);
-          return {
-            id: idStr,
-            title: r.title || r.type || 'Incident',
-            description: r.description || r.summary || 'No description provided',
-            location: r.location || 'Unknown location',
-            coordinates: (longitude != null && latitude != null ? [longitude, latitude] : [0,0]) as [number, number],
-            latitude: (latitude ?? 0) as number,
-            longitude: (longitude ?? 0) as number,
-            severity: normalizeSeverity(r.severity || r.priority),
-            priority: normalizeSeverity(r.priority || r.severity),
-            created_at: r.created_at || r.dateTime || new Date().toISOString()
-          } as Report;
-        }).filter(r => r.longitude !== 0 || r.latitude !== 0);
-        setReports(normalizedLegacy);
-      } catch (legacyErr) {
-        console.error('Both /api/events and /api/reports failed', legacyErr);
-      }
-    }
-  };
-
-  // Setup map layers and data source (with feature-state based highlighting)
+  // Push data into the source; fit to the data once.
   useEffect(() => {
-    if (!isStyleLoaded || !map.current || reports.length === 0) return;
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    (map.getSource(SOURCE) as mapboxgl.GeoJSONSource | undefined)?.setData(toGeoJSON(reports));
 
-    const mapInstance = map.current;
-
-    const geojson: GeoJSON.FeatureCollection<GeoJSON.Geometry> = {
-      type: 'FeatureCollection',
-      features: reports.map(report => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [report.longitude, report.latitude],
-        },
-        properties: {
-          id: report.id,
-          title: report.title,
-          description: report.description,
-          severity: report.severity,
-        },
-      }))
-    };
-
-  const existingSource = mapInstance.getSource('reports') as mapboxgl.GeoJSONSource | undefined;
-    if (existingSource) {
-      existingSource.setData(geojson);
-    } else {
-      mapInstance.addSource('reports', {
-        type: 'geojson',
-        data: geojson,
-        promoteId: 'id' // allow feature-state keyed by id
-      });
-
-      // Glow / halo layer (below main circles)
-      mapInstance.addLayer({
-        id: 'reports-glow',
-        type: 'circle',
-        source: 'reports',
-        paint: {
-          'circle-radius': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            22,
-            0
-          ],
-          'circle-color': '#2563eb',
-            'circle-opacity': [
-              'case',
-              ['boolean', ['feature-state', 'selected'], false],
-              0.45,
-              0
-            ],
-          'circle-blur': 0.6
-        }
-      });
-
-      // Main points layer
-      mapInstance.addLayer({
-        id: 'reports-layer',
-        type: 'circle',
-        source: 'reports',
-        paint: {
-          'circle-radius': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            11,
-            6
-          ],
-          'circle-color': [
-            'match',
-            ['get', 'severity'],
-            'low', '#4ade80',
-            'medium', '#fb923c',
-            'high', '#ef4444',
-            '#ef4444'
-          ],
-          'circle-stroke-width': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            3,
-            1
-          ],
-          'circle-stroke-color': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            '#ffffff',
-            '#ffffff'
-          ]
-        }
-      });
-
-      // Interactivity
-      mapInstance.on('click', 'reports-layer', (e) => {
-        if (!e.features?.length) return;
-        const id = e.features[0].properties?.id;
-        if (id && onMarkerClick) onMarkerClick(String(id));
-      });
-
-      // Disable default double-click zoom so we can control it
-      try { mapInstance.doubleClickZoom.disable(); } catch {}
-
-      // Double-click: select (if not already) and zoom in further
-      mapInstance.on('dblclick', 'reports-layer', (e) => {
-        if (!e.features?.length) return;
-        const feature = e.features[0];
-        const id = feature.properties?.id;
-        if (id && onMarkerClick) onMarkerClick(String(id));
-        const coords = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
-        const currentZoom = mapInstance.getZoom();
-        const targetZoom = currentZoom < 15 ? 15 : Math.min(currentZoom + 1.5, 18); // clamp
-        mapInstance.easeTo({
-          center: coords,
-          zoom: targetZoom,
-          duration: 800,
-          curve: 1.4,
-          easing: (t) => t
-        });
-      });
-
-      mapInstance.on('mouseenter', 'reports-layer', (e) => {
-        mapInstance.getCanvas().style.cursor = 'pointer';
-        if (!e.features?.length) return;
-        const feature = e.features[0];
-        const coordinates = (feature.geometry as GeoJSON.Point).coordinates.slice();
-  const { title, description, severity } = feature.properties as { title?: string; description?: string; severity: string };
-        popupRef.current = new mapboxgl.Popup({
-          offset: 15,
-          closeButton: false,
-          maxWidth: '300px'
-        })
-          .setLngLat(coordinates as [number, number])
-          .setHTML(`
-            <div class="p-2">
-              <h3 class="font-bold text-gray-900">${title}</h3>
-              <p class="text-sm text-gray-600">${description}</p>
-              <div class="mt-2 text-xs text-gray-500">
-                <span class="inline-flex items-center">
-                  <span style="background-color: ${getSeverityColor(severity)}" class="w-2 h-2 rounded-full mr-1"></span>
-                  ${severity.toUpperCase()} Severity
-                </span>
-              </div>
-            </div>`)
-          .addTo(mapInstance);
-      });
-
-      mapInstance.on('mouseleave', 'reports-layer', () => {
-        mapInstance.getCanvas().style.cursor = '';
-        popupRef.current?.remove();
+    const located = reports.filter((r) => r.latitude != null && r.longitude != null);
+    if (!fittedRef.current && located.length > 0) {
+      fittedRef.current = true;
+      const bounds = new mapboxgl.LngLatBounds();
+      located.forEach((r) => bounds.extend([r.longitude as number, r.latitude as number]));
+      map.fitBounds(bounds, {
+        padding: { left: insetsRef.current.left + 48, right: 48, top: 64, bottom: insetsRef.current.bottom + 48 },
+        maxZoom: 13,
+        duration: 0,
       });
     }
-  }, [reports, isStyleLoaded, onMarkerClick]);
+  }, [reports, ready]);
 
-  // Highlight logic using feature-state
+  // Selection: feature-state, popup and camera.
   useEffect(() => {
-    if (!isStyleLoaded || !map.current) return;
-    const mapInstance = map.current;
-    if (!mapInstance.getSource('reports')) return;
+    const map = mapRef.current;
+    if (!ready || !map) return;
 
-    // Clear previous selection feature-state
-    const prevId = prevHighlightedIdRef.current;
-    if (prevId) {
-      try { mapInstance.setFeatureState({ source: 'reports', id: prevId }, { selected: false }); } catch {}
-    }
+    const prev = prevSelectedRef.current;
+    if (prev) map.setFeatureState({ source: SOURCE, id: prev }, { selected: false });
+    popupRef.current?.remove();
+    prevSelectedRef.current = selectedId;
+    if (!selectedId) return;
 
-    const coercedId = highlightedEventId != null ? String(highlightedEventId) : null;
-    if (coercedId) {
-      try {
-        mapInstance.setFeatureState({ source: 'reports', id: coercedId }, { selected: true });
-        const target = reports.find(r => r.id === coercedId);
-        if (target) {
-          console.log('[Map] Highlighting + recenter', highlightedEventId, target.longitude, target.latitude);
-          // Compute padding so point is visible (not hidden under sidebar + reports panel)
-          const sidebarWidth = sidebarCollapsed ? 64 : 256; // matches layout logic
-            // Reports panel approx width (hard-coded to match page.tsx width). If collapsed -> 0
-          const reportsPanelWidth = reportsPanelCollapsed ? 0 : 400; 
-          const leftPadding = sidebarWidth + reportsPanelWidth + 24; // extra breathing space
-          // Stop any current camera movement to ensure new animation applies
-          try { mapInstance.stop(); } catch {}
-          const currentZoom = mapInstance.getZoom();
-          const targetZoom = currentZoom < 13.5 ? 14 : currentZoom; // preserve if user already zoomed in
-          mapInstance.easeTo({
-            center: [target.longitude, target.latitude],
-            zoom: targetZoom,
-            duration: 900,
-            curve: 1.3,
-            padding: { left: leftPadding, right: 32, top: 32, bottom: 32 },
-            essential: true
-          });
-        }
-      } catch {}
-    }
-    prevHighlightedIdRef.current = coercedId;
-  }, [highlightedEventId, highlightSeq, reports, isStyleLoaded, sidebarCollapsed, reportsPanelCollapsed]);
+    const report = reportsRef.current.find((r) => r.id === selectedId);
+    if (!report || report.latitude == null || report.longitude == null) return;
 
-  // Debug effect to confirm when highlightedEventId changes vs report ids present
-  useEffect(() => {
-    if (!highlightedEventId) return;
-    const exists = reports.some(r => r.id === highlightedEventId || String(r.id) === highlightedEventId);
-    if (!exists) {
-      console.warn('[Map] highlightedEventId not found among reports', highlightedEventId, reports.map(r => r.id));
-    }
-  }, [highlightedEventId, reports]);
+    map.setFeatureState({ source: SOURCE, id: selectedId }, { selected: true });
+    const lngLat: [number, number] = [report.longitude, report.latitude];
 
+    popupRef.current = new mapboxgl.Popup({ offset: 16, closeButton: true, maxWidth: '300px', className: 'jirani-popup-wrap' })
+      .setLngLat(lngLat)
+      .setDOMContent(buildPopup(report))
+      .addTo(map);
+    popupRef.current.on('close', () => {
+      if (prevSelectedRef.current === selectedId) onSelectRef.current(null);
+    });
 
-  // Handle resize and panel collapse
-  useEffect(() => {
-    if (!map.current) return;
-
-    let timeoutId: NodeJS.Timeout;
-
-    const handleResize = () => {
-      if (!map.current) return;
-      map.current.resize();
-    };
-
-    const debouncedResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleResize, 100);
-    };
-
-    handleResize();
-    window.addEventListener('resize', debouncedResize);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', debouncedResize);
-    };
-  }, [sidebarCollapsed, reportsPanelCollapsed]);
+    const { left, bottom } = insetsRef.current;
+    map.stop();
+    map.easeTo({
+      center: lngLat,
+      zoom: Math.max(map.getZoom(), 14),
+      duration: 700,
+      padding: { left: left + 24, right: 24, top: 24, bottom: bottom + 24 },
+      essential: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, selectSeq, ready]);
 
   return (
-    <div className="h-full w-full absolute inset-0">
-      <div
-        ref={mapContainer}
-        className="absolute inset-0 w-full h-full"
-        style={{
-          transition: 'all 0.3s ease-in-out',
-        }}
-      />
-      <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg px-4 py-2 text-sm font-medium text-gray-800 z-10">
-        <span className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-red-500 rounded-full" />
-          Reports: {reports.length}
-        </span>
-      </div>
+    <div className="absolute inset-0">
+      <div ref={container} className="absolute inset-0" role="application" aria-label="Interactive map of community reports" />
+      <Legend />
+    </div>
+  );
+}
+
+function Legend() {
+  return (
+    <div className="pointer-events-none absolute bottom-8 left-3 hidden rounded-xl border border-line bg-card/95 px-3 py-2 text-[11px] text-ink-2 shadow-soft backdrop-blur md:block">
+      <div className="mb-1 font-semibold uppercase tracking-wider text-ink-3">Severity</div>
+      <ul className="flex gap-3">
+        {([1, 2, 3, 4, 5] as const).map((s) => (
+          <li key={s} className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: SEVERITIES[s].color }} />
+            {SEVERITIES[s].label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -2,20 +2,20 @@
 
 **Jirani** is a community safety and incident reporting platform that enables citizens to report and track local incidents in real-time through WhatsApp integration and an interactive map interface.
 
-🌐 **Website**: [majiraniwetu.org](https://majiraniwetu.org)  
-🗺️ **Live Map**: [maps.majiraniwetu.org](https://maps.majiraniwetu.org)
+🌐 **Website**: [jirani.the625movement.com](https://jirani.the625movement.com)  
+🗺️ **Live Map**: [maps.the625movement.com](https://maps.the625movement.com)
 
-## About Majira Ni Wetu 🇰🇪
+## About Majirani Wetu 🇰🇪
 
-**Majira Ni Wetu** (Our Neighborhood) is the organization behind Jirani. We're on a mission to ensure that all Kenyan communities are safe and protected through accessible technology.
+**Jirani** is a program of the **Majirani Wetu** (“our neighbors”) initiative of [The 6.25 Movement](https://www.the625movement.com), a U.S.-based nonprofit.
 
 ## Domain Structure
 
 This project uses subdomain routing:
-- **majiraniwetu.org** → Landing page only
-- **maps.majiraniwetu.org** → Map application only
+- **jirani.the625movement.com** → Landing page only
+- **maps.the625movement.com** → Map application only
 
-The `/maps` route is NOT accessible on the main domain. Only the subdomain `maps.majiraniwetu.org` serves the map application.
+The `/maps` route is NOT accessible on the main domain. Only the subdomain `maps.the625movement.com` serves the map application.
 Both domains point to the same Vercel deployment, with middleware handling the routing.
 
 ## Features
@@ -35,13 +35,13 @@ Both domains point to the same Vercel deployment, with middleware handling the r
 - **Messaging**: WhatsApp Cloud API
 - **Deployment**: Vercel
 - **Domain Structure**: 
-  - `majiraniwetu.org` - Main landing page
-  - `maps.majiraniwetu.org` - Interactive map application
+  - `jirani.the625movement.com` - Main landing page
+  - `maps.the625movement.com` - Interactive map application
 
 ## Privacy Policy
 
 The privacy policy is available at:
-- Production: [https://majiraniwetu.org/privacy-policy.pdf](https://majiraniwetu.org/privacy-policy.pdf)
+- Production: [https://jirani.the625movement.com/privacy-policy.pdf](https://jirani.the625movement.com/privacy-policy.pdf)
 
 ## Getting Started
 
@@ -90,12 +90,10 @@ See `API_SETUP.md` and `WHATSAPP_SETUP.md` for detailed setup instructions for:
 
 ## API Routes
 
-- `/api/webhook` - WhatsApp webhook endpoint
-- `/api/whatsapp` - WhatsApp message handling
-- `/api/process-llm` - LLM processing endpoint
-- `/api/reports` - Report management
-- `/api/events` - Event data retrieval
-- `/api/store-report` - Report storage
+- `/api/whatsapp` - WhatsApp Cloud API webhook (GET verification, signed POST)
+- `/api/events` - Public, anonymized report feed used by the map
+- `/api/store-report` - Admin-only report insertion (`x-admin-token`)
+- `/api/status` - Health/config check
 
 ## Database Schema
 

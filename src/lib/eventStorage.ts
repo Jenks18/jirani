@@ -1,3 +1,4 @@
+import { debug } from './log';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { supabase, supabaseEnabled, ensureSupabaseAvailable } from './supabaseClient';
@@ -39,7 +40,7 @@ async function loadEventsFromFile(): Promise<StoredEvent[]> {
     const data = JSON.parse(fileContent);
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.log('No existing events file found, starting with empty array');
+    debug('No existing events file found, starting with empty array');
     return [];
   }
 }
@@ -49,7 +50,7 @@ async function saveEventsToFile(eventsToSave: StoredEvent[]): Promise<void> {
   try {
     await fs.mkdir(path.dirname(EVENTS_FILE), { recursive: true });
     await fs.writeFile(EVENTS_FILE, JSON.stringify(eventsToSave, null, 2));
-    console.log(`Saved ${eventsToSave.length} events to file`);
+    debug(`Saved ${eventsToSave.length} events to file`);
   } catch (error) {
     console.error('Error saving events to file:', error);
   }
@@ -61,7 +62,7 @@ async function initializeEvents(): Promise<void> {
   if (!eventsInitialized) {
     events = await loadEventsFromFile();
     eventsInitialized = true;
-    console.log(`Loaded ${events.length} events from file`);
+    debug(`Loaded ${events.length} events from file`);
   }
 }
 
@@ -136,10 +137,10 @@ export async function storeEvent(event: EventData, from: string, images?: string
   // If coordinates not provided but location is, MUST geocode it
   let coordinates = event.coordinates;
   if (!coordinates && event.location && event.location !== 'Unknown location' && event.location !== 'Location not specified') {
-    console.log(`🗺️  Geocoding location: "${event.location}"`);
+    debug(`🗺️  Geocoding location: "${event.location}"`);
     coordinates = await extractCoordinates(event.location);
     if (coordinates) {
-      console.log(`✅ Geocoded to: [${coordinates[0]}, ${coordinates[1]}]`);
+      debug(`✅ Geocoded to: [${coordinates[0]}, ${coordinates[1]}]`);
     } else {
       console.error(`❌ Geocoding failed for: "${event.location}" - report will have null coordinates`);
     }
@@ -166,7 +167,7 @@ export async function storeEvent(event: EventData, from: string, images?: string
       source: 'whatsapp'
     };
 
-    console.log('📤 Inserting to Supabase reports:', { type: insertPayload.type, location: insertPayload.location, coords: [insertPayload.longitude, insertPayload.latitude] });
+    debug('📤 Inserting to Supabase reports:', { type: insertPayload.type, location: insertPayload.location, coords: [insertPayload.longitude, insertPayload.latitude] });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any).from('reports').insert(insertPayload).select('*').single();
@@ -175,7 +176,7 @@ export async function storeEvent(event: EventData, from: string, images?: string
       throw error;
     }
 
-    console.log('✅ Supabase insert successful:', data.id);
+    debug('✅ Supabase insert successful:', data.id);
 
     const storedEvent: StoredEvent = {
       id: data.id,
@@ -189,7 +190,7 @@ export async function storeEvent(event: EventData, from: string, images?: string
       createdAt: data.created_at,
       images: data.images || []
     };
-    console.log('Event stored in Supabase:', storedEvent.id);
+    debug('Event stored in Supabase:', storedEvent.id);
     return storedEvent;
   } catch (dbError) {
     // `ensureSupabaseAvailable()` is responsible for detecting schema errors and

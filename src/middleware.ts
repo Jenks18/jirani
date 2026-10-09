@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+const MAPS_HOST = 'maps.the625movement.com';
+
 export function middleware(request: NextRequest) {
-  // Minimal host-based routing fallback.
-  // Primary routing is still handled by vercel.json at the edge, but
-  // this middleware provides a safe fallback to ensure the correct
-  // app is served while DNS/edge caches propagate.
+  // Host-based routing: the map app is served from MAPS_HOST and the
+  // marketing site from the main host. Both are the same Next.js deployment.
   const host = request.headers.get('host') || '';
   const pathname = request.nextUrl.pathname || '/';
 
-  const isMapsSubdomain = host.startsWith('maps.');
-  const isMainDomain = host === 'majiraniwetu.org' || host === 'www.majiraniwetu.org';
+  // Anything that is not the maps host (production main host, Vercel previews, localhost) serves the site.
+  // For local map testing use http://maps.localhost:3000.
+  const isMapsSubdomain = host === MAPS_HOST || host.startsWith('maps.');
+  const isMainDomain = !isMapsSubdomain;
 
   if (isMapsSubdomain) {
     // Serve the map app under /maps
@@ -30,7 +32,13 @@ export function middleware(request: NextRequest) {
     if (pathname === '/maps' || pathname.startsWith('/maps/')) {
       // preserve the path suffix when redirecting
       const suffix = pathname.replace(/^\/maps/, '') || '';
-      return NextResponse.redirect(new URL(`https://maps.majiraniwetu.org${suffix}`, request.url));
+      return NextResponse.redirect(new URL(`https://${MAPS_HOST}${suffix}`, request.url));
+    }
+
+    // /site/* is an internal namespace; send direct hits to the clean URL
+    if (pathname === '/site' || pathname.startsWith('/site/')) {
+      const clean = pathname.replace(/^\/site/, '') || '/';
+      return NextResponse.redirect(new URL(clean, request.url), 308);
     }
 
     // Serve the landing site under /site
@@ -58,7 +66,7 @@ export const config = {
      * - public files (images, fonts, etc.)
      */
     // Match all paths except API, next/static, next/image, favicon and files with extensions
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|robots.txt|sitemap.xml|manifest.webmanifest|.*\\..*).*)',
   ],
 };
 

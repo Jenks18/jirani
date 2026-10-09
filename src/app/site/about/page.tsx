@@ -1,30 +1,46 @@
-"use client";
-import Link from "next/link";
+import type { Metadata } from "next";
+import { Prose } from "../_components/ui";
+import { org } from "@/config/org";
 
-export default function AboutPage() {
+export const metadata: Metadata = {
+  title: "About",
+  description: "Jirani is a Majirani Wetu program of The 6.25 Movement, a U.S.-based nonprofit.",
+  alternates: { canonical: "/about" },
+};
+
+export default function Page() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-200">
-      <header className="py-8 px-6 border-b border-[--color-kenya-green-600]/10">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">About Majira Ni Wetu</h1>
-          <Link href="/site" className="text-sm text-[--color-kenya-green-400] hover:underline">Back to home</Link>
-        </div>
-      </header>
+    <Prose
+      title="About Jirani and Majirani Wetu"
+      intro="Jirani (Kiswahili for “neighbor”) is a community safety tool built by The 6.25 Movement as part of its Majirani Wetu program."
+    >
+      <h2>The 6.25 Movement</h2>
+      <p>
+        {org.legalName} is a U.S.-based nonprofit founded in January 2025 by young Kenyans in the Washington D.C., Maryland and
+        Virginia area. The name honors June 25, 2024, and those who sacrificed for justice and accountability in Kenya. Its mission
+        is to advocate for and raise awareness of the rights, dignity and wellbeing of Kenyans and people of African descent in the
+        United States and around the world, rooted in inclusive governance, justice, shared prosperity and collective freedom.
+      </p>
+      <p>
+        Learn more at <a href={org.parentUrl}>{org.parentUrl.replace("https://", "")}</a>.
+      </p>
 
-      <main className="max-w-4xl mx-auto p-6">
-        <section className="bg-black/50 p-8 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Our Mission</h2>
-          <p className="text-gray-300 mb-4">
-            Majira Ni Wetu empowers Kenyan communities to report and track safety incidents in real time using familiar channels like WhatsApp.
-            We combine lightweight mapping, privacy-first design, and AI-assisted workflows to make neighborhoods safer and better informed.
-          </p>
+      <h2>Majirani Wetu</h2>
+      <p>
+        <strong>Majirani Wetu</strong> means &ldquo;our neighbors.&rdquo; It is the program under which The 6.25 Movement builds
+        practical, community-led tools. Jirani is the program&apos;s first product.
+      </p>
 
-          <h3 className="text-lg font-semibold mt-6 mb-2">How it works</h3>
-          <p className="text-gray-300">
-            Residents report incidents via WhatsApp. Reports are routed to moderators, and incidents are visualized on a live map so communities and local responders can take action.
-          </p>
-        </section>
-      </main>
-    </div>
+      <h2>What Jirani does</h2>
+      <p>
+        Jirani lets residents report safety incidents over WhatsApp and view them on a live, anonymized community map. It is designed
+        to be accessible on any phone, in English and Kiswahili, and to protect the privacy of the people who take part.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions, partnerships or press: <a href={`mailto:${org.email}`}>{org.email}</a>.
+      </p>
+    </Prose>
   );
 }

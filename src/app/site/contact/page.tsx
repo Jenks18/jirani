@@ -1,28 +1,46 @@
-"use client";
-import Link from "next/link";
+import type { Metadata } from "next";
+import { Prose } from "../_components/ui";
+import { org, whatsappLink } from "@/config/org";
 
-export default function ContactPage() {
+export const metadata: Metadata = {
+  title: "Contact",
+  description: "Contact The 6.25 Movement about Jirani: support, privacy requests, press and partnerships.",
+  alternates: { canonical: "/contact" },
+};
+
+export default function Page() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-200">
-      <header className="py-8 px-6 border-b border-[--color-kenya-green-600]/10">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Contact</h1>
-          <Link href="/site" className="text-sm text-[--color-kenya-green-400] hover:underline">Back to home</Link>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto p-6">
-        <section className="bg-black/50 p-8 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Get in touch</h2>
-          <p className="text-gray-300 mb-6">If you have questions, partnership inquiries, or want to report a problem with the site, contact us:</p>
-
-          <ul className="space-y-3 text-sm text-gray-300">
-            <li><strong>Email:</strong> <a href="mailto:hello@majiraniwetu.org" className="text-[--color-kenya-green-300]">hello@majiraniwetu.org</a></li>
-            <li><strong>WhatsApp:</strong> <a href="https://api.whatsapp.com/send?phone=254783045226" className="text-[--color-kenya-green-300]">+254 783 045226</a></li>
-            <li><strong>Privacy:</strong> <a href="/privacy-policy.pdf" className="text-[--color-kenya-green-300]">Privacy Policy (PDF)</a></li>
-          </ul>
-        </section>
-      </main>
-    </div>
+    <Prose title="Contact us" intro="We read every message. For anything urgent about personal safety, call 999 or 112 first.">
+      <table>
+        <tbody>
+          <tr>
+            <td><strong>General, press, partnerships</strong></td>
+            <td><a href={`mailto:${org.email}`}>{org.email}</a></td>
+          </tr>
+          <tr>
+            <td><strong>Privacy &amp; data requests</strong></td>
+            <td>
+              <a href={`mailto:${org.email}?subject=Privacy%20request`}>{org.email}</a> (subject: “Privacy request”)
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Report an incident</strong></td>
+            <td><a href={whatsappLink}>WhatsApp {org.whatsappDisplay}</a></td>
+          </tr>
+          <tr>
+            <td><strong>Follow</strong></td>
+            <td>
+              <a href={org.social.x}>X</a> · <a href={org.social.instagram}>Instagram</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      {org.address && (
+        <p>
+          <strong>Mailing address:</strong> {org.address}
+        </p>
+      )}
+      <p>We aim to reply within five business days.</p>
+    </Prose>
   );
 }

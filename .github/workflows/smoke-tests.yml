@@ -34,11 +34,11 @@ jobs:
             done
           }
 
-          echo "Checking https://majiraniwetu.org ..."
-          retry bash -c 'status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$timeout" -H "Cache-Control: no-cache" https://majiraniwetu.org) && [ "$status" = "200" ]'
+          echo "Checking https://jirani.the625movement.com ..."
+          retry bash -c 'status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$timeout" -H "Cache-Control: no-cache" https://jirani.the625movement.com) && [ "$status" = "200" ]'
 
-          echo "Checking https://majiraniwetu.org/maps ..."
-          resp=$(curl -sS -I --max-time "$timeout" -H "Cache-Control: no-cache" -o - https://majiraniwetu.org/maps)
+          echo "Checking https://jirani.the625movement.com/maps ..."
+          resp=$(curl -sS -I --max-time "$timeout" -H "Cache-Control: no-cache" -o - https://jirani.the625movement.com/maps)
           echo "$resp"
           status=$(echo "$resp" | awk 'NR==1{print $2}')
           location=$(echo "$resp" | awk -F': ' '/^Location:/ {print $2}' | tr -d '\r\n' || true)
@@ -46,12 +46,12 @@ jobs:
             echo "/maps did not return a redirect status; got: $status"
             exit 1
           fi
-          if [[ -z "$location" || "$location" != https://maps.majiraniwetu.org* ]]; then
+          if [[ -z "$location" || "$location" != https://maps.the625movement.com* ]]; then
             echo "Unexpected Location header for /maps: $location"
             exit 1
           fi
 
-          echo "Checking https://maps.majiraniwetu.org ..."
-          retry bash -c 'status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$timeout" -H "Cache-Control: no-cache" https://maps.majiraniwetu.org) && [ "$status" = "200" ]'
+          echo "Checking https://maps.the625movement.com ..."
+          retry bash -c 'status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$timeout" -H "Cache-Control: no-cache" https://maps.the625movement.com) && [ "$status" = "200" ]'
 
           echo "Smoke tests passed."

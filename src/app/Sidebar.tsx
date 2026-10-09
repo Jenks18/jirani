@@ -1,37 +1,37 @@
 "use client";
 import React, { useRef } from "react";
-import {
-  FaTachometerAlt, FaMapMarkerAlt, FaFileAlt, FaChartBar, FaBell, FaCog, FaUserCircle,
-  FaExclamationTriangle, FaMapMarkedAlt, FaComments, FaUsers, FaBars
-} from "react-icons/fa";
+import { FaMapMarkerAlt, FaWhatsapp, FaInfoCircle, FaShieldAlt, FaBars } from "react-icons/fa";
+import { org, whatsappLink } from "@/config/org";
 
-const menuItems = [
-  { icon: <FaMapMarkerAlt />, text: "Live Map", path: "/map" },
-  { icon: <FaFileAlt />, text: "Reports", path: "/reports", active: true },
-  { icon: <FaChartBar />, text: "Analytics", path: "/analytics" },
-  { icon: <FaBell />, text: "News", path: "/news" },
-];
-
-const jiraniMenu = [
-  { icon: <FaExclamationTriangle />, text: "Alerts", path: "/alerts" },
-  { icon: <FaMapMarkedAlt />, text: "Areas", path: "/areas" },
-  { icon: <FaComments />, text: "Chat History", path: "/chat" },
-  { icon: <FaUsers />, text: "Communities", path: "/communities" },
-];
-
-function NavItem({ icon, text, isActive, navCollapsed }: {
+function NavItem({
+  icon,
+  text,
+  href,
+  isActive = false,
+  navCollapsed,
+}: {
   icon: React.ReactNode;
   text: string;
-  isActive: boolean;
+  href?: string;
+  isActive?: boolean;
   navCollapsed: boolean;
 }) {
-  return (
-    <div
-      className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-all duration-200 relative
-        ${isActive ? "bg-white font-bold" : "hover:bg-[#F1F3F5]"} ${navCollapsed ? "justify-center" : ""}`}
-      style={{ minHeight: "44px" }}>
-      {icon && <span className={`text-xl ${isActive ? "text-black" : "text-gray-400"}`}>{icon}</span>}
-      {!navCollapsed && <span className={`text-base ${isActive ? "font-bold text-black" : "text-gray-600"}`}>{text}</span>}
+  const cls = `flex min-h-[44px] items-center gap-3 rounded-xl px-3 transition-colors ${
+    navCollapsed ? "justify-center" : ""
+  } ${isActive ? "bg-forest-50 font-semibold text-forest-800" : "text-ink-2 hover:bg-paper-2"}`;
+  const content = (
+    <>
+      <span className={`text-lg ${isActive ? "text-forest-700" : "text-ink-3"}`}>{icon}</span>
+      {!navCollapsed && <span className="text-sm">{text}</span>}
+    </>
+  );
+  return href ? (
+    <a href={href} className={cls} title={navCollapsed ? text : undefined} aria-label={navCollapsed ? text : undefined}>
+      {content}
+    </a>
+  ) : (
+    <div className={cls} aria-current={isActive ? "page" : undefined}>
+      {content}
     </div>
   );
 }
@@ -56,45 +56,45 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
 
   return (
     <aside
-      className={`bg-white h-full flex flex-col ${collapsed ? "w-16 min-w-[64px]" : "w-64 min-w-[220px]"} shadow-lg transition-all duration-300`}
+      className={`flex h-full flex-col bg-card ${collapsed ? "w-16 min-w-[64px]" : "w-64 min-w-[220px]"} border-r border-line transition-all duration-300`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} py-6 px-6`}>
-        {!collapsed && <span className="font-bold text-2xl text-black">Jirani</span>}
-        <button onClick={() => setCollapsed(!collapsed)} className="text-xl text-black focus:outline-none">
+      <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-4 py-5`}>
+        {!collapsed && (
+          <span className="leading-none">
+            <span className="block font-serif text-2xl font-semibold text-ink">Jirani</span>
+            <span className="mt-1 block text-[10px] font-medium uppercase tracking-[0.14em] text-ink-3">Majirani Wetu</span>
+          </span>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="rounded-lg p-2 text-lg text-ink-2 hover:bg-paper-2"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
           <FaBars />
         </button>
       </div>
-      <div className="flex flex-col gap-0 mt-2">
-        {/* Overview Section Header */}
-        {!collapsed && (
-          <div className="px-6 text-xs text-[#6C757D] font-bold uppercase tracking-wide mb-2">Overview</div>
-        )}
-        <nav className={`flex flex-col gap-1 ${collapsed ? "" : "pl-4"}`}>
-          <NavItem icon={<FaMapMarkerAlt />} text="Live Map" isActive={false} navCollapsed={collapsed} />
-          <NavItem icon={<FaFileAlt />} text="Reports" isActive={true} navCollapsed={collapsed} />
-          <NavItem icon={<FaChartBar />} text="Analytics" isActive={false} navCollapsed={collapsed} />
-          <NavItem icon={<FaBell />} text="News" isActive={false} navCollapsed={collapsed} />
-        </nav>
-        {/* My Jirani Section Header */}
-        {!collapsed && (
-          <div className="mt-8 mb-2 px-6 text-xs text-[#6C757D] font-bold uppercase tracking-wide">My Jirani</div>
-        )}
-        <nav className={`flex flex-col gap-1 ${collapsed ? "" : "pl-4"}`}>
-          <NavItem icon={<FaExclamationTriangle />} text="Alerts" isActive={false} navCollapsed={collapsed} />
-          <NavItem icon={<FaMapMarkedAlt />} text="Areas" isActive={false} navCollapsed={collapsed} />
-          <NavItem icon={<FaComments />} text="Chat History" isActive={false} navCollapsed={collapsed} />
-          <NavItem icon={<FaUsers />} text="Communities" isActive={false} navCollapsed={collapsed} />
-        </nav>
-        {/* Settings Section Header */}
-        {!collapsed && (
-          <div className="mt-8 mb-2 px-6 text-xs text-[#6C757D] font-bold uppercase tracking-wide">Settings</div>
-        )}
-        <nav className={`flex flex-col gap-1 mb-6 ${collapsed ? "" : "pl-4"}`}>
-          <NavItem icon={<FaUserCircle />} text="Account" isActive={false} navCollapsed={collapsed} />
-        </nav>
-      </div>
+
+      <nav className="flex flex-col gap-1 px-3" aria-label="Map navigation">
+        <NavItem icon={<FaMapMarkerAlt />} text="Live map" isActive navCollapsed={collapsed} />
+        <NavItem icon={<FaWhatsapp />} text="Report on WhatsApp" href={whatsappLink} navCollapsed={collapsed} />
+        <NavItem icon={<FaInfoCircle />} text="How Jirani works" href={`${org.mainUrl}/how-it-works`} navCollapsed={collapsed} />
+        <NavItem icon={<FaShieldAlt />} text="Safety principles" href={`${org.mainUrl}/safety`} navCollapsed={collapsed} />
+      </nav>
+
+      {!collapsed && (
+        <div className="mt-auto space-y-3 border-t border-line p-4 text-xs text-ink-3">
+          <p className="rounded-lg bg-clay-50 p-3 leading-relaxed text-clay-700">
+            Not an emergency service. In Kenya call <strong>999</strong> or <strong>112</strong>. Reports are unverified.
+          </p>
+          <p className="flex flex-wrap gap-x-3 gap-y-1">
+            <a className="hover:text-forest-700 hover:underline" href={`${org.mainUrl}/privacy`}>Privacy</a>
+            <a className="hover:text-forest-700 hover:underline" href={`${org.mainUrl}/terms`}>Terms</a>
+            <a className="hover:text-forest-700 hover:underline" href={`${org.mainUrl}/cookies`}>Cookies</a>
+          </p>
+        </div>
+      )}
     </aside>
   );
 }

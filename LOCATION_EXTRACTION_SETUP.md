@@ -37,7 +37,7 @@ Coordinates are saved to Supabase `events` table:
 ### Required Environment Variable
 Add to Vercel (already exists for maps):
 ```
-NEXT_PUBLIC_MAPBOX_TOKEN=pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw
+NEXT_PUBLIC_MAPBOX_TOKEN=<your-mapbox-public-token>
 ```
 
 ### Vercel Setup
@@ -48,7 +48,7 @@ NEXT_PUBLIC_MAPBOX_TOKEN=pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1v
 ### Local Development
 Add to `.env.local`:
 ```bash
-NEXT_PUBLIC_MAPBOX_TOKEN=pk.eyJ1IjoieWF6enlqZW5rcyIsImEiOiJjbWU2b2o0eXkxNDFmMm1vbGY3dWt5aXViIn0.8hEu3t-bv3R3kGsBb_PIcw
+NEXT_PUBLIC_MAPBOX_TOKEN=<your-mapbox-public-token>
 ```
 
 ## API Usage Limits

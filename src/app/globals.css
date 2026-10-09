@@ -1,66 +1,63 @@
 @import "tailwindcss";
-@import url("https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css");
 
-/* Kenya Flag-Inspired Color Theme 🇰🇪 */
+/* Design tokens — The 6.25 Movement / Majirani Wetu
+   Warm paper, deep forest green, and a clay-red accent. Light theme only. */
 @theme inline {
-  /* Custom Kenya-inspired color palette */
-  --color-kenya-black: #1a1a1a;
-  --color-kenya-red-50: #fee2e2;
-  --color-kenya-red-100: #fecaca;
-  --color-kenya-red-200: #fca5a5;
-  --color-kenya-red-300: #f87171;
-  --color-kenya-red-400: #ef4444;
-  --color-kenya-red-500: #dc143c;
-  --color-kenya-red-600: #bb0000;
-  --color-kenya-red-700: #991b1b;
-  --color-kenya-red-800: #7f1d1d;
-  --color-kenya-red-900: #550000;
-  
-  --color-kenya-green-50: #f0fdf0;
-  --color-kenya-green-100: #dcfce7;
-  --color-kenya-green-200: #bbf7d0;
-  --color-kenya-green-300: #86efac;
-  --color-kenya-green-400: #4ade80;
-  --color-kenya-green-500: #22c55e;
-  --color-kenya-green-600: #006600;
-  --color-kenya-green-700: #005500;
-  --color-kenya-green-800: #004400;
-  --color-kenya-green-900: #003300;
-  
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: #faf8f3;
+  --color-paper-2: #f2eee4;
+  --color-card: #ffffff;
+  --color-ink: #14201a;
+  --color-ink-2: #3b4a42;
+  --color-ink-3: #66756c;
+  --color-line: #e3ddcf;
+
+  --color-forest-950: #06231a;
+  --color-forest-900: #0a3d26;
+  --color-forest-800: #0d5232;
+  --color-forest-700: #0f6b3e;
+  --color-forest-600: #178650;
+  --color-forest-100: #dff1e6;
+  --color-forest-50: #eef8f1;
+
+  --color-clay-700: #8f2a16;
+  --color-clay-600: #b4361f;
+  --color-clay-500: #cf4a2e;
+  --color-clay-50: #fbece7;
+
+  --color-sun-500: #e8b13a;
+  --color-sun-100: #fbefcf;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --shadow-soft: 0 1px 2px rgb(20 32 26 / 0.04), 0 8px 24px -8px rgb(20 32 26 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(20 32 26 / 0.05), 0 18px 40px -12px rgb(20 32 26 / 0.22);
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #faf8f3;
+  --foreground: #14201a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-.map-container {
-  flex: 1;
-  position: relative !important;
-}
+:focus-visible { outline: 3px solid var(--color-forest-600); outline-offset: 2px; border-radius: 4px; }
 
-/* Position the navigation control in the middle-right */
-.mapboxgl-control-container .mapboxgl-ctrl-group {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-}
+::selection { background: var(--color-sun-100); color: var(--color-ink); }
 
 /* Animation for new events sliding in */
 @keyframes slideIn {
@@ -86,3 +83,17 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Map popups */
+.jirani-popup-wrap .mapboxgl-popup-content {
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow-lift);
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+}
+.jirani-popup-head { display: flex; align-items: center; gap: 8px; font-size: 15px; padding-right: 18px; }
+.jirani-popup-dot { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
+.jirani-popup p { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--color-ink-2); }
+.jirani-popup-meta { margin-top: 10px; font-size: 11px; color: var(--color-ink-3); }
+.jirani-popup-wrap .mapboxgl-popup-close-button { font-size: 18px; padding: 4px 8px; color: var(--color-ink-3); }

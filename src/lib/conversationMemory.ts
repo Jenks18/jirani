@@ -1,3 +1,4 @@
+import { debug } from './log';
 // Simple conversation memory for WhatsApp users
 interface ConversationState {
   userId: string;

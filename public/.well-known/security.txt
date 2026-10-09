@@ -1,0 +1,4 @@
+Contact: mailto:6.25movement@gmail.com
+Expires: 2027-10-09T00:00:00.000Z
+Preferred-Languages: en, sw
+Canonical: https://jirani.the625movement.com/.well-known/security.txt

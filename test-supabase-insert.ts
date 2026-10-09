@@ -67,7 +67,7 @@ async function testInsert() {
     console.log('   Location:', data.location);
     console.log('   Coordinates:', [data.longitude, data.latitude]);
     console.log('   Created:', data.created_at);
-    console.log('\n🗺️  Check your map at: https://maps.majiraniwetu.org');
+    console.log('\n🗺️  Check your map at: https://maps.the625movement.com');
     console.log('   The test report should appear as a marker!');
     
   } catch (err) {

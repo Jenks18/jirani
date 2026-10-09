@@ -1,31 +1,12 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "../globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Majira Ni Wetu - Landing",
-  description: "Landing site for Majira Ni Wetu",
-};
+import SiteHeader from "./_components/SiteHeader";
+import SiteFooter from "./_components/SiteFooter";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" />
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
-      </body>
-    </html>
+    <>
+      <SiteHeader />
+      <main id="main">{children}</main>
+      <SiteFooter />
+    </>
   );
 }

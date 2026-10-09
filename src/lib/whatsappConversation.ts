@@ -1,3 +1,4 @@
+import { debug, maskPhone } from './log';
 // Robust WhatsApp Conversation Management System with Supabase persistence
 import { supabase } from './supabaseClient';
 
@@ -84,8 +85,8 @@ class WhatsAppConversationManager {
     }
     
     try {
-      console.log(`💾 Attempting to save conversation for ${conversation.userId}...`);
-      console.log('📊 Data to save:', {
+      debug(`💾 Attempting to save conversation for ${conversation.userId}...`);
+      debug('📊 Data to save:', {
         user_id: conversation.userId,
         messageCount: conversation.messages.length,
         hasIncident: !!conversation.currentIncident,
@@ -123,8 +124,8 @@ class WhatsAppConversationManager {
         console.error('Error details:', error.details);
         console.error('Error hint:', error.hint);
       } else {
-        console.log('✅✅✅ Conversation SAVED successfully to Supabase!');
-        console.log('Saved data:', data);
+        debug('✅✅✅ Conversation SAVED successfully to Supabase!');
+        debug('Saved data:', data);
       }
     } catch (error) {
       console.error('❌❌❌ EXCEPTION during save:', error);
@@ -146,11 +147,11 @@ class WhatsAppConversationManager {
     }
 
     // Try to load from Supabase
-    console.log('🔍 Loading conversation from Supabase for', userId);
+    debug('🔍 Loading conversation from Supabase for', userId);
     const stored = await this.loadFromSupabase(userId);
     
     if (stored) {
-      console.log('✅ Found existing conversation:', {
+      debug('✅ Found existing conversation:', {
         phase: stored.conversationPhase,
         hasIncident: !!stored.currentIncident,
         awaitingConfirmation: stored.awaitingConfirmation,
@@ -162,7 +163,7 @@ class WhatsAppConversationManager {
     }
 
     // Create new conversation
-    console.log('🆕 Creating new conversation for', userId);
+    debug('🆕 Creating new conversation for', userId);
     const newConversation: ConversationState = {
       userId,
       messages: [],
@@ -199,11 +200,11 @@ class WhatsAppConversationManager {
     try {
       const GROQ_API_KEY = process.env.GROQ_API_KEY;
       if (!GROQ_API_KEY) {
-        console.log('⚠️ No GROQ_API_KEY');
+        debug('⚠️ No GROQ_API_KEY');
         return null;
       }
 
-      console.log('🔍 Analyzing message for incident with Groq Compound...');
+      debug('🔍 Analyzing message for incident with Groq Compound...');
 
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -241,10 +242,10 @@ NOT_INCIDENT`
       const data = await response.json();
       const aiText = data.choices?.[0]?.message?.content?.trim();
       
-      console.log('🤖 Groq response:', aiText);
+      debug('🤖 Groq response:', aiText);
 
       if (!aiText || aiText.includes('NOT_INCIDENT')) {
-        console.log('❌ Not an incident');
+        debug('❌ Not an incident');
         return null;
       }
 
@@ -253,14 +254,14 @@ NOT_INCIDENT`
       const incidentLine = lines.find((line: string) => line.trim().startsWith('INCIDENT|'));
       
       if (!incidentLine) {
-        console.log('❌ No INCIDENT line found in response');
+        debug('❌ No INCIDENT line found in response');
         return null;
       }
 
       // Parse the response: INCIDENT|Type|Location|Severity
       const parts = incidentLine.trim().split('|');
       if (parts[0] !== 'INCIDENT' || parts.length < 4) {
-        console.log('❌ Invalid response format');
+        debug('❌ Invalid response format');
         return null;
       }
 
@@ -268,7 +269,7 @@ NOT_INCIDENT`
       const location = parts[2] !== 'null' && parts[2] ? parts[2] : undefined;
       const severity = parseInt(parts[3]) || 3;
 
-      console.log('✅ Incident detected:', { type, location, severity });
+      debug('✅ Incident detected:', { type, location, severity });
 
       return {
         type,
@@ -288,7 +289,7 @@ NOT_INCIDENT`
     try {
       const GROQ_API_KEY = process.env.GROQ_API_KEY;
       if (!GROQ_API_KEY) {
-        console.log('⚠️  No GROQ_API_KEY, extraction failed');
+        debug('⚠️  No GROQ_API_KEY, extraction failed');
         return undefined;
       }
 
@@ -335,7 +336,7 @@ Return JSON: {"location": "exact location string" or null}`
       const content = data.choices?.[0]?.message?.content?.trim();
       
       if (!content) {
-        console.log('⚠️  No response from AI');
+        debug('⚠️  No response from AI');
         return undefined;
       }
 
@@ -343,11 +344,11 @@ Return JSON: {"location": "exact location string" or null}`
       const extractedLocation = parsed.location;
       
       if (!extractedLocation || typeof extractedLocation !== 'string' || extractedLocation.length < 2) {
-        console.log('⚠️  No location found in message');
+        debug('⚠️  No location found in message');
         return undefined;
       }
 
-      console.log(`🎯 AI extracted location: "${extractedLocation}"`);
+      debug(`🎯 AI extracted location: "${extractedLocation}"`);
       return extractedLocation;
     } catch (error) {
       console.error('❌ Error in AI location extraction:', error);
@@ -359,9 +360,9 @@ Return JSON: {"location": "exact location string" or null}`
 
   private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
     try {
-      console.log('🤖 CALLING GROQ AI...');
-      console.log('📝 User message:', userMessage);
-      console.log('📚 Context:', conversationHistory);
+      debug('🤖 CALLING GROQ AI...');
+      debug('📝 User message:', userMessage);
+      debug('📚 Context:', conversationHistory);
       
       const GROQ_API_KEY = process.env.GROQ_API_KEY;
       
@@ -401,7 +402,7 @@ INSTRUCTIONS:
 
 Respond now as Jirani:`;
 
-      console.log('🌐 Calling Groq Compound AI...');
+      debug('🌐 Calling Groq Compound AI...');
       
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -421,7 +422,7 @@ Respond now as Jirani:`;
         })
       });
 
-      console.log('📡 Response status:', response.status);
+      debug('📡 Response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -430,7 +431,7 @@ Respond now as Jirani:`;
       }
 
       const data = await response.json();
-      console.log('✅ Groq response received');
+      debug('✅ Groq response received');
       
       const aiText = data.choices?.[0]?.message?.content;
       
@@ -439,7 +440,7 @@ Respond now as Jirani:`;
         throw new Error('No text in Groq response');
       }
 
-      console.log('💬 AI generated response:', aiText);
+      debug('💬 AI generated response:', aiText);
       return aiText.trim();
       
     } catch (error) {
@@ -448,7 +449,7 @@ Respond now as Jirani:`;
       
       // INTELLIGENT FALLBACK - brief, guarded, security-focused with Kenyan English
       const lowerMessage = userMessage.toLowerCase();
-      console.log('⚠️ Using fallback response for:', lowerMessage);
+      debug('⚠️ Using fallback response for:', lowerMessage);
       if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name')) {
         return "I'm Jirani, your community safety assistant. Uko na shida ya usalama?";
       }
@@ -470,11 +471,11 @@ Respond now as Jirani:`;
     const conversation = await this.getConversation(userId);
     const lowerMessage = userMessage.toLowerCase();
 
-    console.log(`📱 Processing message from ${userId}: "${userMessage}"`);
-    console.log(`📊 Conversation phase: ${conversation.conversationPhase}`);
+    debug(`📱 Processing message from ${maskPhone(userId)} (${userMessage.length} chars)`);
+    debug(`📊 Conversation phase: ${conversation.conversationPhase}`);
 
     // Handle confirmation responses first (these need immediate action)
-    console.log('🔍 Checking confirmation:', {
+    debug('🔍 Checking confirmation:', {
       awaitingConfirmation: conversation.awaitingConfirmation,
       hasCurrentIncident: !!conversation.currentIncident,
       messageIsYes: lowerMessage.includes('yes')
@@ -484,7 +485,7 @@ Respond now as Jirani:`;
       if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y' || 
           lowerMessage.includes('okay') || lowerMessage.includes('ok') || lowerMessage.includes('sure') ||
           lowerMessage.includes('ndio') || lowerMessage.includes('sawa')) {
-        console.log('✅✅✅ USER CONFIRMED - FILING REPORT ✅✅✅');
+        debug('✅✅✅ USER CONFIRMED - FILING REPORT ✅✅✅');
         conversation.currentIncident.confirmed = true;
         conversation.awaitingConfirmation = false;
         conversation.conversationPhase = 'completed';
@@ -500,7 +501,7 @@ Respond now as Jirani:`;
       } else {
         // User said something else while we're waiting for confirmation
         // Don't process it as a new message - just remind them
-        console.log('⚠️ User said something other than yes/no during confirmation');
+        debug('⚠️ User said something other than yes/no during confirmation');
         const summary = `${conversation.currentIncident.type} at ${conversation.currentIncident.location || 'provided location'}`;
         return `I'm waiting for your confirmation. ${summary}. Reply "yes" to file or "no" to cancel.`;
       }
@@ -512,12 +513,12 @@ Respond now as Jirani:`;
       .map(m => `${m.role === 'user' ? 'User' : 'Jirani'}: ${m.content}`)
       .join('\n');
 
-    console.log('📝 Conversation history:', conversationHistory);
+    debug('📝 Conversation history:', conversationHistory);
 
     // ALWAYS use AI for responses - no fallback to generic responses
     const aiResponse = await this.generateResponseWithAI(userId, userMessage, conversationHistory);
     
-    console.log('💭 Generated response:', aiResponse);
+    debug('💭 Generated response:', aiResponse);
     
     // Check if the message indicates an incident (Groq Compound AI detection)
     // Prevent re-detection if incident was stored in last 60 seconds
@@ -529,14 +530,14 @@ Respond now as Jirani:`;
     if (shouldDetectNewIncident) {
       const detectedIncident = await this.detectIncident(userMessage);
       if (detectedIncident) {
-        console.log('🚨 New incident detected and saving:', JSON.stringify(detectedIncident));
+        debug('🚨 New incident detected and saving:', JSON.stringify(detectedIncident));
         conversation.currentIncident = detectedIncident;
         conversation.conversationPhase = 'collecting';
         await this.saveToSupabase(conversation);
-        console.log('✅ Incident saved to Supabase');
+        debug('✅ Incident saved to Supabase');
       }
     } else {
-      console.log('⏭️ Skipping incident detection - current incident pending:', JSON.stringify(conversation.currentIncident));
+      debug('⏭️ Skipping incident detection - current incident pending:', JSON.stringify(conversation.currentIncident));
     }
     
     // Check if AI response asks for confirmation (indicates we have enough details)
@@ -548,7 +549,7 @@ Respond now as Jirani:`;
                                  lowerAI.includes('pole sana');
     
     if (conversation.currentIncident && asksForConfirmation && !conversation.awaitingConfirmation) {
-      console.log('✋ Setting awaiting confirmation to true');
+      debug('✋ Setting awaiting confirmation to true');
       conversation.awaitingConfirmation = true;
       conversation.conversationPhase = 'confirming';
       await this.saveToSupabase(conversation); // Persist awaiting confirmation state
@@ -562,7 +563,7 @@ Respond now as Jirani:`;
     
     // Check if user sent a location pin
     if (coordinates && conversation.currentIncident && !conversation.currentIncident.confirmed) {
-      console.log('📍 Location pin received! Updating incident with coordinates:', coordinates);
+      debug('📍 Location pin received! Updating incident with coordinates:', coordinates);
       conversation.currentIncident.coordinates = coordinates;
       conversation.currentIncident.location = `${coordinates[1]}, ${coordinates[0]}`; // lat, lng
       await this.saveToSupabase(conversation);
@@ -588,17 +589,17 @@ Respond now as Jirani:`;
     // SIMPLE: If incident is confirmed, return it
     const shouldReturnIncident = updatedConversation.currentIncident?.confirmed === true;
     
-    console.log('🔍🔍🔍 FINAL INCIDENT CHECK 🔍🔍🔍');
-    console.log('Has incident:', !!updatedConversation.currentIncident);
-    console.log('Incident details:', JSON.stringify(updatedConversation.currentIncident));
-    console.log('Is confirmed:', updatedConversation.currentIncident?.confirmed);
-    console.log('Has coordinates:', !!updatedConversation.currentIncident?.coordinates);
-    console.log('Will return to webhook:', shouldReturnIncident);
+    debug('🔍🔍🔍 FINAL INCIDENT CHECK 🔍🔍🔍');
+    debug('Has incident:', !!updatedConversation.currentIncident);
+    debug('Incident details:', JSON.stringify(updatedConversation.currentIncident));
+    debug('Is confirmed:', updatedConversation.currentIncident?.confirmed);
+    debug('Has coordinates:', !!updatedConversation.currentIncident?.coordinates);
+    debug('Will return to webhook:', shouldReturnIncident);
     
     if (shouldReturnIncident) {
-      console.log('✅✅✅ RETURNING CONFIRMED INCIDENT TO WEBHOOK ✅✅✅');
+      debug('✅✅✅ RETURNING CONFIRMED INCIDENT TO WEBHOOK ✅✅✅');
     } else {
-      console.log('❌ NOT returning incident - either not confirmed or no incident');
+      debug('❌ NOT returning incident - either not confirmed or no incident');
     }
     
     return {
@@ -621,7 +622,7 @@ Respond now as Jirani:`;
     conversation.conversationPhase = 'greeting';
     conversation.lastStoredAt = new Date(); // Prevent re-detection for 60 seconds
     await this.saveToSupabase(conversation);
-    console.log('✅ Cleared incident from conversation (ready for new reports in 60s)');
+    debug('✅ Cleared incident from conversation (ready for new reports in 60s)');
   }
 
   public async clearConversation(userId: string): Promise<void> {

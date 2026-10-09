@@ -3,6 +3,12 @@ import { storeEvent } from '@/lib/eventStorage';
 import type { Database } from '@/lib/database.types';
 
 export async function POST(req: NextRequest) {
+  // Admin-only: this endpoint writes directly to the public map.
+  const adminToken = process.env.ADMIN_API_TOKEN;
+  if (!adminToken || req.headers.get('x-admin-token') !== adminToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
 
@@ -57,9 +63,4 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({
-    message: 'Store Report API is working',
-    note: 'Use POST to store a report'
-  });
-}
+
