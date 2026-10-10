@@ -1,41 +1,51 @@
 import { debug } from './log';
 import { MAPBOX_TOKEN } from './mapConfig';
+import { findPlace } from './placeSearch';
 
 // Dynamic geocoding using Mapbox - no hardcoded locations
 // This allows the system to handle ANY location in Kenya that users report
 
+const KENYA_BBOX = '33.9,-4.8,41.95,5.6';
+
+interface MapboxFeature {
+  place_type?: string[];
+  center: [number, number];
+  place_name?: string;
+  relevance?: number;
+}
+
 export async function geocodeLocation(locationString: string): Promise<[number, number] | null> {
+  try {
+    const place = await findPlace(locationString);
+    if (place) {
+      debug(`Place index matched "${locationString}" -> ${place.name}, ${place.subcounty}, ${place.county}`);
+      return [place.lng, place.lat];
+    }
+  } catch (error) {
+    console.error('Place index lookup failed, falling back to Mapbox:', error);
+  }
+
+  const query = encodeURIComponent(locationString);
+  const url =
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${MAPBOX_TOKEN}` +
+    `&limit=3&country=ke&bbox=${KENYA_BBOX}`;
 
   try {
-    // Add "Nairobi, Kenya" for better accuracy with malls and specific locations
-    const query = encodeURIComponent(`${locationString}, Nairobi, Kenya`);
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${MAPBOX_TOKEN}&limit=3&country=ke&types=poi,address,place`;
-    
-    debug(`🗺️  Geocoding with Mapbox: "${locationString}"`);
     const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data.features && data.features.length > 0) {
-      // Prioritize POI (point of interest) results for malls/landmarks
-      interface MapboxFeature {
-        place_type?: string[];
-        center: [number, number];
-        place_name?: string;
-      }
-      
-      const poiResult = data.features.find((f: MapboxFeature) => f.place_type?.includes('poi'));
-      const feature: MapboxFeature = poiResult || data.features[0];
-      
-      const [lng, lat] = feature.center;
-      debug(`✅ Geocoded to: [${lng}, ${lat}] - ${feature.place_name}`);
-      debug(`   Place type: ${feature.place_type?.join(', ')}`);
+    const data = response.ok ? ((await response.json()) as { features?: MapboxFeature[] }) : { features: [] };
+    const best = (data.features ?? []).find((f) => (f.relevance ?? 0) >= 0.7);
+    if (best) {
+      const [lng, lat] = best.center;
       return [lng, lat];
     }
-    
-    debug(`⚠️  No Mapbox results for: "${locationString}"`);
-    return null;
   } catch (error) {
-    console.error(`❌ Geocoding error for "${locationString}":`, error);
+    console.error(`Geocoding error for "${locationString}":`, error);
+  }
+
+  try {
+    const area = await findPlace(locationString, { areaFallback: true });
+    return area ? [area.lng, area.lat] : null;
+  } catch {
     return null;
   }
 }
