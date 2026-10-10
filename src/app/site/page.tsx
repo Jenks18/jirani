@@ -145,7 +145,7 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-2">
               Report an incident over WhatsApp in under a minute and see what&apos;s happening around you on a live community map.
-              No app to download, no account to create.
+              No app to download and no password to remember.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Button href={whatsappLink} external>
