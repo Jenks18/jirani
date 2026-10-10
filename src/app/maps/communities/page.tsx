@@ -17,7 +17,7 @@ export default function CommunitiesPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {data?.communities.map((c) => (
           <Card key={c.id}>
-            <h2 className="font-serif text-xl font-semibold text-ink">{c.name}</h2>
+            <h2 className="font-serif text-xl  text-ink">{c.name}</h2>
             <p className="mt-1 text-xs text-ink-3">{c.area?.name ?? "All areas"} · {c.members} {c.members === 1 ? "member" : "members"}</p>
             {c.description && <p className="mt-3 text-sm leading-relaxed text-ink-2">{c.description}</p>}
             <a href={`https://wa.me/${org.whatsappNumber}?text=${encodeURIComponent(`JOIN ${c.slug}`)}`} className="mt-4 inline-flex items-center gap-2 rounded-full bg-forest-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-forest-900">

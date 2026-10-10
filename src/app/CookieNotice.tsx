@@ -30,11 +30,11 @@ export default function CookieNotice() {
     <div
       role="region"
       aria-label="Cookie and storage notice"
-      className="fixed inset-x-3 bottom-3 z-[1000] mx-auto max-w-xl rounded-2xl border border-line bg-card p-4 text-sm text-ink-2 shadow-lift sm:inset-x-auto sm:left-4 sm:bottom-4"
+      className="fixed inset-x-3 bottom-3 z-[1000] mx-auto max-w-xl rounded-lg border border-line bg-card p-4 text-sm text-ink-2 shadow-lift sm:inset-x-auto sm:left-4 sm:bottom-4"
     >
       <p className="leading-relaxed">
-        We use no advertising or tracking cookies. Your browser may store a small note that you saw this message, and the live
-        map uses a third-party mapping provider, which may store technical data to render the map.{" "}
+        We use no advertising or tracking cookies. Your browser may store a small note that you saw this message, a sign-in
+        cookie if you sign in to your account, and the live map uses a third-party mapping provider, which may store technical data to render the map.{" "}
         <a href="https://jirani.the625movement.com/cookies" className="font-medium text-forest-700 underline underline-offset-2">
           Cookie policy
         </a>

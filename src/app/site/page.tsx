@@ -38,7 +38,7 @@ const principles = [
   },
   {
     title: "Built for real phones",
-    body: "Everything runs inside WhatsApp. No app, no account, no password, and it works on the phone you already have.",
+    body: "Everything runs inside WhatsApp. No app to install and no password to remember. It works on the phone you already have.",
   },
 ];
 
@@ -72,27 +72,27 @@ function PhoneMock() {
       <div className="relative rounded-[2.4rem] border border-ink/10 bg-card p-3 shadow-lift">
         <div className="overflow-hidden rounded-[1.8rem] bg-[#ece5d8]">
           <div className="flex items-center gap-3 bg-forest-800 px-4 py-3 text-white">
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 font-serif text-sm font-semibold">J</div>
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 font-serif text-sm ">J</div>
             <div className="leading-tight">
               <div className="text-sm font-semibold">Jirani</div>
               <div className="text-[11px] text-white/70">online</div>
             </div>
           </div>
           <div className="space-y-2.5 px-3 py-4 text-[13px] leading-snug">
-            <div className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">
+            <div className="ml-auto w-fit max-w-[80%] rounded-lg rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">
               Jambo, there was a phone snatching near the Kikuyu stage around 6pm
             </div>
-            <div className="w-fit max-w-[84%] rounded-2xl rounded-tl-md bg-white px-3.5 py-2.5 text-ink shadow-sm">
+            <div className="w-fit max-w-[84%] rounded-lg rounded-tl-md bg-white px-3.5 py-2.5 text-ink shadow-sm">
               Pole sana. Are you safe? Could you share the exact spot with a location pin?
             </div>
-            <div className="ml-auto w-fit max-w-[60%] rounded-2xl rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">📍 Location shared</div>
-            <div className="w-fit max-w-[88%] rounded-2xl rounded-tl-md bg-white px-3.5 py-2.5 text-ink shadow-sm">
+            <div className="ml-auto w-fit max-w-[60%] rounded-lg rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">📍 Location shared</div>
+            <div className="w-fit max-w-[88%] rounded-lg rounded-tl-md bg-white px-3.5 py-2.5 text-ink shadow-sm">
               Let me confirm: <strong>phone theft</strong> near Kikuyu stage at about 6pm. Shall I add this to the community map?
             </div>
-            <div className="ml-auto w-fit rounded-2xl rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">Yes</div>
+            <div className="ml-auto w-fit rounded-lg rounded-tr-md bg-[#d9f2d5] px-3.5 py-2.5 text-ink">Yes</div>
           </div>
         </div>
-        <div className="absolute -bottom-5 -right-3 w-44 rounded-2xl border border-line bg-card p-3 shadow-lift sm:-right-8">
+        <div className="absolute -bottom-5 -right-3 w-44 rounded-lg border border-line bg-card p-3 shadow-lift sm:-right-8">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-clay-600" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-3">Just now</span>
@@ -140,7 +140,7 @@ export default function HomePage() {
             <span className="inline-flex items-center gap-2 rounded-full border border-forest-700/20 bg-forest-50 px-4 py-1.5 text-xs font-semibold text-forest-800">
               <span className="h-1.5 w-1.5 rounded-full bg-forest-600" /> A Majirani Wetu program of The 6.25 Movement
             </span>
-            <h1 className="mt-6 font-serif text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-ink md:text-6xl">
+            <h1 className="mt-6 font-serif text-[2.6rem]  leading-[1.05] tracking-tight text-ink md:text-6xl">
               Safer streets start with <span className="italic text-forest-700">neighbors</span> who speak up.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-2">
@@ -170,14 +170,14 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl px-5">
           <div className="max-w-2xl">
             <Eyebrow>How it works</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+            <h2 className="mt-3 font-serif text-3xl  tracking-tight text-ink md:text-4xl">
               From &ldquo;I saw something&rdquo; to a shared picture of your neighborhood.
             </h2>
           </div>
           <ol className="mt-14 grid gap-6 md:grid-cols-3">
             {steps.map((s) => (
-              <li key={s.n} className="rounded-3xl border border-line bg-paper p-8">
-                <span className="font-serif text-3xl font-semibold text-forest-600">{s.n}</span>
+              <li key={s.n} className="rounded-lg border border-line bg-paper p-8">
+                <span className="font-serif text-3xl  text-forest-600">{s.n}</span>
                 <h3 className="mt-5 text-lg font-semibold text-ink">{s.title}</h3>
                 <p className="mt-2 leading-relaxed text-ink-2">{s.body}</p>
               </li>
@@ -191,11 +191,11 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl px-5">
           <div className="max-w-2xl">
             <Eyebrow light>Designed with care</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight md:text-4xl">
+            <h2 className="mt-3 font-serif text-3xl  tracking-tight md:text-4xl">
               Community safety only works when people feel safe taking part.
             </h2>
           </div>
-          <div className="mt-14 grid gap-px overflow-hidden rounded-3xl bg-white/10 md:grid-cols-3">
+          <div className="mt-14 grid gap-px overflow-hidden rounded-lg bg-white/10 md:grid-cols-3">
             {principles.map((p) => (
               <div key={p.title} className="bg-forest-900 p-8">
                 <h3 className="text-lg font-semibold">{p.title}</h3>
@@ -216,7 +216,7 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center">
           <div>
             <Eyebrow>Safety net</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+            <h2 className="mt-3 font-serif text-3xl  tracking-tight text-ink md:text-4xl">
               The people who love you, one message away.
             </h2>
             <p className="mt-5 leading-relaxed text-ink-2">
@@ -227,7 +227,7 @@ export default function HomePage() {
               <Button href="/safety-net">How the safety net works</Button>
             </div>
           </div>
-          <div className="rounded-3xl border border-line bg-paper p-8 font-mono text-sm leading-relaxed text-ink-2">
+          <div className="rounded-lg border border-line bg-paper p-8 font-mono text-sm leading-relaxed text-ink-2">
             <p><span className="text-forest-700">you</span> ADD Mum +254712345678</p>
             <p className="mt-2"><span className="text-forest-700">you</span> CHECKIN 30</p>
             <p className="mt-2 text-ink-3">… 30 min, no reply …</p>
@@ -241,7 +241,7 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:items-center">
           <div>
             <Eyebrow>Majirani Wetu</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+            <h2 className="mt-3 font-serif text-3xl  tracking-tight text-ink md:text-4xl">
               &ldquo;Our neighbors.&rdquo; A program for community, by community.
             </h2>
             <p className="mt-5 leading-relaxed text-ink-2">
@@ -258,15 +258,15 @@ export default function HomePage() {
               </Button>
             </div>
           </div>
-          <div className="rounded-3xl border border-line bg-card p-8 shadow-soft">
-            <h3 className="font-serif text-xl font-semibold text-ink">Jirani is not an emergency service</h3>
+          <div className="rounded-lg border border-line bg-card p-8 shadow-soft">
+            <h3 className="font-serif text-xl  text-ink">Jirani is not an emergency service</h3>
             <p className="mt-3 leading-relaxed text-ink-2">
               Reports are community information, not a dispatch. If someone is in danger, contact emergency services first.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               {["999", "112"].map((n) => (
-                <div key={n} className="rounded-2xl bg-clay-50 px-5 py-4 text-center">
-                  <div className="font-serif text-3xl font-semibold text-clay-700">{n}</div>
+                <div key={n} className="rounded-lg bg-clay-50 px-5 py-4 text-center">
+                  <div className="font-serif text-3xl  text-clay-700">{n}</div>
                   <div className="text-xs text-clay-700/80">Kenya emergency</div>
                 </div>
               ))}
@@ -279,7 +279,7 @@ export default function HomePage() {
       <section className="bg-card py-24">
         <div className="mx-auto max-w-3xl px-5">
           <Eyebrow>Questions</Eyebrow>
-          <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">Good to know</h2>
+          <h2 className="mt-3 font-serif text-3xl  tracking-tight text-ink md:text-4xl">Good to know</h2>
           <div className="mt-10 divide-y divide-line border-y border-line">
             {faqs.map((f) => (
               <details key={f.q} className="group py-5">
@@ -297,7 +297,7 @@ export default function HomePage() {
       {/* CTA */}
       <section className="bg-paper py-20">
         <div className="mx-auto max-w-4xl rounded-[2rem] bg-forest-800 px-8 py-16 text-center text-white shadow-lift">
-          <h2 className="font-serif text-3xl font-semibold tracking-tight md:text-4xl">Say hello to your Jirani.</h2>
+          <h2 className="font-serif text-3xl  tracking-tight md:text-4xl">Say hello to your Jirani.</h2>
           <p className="mx-auto mt-4 max-w-xl text-forest-100/85">
             Open WhatsApp, send &ldquo;Hello&rdquo; to {org.whatsappDisplay}, and you&apos;re set.
           </p>

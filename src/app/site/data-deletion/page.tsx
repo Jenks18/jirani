@@ -15,7 +15,14 @@ export default function Page() {
       intro="You can ask us to delete your personal data at any time. It's free and you don't need to give a reason."
       updated={org.legalUpdated}
     >
-      <h2>How to ask</h2>
+      <h2>The fast way: do it yourself</h2>
+      <p>
+        Sign in at <a href="https://maps.the625movement.com/account">maps.the625movement.com/account</a> with a code from WhatsApp
+        and choose <strong>Delete my account</strong>. It removes your account, trusted contacts, check-ins, alerts and community
+        memberships straight away, and unlinks your phone number from your reports. You can also download your data there first.
+      </p>
+
+      <h2>Or ask us</h2>
       <ol>
         <li>
           Email <a href={`mailto:${org.email}?subject=Data%20deletion%20request`}>{org.email}</a> with the subject{" "}

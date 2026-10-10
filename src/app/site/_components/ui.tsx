@@ -52,12 +52,12 @@ export function Prose({
   return (
     <div className="bg-paper">
       <div className="mx-auto max-w-3xl px-5 pb-24 pt-14 md:pt-20">
-        <h1 className="font-serif text-4xl font-semibold tracking-tight text-ink md:text-5xl">{title}</h1>
+        <h1 className="font-serif text-4xl  tracking-tight text-ink md:text-5xl">{title}</h1>
         {intro && <p className="mt-5 text-lg leading-relaxed text-ink-2">{intro}</p>}
         {updated && <p className="mt-4 text-sm text-ink-3">Last updated: {updated}</p>}
         <div
           className="mt-10 space-y-5 leading-relaxed text-ink-2
-          [&_h2]:mt-12 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-ink
+          [&_h2]:mt-12 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]: [&_h2]:text-ink
           [&_h3]:mt-8 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-ink
           [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-6
           [&_a]:font-medium [&_a]:text-forest-700 [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-forest-900

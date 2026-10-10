@@ -94,4 +94,6 @@ class RateLimiter {
 export const webhookRateLimiter = new RateLimiter(20, 60000); // 20 requests per minute
 export const testEndpointRateLimiter = new RateLimiter(5, 60000); // 5 requests per minute for test endpoint
 
+export const loginRateLimiter = new RateLimiter(10, 15 * 60000);
+
 export default RateLimiter;

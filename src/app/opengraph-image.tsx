@@ -14,18 +14,18 @@ export default function OpengraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#0a3d26",
-          color: "#faf8f3",
+          background: "#0c643a",
+          color: "#ebebe3",
           padding: 80,
           fontFamily: "serif",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20, fontSize: 36 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: "#faf8f3", display: "flex" }} />
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: "#ebebe3", display: "flex" }} />
           <span>Jirani · Majirani Wetu</span>
         </div>
         <div style={{ fontSize: 84, lineHeight: 1.05, display: "flex" }}>Safer streets start with neighbors who speak up.</div>
-        <div style={{ fontSize: 28, color: "#e8b13a", display: "flex" }}>A program of The 6.25 Movement</div>
+        <div style={{ fontSize: 28, color: "#ebebe3", display: "flex" }}>A program of The 6.25 Movement</div>
       </div>
     ),
     size

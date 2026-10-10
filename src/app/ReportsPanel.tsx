@@ -87,7 +87,7 @@ export default function ReportsPanel({
       <header className="border-b border-line px-5 pb-4 pt-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-serif text-2xl font-semibold text-ink">Reports</h2>
+            <h2 className="font-serif text-2xl  text-ink">Reports</h2>
             <p className="mt-0.5 text-sm text-ink-3" aria-live="polite">
               {status === 'loading'
                 ? 'Loading…'
@@ -115,7 +115,7 @@ export default function ReportsPanel({
             value={filters.query}
             onChange={(e) => onFiltersChange({ ...filters, query: e.target.value })}
             placeholder="Search place or incident"
-            className="w-full rounded-xl border border-line bg-paper py-2.5 pl-9 pr-3 text-sm text-ink placeholder:text-ink-3 focus:border-forest-600 focus:outline-none"
+            className="w-full rounded-lg border border-line bg-paper py-2.5 pl-9 pr-3 text-sm text-ink placeholder:text-ink-3 focus:border-forest-600 focus:outline-none"
           />
         </label>
 
@@ -153,7 +153,7 @@ export default function ReportsPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-paper">
         {status === 'error' && (
-          <div role="alert" className="m-4 rounded-xl border border-clay-500/30 bg-clay-50 p-4 text-sm text-clay-700">
+          <div role="alert" className="m-4 rounded-lg border border-clay-500/30 bg-clay-50 p-4 text-sm text-clay-700">
             We couldn&apos;t load reports.{' '}
             <button onClick={onRefresh} className="font-semibold underline">
               Try again
@@ -164,7 +164,7 @@ export default function ReportsPanel({
         {status === 'loading' && reports.length === 0 && (
           <div className="space-y-3 p-5" aria-hidden="true">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="animate-pulse rounded-xl bg-card p-4">
+              <div key={i} className="animate-pulse rounded-lg bg-card p-4">
                 <div className="h-3 w-1/2 rounded bg-paper-2" />
                 <div className="mt-3 h-3 w-full rounded bg-paper-2" />
                 <div className="mt-2 h-3 w-3/4 rounded bg-paper-2" />
@@ -175,7 +175,7 @@ export default function ReportsPanel({
 
         {status === 'ready' && reports.length === 0 && (
           <div className="p-8 text-center">
-            <p className="font-serif text-lg font-semibold text-ink">
+            <p className="font-serif text-lg  text-ink">
               {filtersActive ? 'No reports match these filters' : 'No reports yet'}
             </p>
             <p className="mt-2 text-sm text-ink-2">

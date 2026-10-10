@@ -25,7 +25,7 @@ export default function NewsPage() {
               {p.communities && <span className="rounded-full bg-paper-2 px-2 py-0.5 font-medium text-ink-2">{p.communities.name}</span>}
               <time dateTime={p.published_at}>{formatWhen(p.published_at)}</time>
             </div>
-            <h2 className="mt-2 font-serif text-xl font-semibold text-ink">{p.title}</h2>
+            <h2 className="mt-2 font-serif text-xl  text-ink">{p.title}</h2>
             <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-2">{p.body}</p>
             {p.author && <p className="mt-3 text-xs text-ink-3">— {p.author}</p>}
           </Card>

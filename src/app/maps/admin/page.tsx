@@ -60,10 +60,10 @@ function AdminForm({ form, token }: { form: (typeof FORMS)[number]; token: strin
     setBusy(false);
   }
 
-  const input = "mt-1 w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-sm";
+  const input = "mt-1 w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-sm";
   return (
     <Card>
-      <h2 className="font-serif text-xl font-semibold text-ink">{form.title}</h2>
+      <h2 className="font-serif text-xl  text-ink">{form.title}</h2>
       <form onSubmit={submit} className="mt-4 space-y-3">
         {form.fields.map((f) => (
           <label key={f.name} className="block text-sm font-medium text-ink-2">
@@ -98,7 +98,7 @@ export default function AdminPage() {
     <AppShell title="Admin" subtitle="Staff only. Create areas, communities and news. The token is kept in this tab's memory and never stored.">
       <Card className="mb-6">
         <label className="block text-sm font-medium text-ink-2">Admin token
-          <input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} className="mt-1 w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-sm" />
+          <input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-sm" />
         </label>
       </Card>
       <div className="grid gap-6 md:grid-cols-2">{FORMS.map((f) => <AdminForm key={f.resource} form={f} token={token} />)}</div>

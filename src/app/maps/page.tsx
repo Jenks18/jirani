@@ -88,7 +88,7 @@ export default function MapPage() {
   };
 
   const insets = {
-    left: desktop ? (sidebarCollapsed ? SIDEBAR_CLOSED : SIDEBAR_OPEN) + (panelOpen ? PANEL_WIDTH : 0) : 0,
+    left: 0,
     bottom: !desktop && panelOpen ? Math.round(vh * 0.55) : 0,
   };
 

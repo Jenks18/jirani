@@ -76,7 +76,7 @@ export default function Page() {
         </tbody>
       </table>
       <p>
-        We do not use passwords or email accounts: your verified WhatsApp number identifies you. Jirani currently reads text messages and shared locations only; it does not
+        We do not use passwords or email accounts: your verified WhatsApp number identifies you, and you sign in on the web with a one-time code we send you on WhatsApp. If you sign in we set a strictly necessary cookie to keep you signed in. Jirani currently reads text messages and shared locations only; it does not
         process photos, voice notes or documents. We do not knowingly collect sensitive categories of data, so please do not include
         health, religion, ethnicity or similar details about anyone in your reports.
       </p>

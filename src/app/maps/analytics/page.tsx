@@ -10,7 +10,7 @@ function Kpi({ label, value, hint }: { label: string; value: number; hint?: Reac
   return (
     <Card>
       <p className="text-xs font-semibold uppercase tracking-wider text-ink-3">{label}</p>
-      <p className="mt-2 font-serif text-4xl font-semibold text-ink">{value}</p>
+      <p className="mt-2 font-serif text-4xl  text-ink">{value}</p>
       {hint && <p className="mt-1 text-xs text-ink-3">{hint}</p>}
     </Card>
   );
@@ -92,23 +92,23 @@ export default function AnalyticsPage() {
           ) : (
             <>
               <Card>
-                <h2 className="font-serif text-xl font-semibold text-ink">Reports per day</h2>
+                <h2 className="font-serif text-xl  text-ink">Reports per day</h2>
                 <p className="mb-4 text-sm text-ink-3">Last 30 days (Nairobi time)</p>
                 <DailyBars data={data.byDay} />
               </Card>
               <div className="grid gap-6 md:grid-cols-2">
                 <Card>
-                  <h2 className="mb-4 font-serif text-xl font-semibold text-ink">By severity</h2>
+                  <h2 className="mb-4 font-serif text-xl  text-ink">By severity</h2>
                   <HBars rows={([1, 2, 3, 4, 5] as const).map((s) => ({ label: SEVERITIES[s].label, count: data.bySeverity[s], color: SEVERITIES[s].color }))} />
                 </Card>
                 <Card>
-                  <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Most reported</h2>
+                  <h2 className="mb-4 font-serif text-xl  text-ink">Most reported</h2>
                   <HBars rows={data.byType.map((t) => ({ label: t.type, count: t.count }))} />
                 </Card>
               </div>
               <div className="grid gap-6 md:grid-cols-2">
                 <Card>
-                  <h2 className="font-serif text-xl font-semibold text-ink">Hotspots</h2>
+                  <h2 className="font-serif text-xl  text-ink">Hotspots</h2>
                   <p className="mb-4 text-sm text-ink-3">Areas with the most reports, last 30 days</p>
                   {data.hotspots.length === 0 ? <p className="text-sm text-ink-2">No area has reports in the last 30 days.</p> : (
                     <ul className="divide-y divide-line">
@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
                   )}
                 </Card>
                 <Card>
-                  <h2 className="font-serif text-xl font-semibold text-ink">Time of day</h2>
+                  <h2 className="font-serif text-xl  text-ink">Time of day</h2>
                   <p className="mb-4 text-sm text-ink-3">When reports happen, last 30 days</p>
                   <HourStrip data={data.byHour} />
                 </Card>

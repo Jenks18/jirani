@@ -8,6 +8,7 @@ import {
   respondToInvite, setName, sosLocationUpdate, startCheckin, stopAllForContact, triggerSos, updateProfile,
 } from './safetyNet';
 import { timeAgo } from './reports';
+import { issueLoginCode } from './session';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -28,6 +29,7 @@ ALERTS & COMMUNITY
 • ALERTS / STOP
 • COMMUNITIES / JOIN <name> / LEAVE <name>
 • NEWS
+• LOGIN — get a code to manage your account on the web
 
 In an emergency call 999 or 112 first.`;
 
@@ -85,6 +87,11 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
   }
 
   if (upper === 'MENU' || upper === 'COMMANDS') return HELP_TEXT;
+
+  if (c === 'LOGIN' || upper === 'SIGN IN' || upper === 'SIGNIN') {
+    const code = await issueLoginCode(member);
+    return `Your Jirani sign-in code is *${code}*. It works for 10 minutes. Enter it with your phone number at maps.the625movement.com/account. Never share this code with anyone.`;
+  }
 
   // ── SOS ────────────────────────────────────────────────────────────────────────────────────
   if (SOS_RE.test(text)) {

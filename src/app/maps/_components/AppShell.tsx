@@ -25,7 +25,7 @@ export default function AppShell({ title, subtitle, children }: { title: string;
       <main className="min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-5xl px-5 pb-24 pt-6 md:px-8 md:pt-10">
           {!desktop && <MobileNav className="mb-5" />}
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink md:text-4xl">{title}</h1>
+          <h1 className="font-serif text-3xl  tracking-tight text-ink md:text-4xl">{title}</h1>
           {subtitle && <p className="mt-2 max-w-2xl text-ink-2">{subtitle}</p>}
           <div className="mt-8">{children}</div>
         </div>

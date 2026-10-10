@@ -14,7 +14,7 @@ function Node({ area, tree, depth }: { area: AreaRow; tree: Map<string | null, A
   const kids = tree.get(area.id) ?? [];
   return (
     <li>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl px-3 py-3 hover:bg-paper" style={{ marginLeft: depth * 20 }}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-3 py-3 hover:bg-paper" style={{ marginLeft: depth * 20 }}>
         <div className="min-w-0 flex-1">
           <p className="font-medium text-ink">{area.name}</p>
           <p className="text-xs text-ink-3">{LEVEL_LABEL[area.level]}</p>

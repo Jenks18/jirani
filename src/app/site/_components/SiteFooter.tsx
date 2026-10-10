@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import Logo from "./Logo";
 import { org } from "@/config/org";
@@ -39,11 +40,15 @@ export default function SiteFooter() {
         <div className="grid gap-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <Logo light />
+            <a href={org.parentUrl} className="mt-5 inline-flex items-center gap-3 rounded-lg bg-paper px-3 py-2" aria-label="The 6.25 Movement">
+              <Image src="/brand/625-movement-logo.webp" alt="The 6.25 Movement" width={56} height={56} className="h-14 w-auto" />
+              <span className="text-xs font-medium leading-tight text-ink">A program of<br />The 6.25 Movement</span>
+            </a>
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-forest-100/75">
               Jirani is a Majirani Wetu program of {org.legalName}, a U.S. nonprofit advocating for the dignity and wellbeing of
-              Kenyans and the African diaspora.
+              Kenyans and the African diaspora. Reclaiming our future.
             </p>
-            <p className="mt-5 max-w-xs rounded-xl border border-white/10 bg-white/5 p-3 text-xs leading-relaxed text-forest-100/80">
+            <p className="mt-5 max-w-xs rounded-lg border border-white/10 bg-white/5 p-3 text-xs leading-relaxed text-forest-100/80">
               Jirani is not an emergency service. In an emergency in Kenya call <strong className="text-white">999</strong> or{" "}
               <strong className="text-white">112</strong>.
             </p>

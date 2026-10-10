@@ -223,11 +223,15 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
       fittedRef.current = true;
       const bounds = new mapboxgl.LngLatBounds();
       located.forEach((r) => bounds.extend([r.longitude as number, r.latitude as number]));
-      map.fitBounds(bounds, {
-        padding: { left: insetsRef.current.left + 48, right: 48, top: 64, bottom: insetsRef.current.bottom + 48 },
-        maxZoom: 13,
-        duration: 0,
-      });
+      const { clientWidth: w, clientHeight: h } = map.getContainer();
+      const side = Math.max(0, Math.min(48, Math.floor(w / 4)));
+      const top = Math.max(0, Math.min(64, Math.floor(h / 6)));
+      const bottom = Math.max(0, Math.min(insetsRef.current.bottom + 48, Math.floor(h / 2.5)));
+      try {
+        map.fitBounds(bounds, { padding: { left: side, right: side, top, bottom }, maxZoom: 13, duration: 0 });
+      } catch {
+        map.jumpTo({ center: bounds.getCenter(), zoom: 11 });
+      }
     }
   }, [reports, ready]);
 
@@ -256,13 +260,14 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
       if (prevSelectedRef.current === selectedId) onSelectRef.current(null);
     });
 
-    const { left, bottom } = insetsRef.current;
+    const { clientHeight: h } = map.getContainer();
+    const bottom = Math.min(insetsRef.current.bottom + 24, Math.floor(h / 2.5));
     map.stop();
     map.easeTo({
       center: lngLat,
       zoom: Math.max(map.getZoom(), 14),
       duration: 700,
-      padding: { left: left + 24, right: 24, top: 24, bottom: bottom + 24 },
+      padding: { left: 24, right: 24, top: 24, bottom },
       essential: true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -278,7 +283,7 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
       center: [focus.lng, focus.lat],
       zoom: focus.zoom,
       duration: 900,
-      padding: { left: insetsRef.current.left + 24, right: 24, top: 24, bottom: insetsRef.current.bottom + 24 },
+      padding: { left: 24, right: 24, top: 24, bottom: Math.min(insetsRef.current.bottom + 24, Math.floor(map.getContainer().clientHeight / 2.5)) },
       essential: true,
     });
   }, [focus, ready]);
@@ -293,7 +298,7 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
 
 function Legend() {
   return (
-    <div className="pointer-events-none absolute bottom-8 left-3 hidden rounded-xl border border-line bg-card/95 px-3 py-2 text-[11px] text-ink-2 shadow-soft backdrop-blur md:block">
+    <div className="pointer-events-none absolute bottom-8 left-3 hidden rounded-lg border border-line bg-card/95 px-3 py-2 text-[11px] text-ink-2 shadow-soft backdrop-blur md:block">
       <div className="mb-1 font-semibold uppercase tracking-wider text-ink-3">Severity</div>
       <ul className="flex gap-3">
         {([1, 2, 3, 4, 5] as const).map((s) => (

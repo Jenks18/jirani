@@ -3,19 +3,19 @@ import React, { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  FaMapMarkerAlt, FaChartBar, FaLayerGroup, FaBell, FaNewspaper, FaUsers, FaWhatsapp, FaShieldAlt, FaBars,
+  FaMapMarkerAlt, FaChartBar, FaLayerGroup, FaBell, FaNewspaper, FaUsers, FaWhatsapp, FaShieldAlt, FaBars, FaUserCircle,
 } from "react-icons/fa";
 import { org, whatsappLink } from "@/config/org";
 import { NAV, normalizePath } from "./maps/_components/nav";
 
 const ICONS: Record<string, React.ReactNode> = {
-  map: <FaMapMarkerAlt />, chart: <FaChartBar />, areas: <FaLayerGroup />, bell: <FaBell />, news: <FaNewspaper />, users: <FaUsers />,
+  map: <FaMapMarkerAlt />, chart: <FaChartBar />, areas: <FaLayerGroup />, bell: <FaBell />, news: <FaNewspaper />, users: <FaUsers />, user: <FaUserCircle />,
 };
 
 function NavItem({ icon, text, href, external, isActive = false, navCollapsed }: {
   icon: React.ReactNode; text: string; href: string; external?: boolean; isActive?: boolean; navCollapsed: boolean;
 }) {
-  const cls = `flex min-h-[44px] items-center gap-3 rounded-xl px-3 transition-colors ${navCollapsed ? "justify-center" : ""} ${
+  const cls = `flex min-h-[44px] items-center gap-3 rounded-lg px-3 transition-colors ${navCollapsed ? "justify-center" : ""} ${
     isActive ? "bg-forest-50 font-semibold text-forest-800" : "text-ink-2 hover:bg-paper-2"
   }`;
   const content = (
@@ -52,7 +52,7 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
       <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-4 py-5`}>
         {!collapsed && (
           <span className="leading-none">
-            <span className="block font-serif text-2xl font-semibold text-ink">Jirani</span>
+            <span className="block font-serif text-2xl  text-ink">Jirani</span>
             <span className="mt-1 block text-[10px] font-medium uppercase tracking-[0.14em] text-ink-3">Majirani Wetu</span>
           </span>
         )}

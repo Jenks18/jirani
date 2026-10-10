@@ -4,7 +4,7 @@ import { org, whatsappLink } from "@/config/org";
 
 export const metadata: Metadata = {
   title: "Safety net: trusted contacts, check-ins and SOS",
-  description: "Add trusted contacts on WhatsApp, set safety check-ins, and send an SOS. No app, no account, and your contacts always opt in.",
+  description: "Add trusted contacts on WhatsApp, set safety check-ins, and send an SOS. No app, no password, and your contacts always opt in.",
   alternates: { canonical: "/safety-net" },
 };
 

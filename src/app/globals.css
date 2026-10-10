@@ -1,44 +1,49 @@
 @import "tailwindcss";
 
-/* Design tokens — The 6.25 Movement / Majirani Wetu
-   Warm paper, deep forest green, and a clay-red accent. Light theme only. */
 @theme inline {
-  --color-paper: #faf8f3;
-  --color-paper-2: #f2eee4;
+  --color-paper: #ebebe3;
+  --color-paper-2: #e0dfd5;
   --color-card: #ffffff;
-  --color-ink: #14201a;
-  --color-ink-2: #3b4a42;
-  --color-ink-3: #66756c;
-  --color-line: #e3ddcf;
+  --color-ink: #151515;
+  --color-ink-2: #3d3d3a;
+  --color-ink-3: #6b6b66;
+  --color-line: #d4d3c8;
 
-  --color-forest-950: #06231a;
-  --color-forest-900: #0a3d26;
-  --color-forest-800: #0d5232;
-  --color-forest-700: #0f6b3e;
+  --color-forest-950: #072a18;
+  --color-forest-900: #0a4a2b;
+  --color-forest-800: #0c643a;
+  --color-forest-700: #0c643a;
   --color-forest-600: #178650;
-  --color-forest-100: #dff1e6;
-  --color-forest-50: #eef8f1;
+  --color-forest-100: #d6e7dc;
+  --color-forest-50: #e4efe8;
 
-  --color-clay-700: #8f2a16;
-  --color-clay-600: #b4361f;
-  --color-clay-500: #cf4a2e;
-  --color-clay-50: #fbece7;
+  --color-clay-700: #9a2022;
+  --color-clay-600: #bf2a2c;
+  --color-clay-500: #d4393b;
+  --color-clay-50: #f3dcdc;
 
-  --color-sun-500: #e8b13a;
-  --color-sun-100: #fbefcf;
+  --color-sun-500: #d9d4c3;
+  --color-sun-100: #e0dfd5;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-bebas), "Bebas Neue", Impact, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --shadow-soft: 0 1px 2px rgb(20 32 26 / 0.04), 0 8px 24px -8px rgb(20 32 26 / 0.12);
-  --shadow-lift: 0 2px 4px rgb(20 32 26 / 0.05), 0 18px 40px -12px rgb(20 32 26 / 0.22);
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+
+  --shadow-soft: 0 1px 0 rgb(0 0 0 / 0.04);
+  --shadow-lift: 0 4px 16px -4px rgb(0 0 0 / 0.18);
 }
 
 :root {
   color-scheme: light;
-  --background: #faf8f3;
-  --foreground: #14201a;
+  --background: #ebebe3;
+  --foreground: #151515;
 }
 
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -55,27 +60,17 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+h1, h2, h3, .font-serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: 0.015em;
+}
+h1, h2, .font-serif { text-transform: uppercase; }
+
 :focus-visible { outline: 3px solid var(--color-forest-600); outline-offset: 2px; border-radius: 4px; }
 
-::selection { background: var(--color-sun-100); color: var(--color-ink); }
+::selection { background: var(--color-forest-100); color: var(--color-ink); }
 
-/* Animation for new events sliding in */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.animate-slideIn {
-  animation: slideIn 0.3s ease-out forwards;
-}
-
-/* Line clamp utility for text truncation */
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;

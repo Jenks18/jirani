@@ -16,12 +16,12 @@ export default function AlertsPage() {
   const chosen = choices.find((a) => a.slug === slug);
 
   return (
-    <AppShell title="Alerts" subtitle="Get a WhatsApp message when a serious incident is reported near you. No account or app: your WhatsApp number is all we need.">
+    <AppShell title="Alerts" subtitle="Get a WhatsApp message when a serious incident is reported near you. No app and no password: your WhatsApp number is all we need.">
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <h2 className="font-serif text-xl font-semibold text-ink">Subscribe to an area</h2>
+          <h2 className="font-serif text-xl  text-ink">Subscribe to an area</h2>
           <label className="mt-4 block text-sm font-medium text-ink-2" htmlFor="area">Choose an area</label>
-          <select id="area" value={slug} onChange={(e) => setSlug(e.target.value)} className="mt-1 w-full rounded-xl border border-line bg-paper px-3 py-3 text-sm">
+          <select id="area" value={slug} onChange={(e) => setSlug(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper px-3 py-3 text-sm">
             <option value="">Select…</option>
             {choices.map((a) => <option key={a.id} value={a.slug}>{a.name}</option>)}
           </select>
@@ -35,13 +35,13 @@ export default function AlertsPage() {
           <p className="mt-3 text-xs text-ink-3">Opens WhatsApp with the message ready to send.</p>
         </Card>
         <Card>
-          <h2 className="font-serif text-xl font-semibold text-ink">Or alert me near a pin</h2>
+          <h2 className="font-serif text-xl  text-ink">Or alert me near a pin</h2>
           <p className="mt-3 text-sm leading-relaxed text-ink-2">Message <strong>SUBSCRIBE</strong>, then share a location pin from WhatsApp (📎 → Location). You&apos;ll be alerted about serious reports within 1.5 km.</p>
           <a href={wa("SUBSCRIBE")} className="mt-4 inline-flex items-center gap-2 rounded-full border border-line bg-paper px-5 py-3 text-sm font-semibold text-ink hover:bg-paper-2"><FaWhatsapp /> Start with a pin</a>
         </Card>
       </div>
       <Card className="mt-6">
-        <h2 className="font-serif text-xl font-semibold text-ink">You&apos;re in control</h2>
+        <h2 className="font-serif text-xl  text-ink">You&apos;re in control</h2>
         <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-ink-2">
           <li>Alerts only cover reports of severity High or above.</li>
           <li>Reply <strong>ALERTS</strong> to review your subscriptions, or <strong>STOP</strong> to turn everything off.</li>

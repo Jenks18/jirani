@@ -27,6 +27,12 @@ export default function Page() {
             <td>Remembers that you dismissed the notice about cookies and storage. Strictly necessary for the notice to behave properly.</td>
             <td>Until you clear site data</td>
           </tr>
+          <tr>
+            <td><code>jirani_session</code> (cookie)</td>
+            <td>maps.the625movement.com, only after you sign in</td>
+            <td>Keeps you signed in to your account. It is HttpOnly and signed, and it is strictly necessary for the account to work.</td>
+            <td>30 days, or until you sign out</td>
+          </tr>
         </tbody>
       </table>
 
