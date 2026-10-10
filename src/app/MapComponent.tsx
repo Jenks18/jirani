@@ -290,7 +290,7 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
 
   return (
     <div className="absolute inset-0">
-      <div ref={container} className="absolute inset-0" role="application" aria-label="Interactive map of community reports" />
+      <div ref={container} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} role="application" aria-label="Interactive map of community reports" />
       <Legend />
     </div>
   );
