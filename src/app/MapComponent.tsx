@@ -298,7 +298,7 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
 
 function Legend() {
   return (
-    <div className="pointer-events-none absolute bottom-8 left-3 hidden rounded-lg border border-line bg-card/95 px-3 py-2 text-[11px] text-ink-2 shadow-soft backdrop-blur md:block">
+    <div className="pointer-events-none absolute bottom-14 left-3 hidden rounded-lg border border-line bg-card/95 px-3 py-2 text-[11px] text-ink-2 shadow-soft backdrop-blur md:block">
       <div className="mb-1 font-semibold uppercase tracking-wider text-ink-3">Severity</div>
       <ul className="flex gap-3">
         {([1, 2, 3, 4, 5] as const).map((s) => (
