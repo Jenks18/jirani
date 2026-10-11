@@ -4,10 +4,10 @@
   --color-paper: #ebebe3;
   --color-paper-2: #e0dfd5;
   --color-card: #ffffff;
-  --color-ink: #151515;
-  --color-ink-2: #3d3d3a;
-  --color-ink-3: #6b6b66;
-  --color-line: #d4d3c8;
+  --color-ink: #000000;
+  --color-ink-2: #262624;
+  --color-ink-3: #5c5c57;
+  --color-line: #cfcec3;
 
   --color-forest-950: #072a18;
   --color-forest-900: #0a4a2b;
@@ -43,7 +43,7 @@
 :root {
   color-scheme: light;
   --background: #ebebe3;
-  --foreground: #151515;
+  --foreground: #000000;
 }
 
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
