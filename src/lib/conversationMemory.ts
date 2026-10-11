@@ -1,5 +1,4 @@
 import { debug } from './log';
-// Simple conversation memory for WhatsApp users
 interface ConversationState {
   userId: string;
   messages: {
@@ -23,11 +22,9 @@ interface ConversationState {
   lastActivity: Date;
 }
 
-// In-memory conversation storage (replace with database in production)
 const conversations = new Map<string, ConversationState>();
 
-// Clean up old conversations (older than 1 hour)
-const CONVERSATION_TIMEOUT = 60 * 60 * 1000; // 1 hour
+const CONVERSATION_TIMEOUT = 60 * 60 * 1000;
 
 export function cleanupOldConversations() {
   const now = new Date();
@@ -39,7 +36,6 @@ export function cleanupOldConversations() {
 }
 
 export function getConversation(userId: string): ConversationState {
-  // Clean up old conversations first
   cleanupOldConversations();
   
   if (!conversations.has(userId)) {
@@ -63,7 +59,6 @@ export function addMessageToConversation(userId: string, role: 'user' | 'assista
     content
   });
   
-  // Keep only last 10 messages to prevent memory bloat
   if (conversation.messages.length > 10) {
     conversation.messages = conversation.messages.slice(-10);
   }

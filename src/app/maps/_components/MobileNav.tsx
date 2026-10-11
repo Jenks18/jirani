@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { NAV, normalizePath } from "./nav";
 import { org, whatsappLink } from "@/config/org";
 
-/** Hamburger menu for phones, where the sidebar is hidden. */
 export default function MobileNav({ className = "" }: { className?: string }) {
   const path = normalizePath(usePathname() ?? "/");
   return (

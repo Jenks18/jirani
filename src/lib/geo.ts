@@ -1,4 +1,3 @@
-/** Great-circle distance in metres. */
 export function haversineM(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const R = 6371000;
   const rad = (d: number) => (d * Math.PI) / 180;
@@ -10,7 +9,6 @@ export function haversineM(aLat: number, aLng: number, bLat: number, bLng: numbe
 
 export const mapsUrl = (lat: number, lng: number) => `https://maps.google.com/?q=${lat.toFixed(5)},${lng.toFixed(5)}`;
 
-/** Normalise a phone number to digits only (E.164 without "+"), as WhatsApp uses. Returns null if implausible. */
 export function normalizePhone(raw: string, defaultCountry = '254'): string | null {
   let d = raw.replace(/[^\d+]/g, '');
   if (d.startsWith('+')) d = d.slice(1);

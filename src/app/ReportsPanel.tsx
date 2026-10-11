@@ -62,7 +62,10 @@ function ReportItem({ report, selected, onSelect }: { report: Report; selected: 
           </time>
         </div>
         <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-2">{report.summary}</p>
-        <p className="mt-2 truncate text-xs text-ink-3">📍 {report.location}</p>
+        <p className="mt-2 truncate text-xs text-ink-3">
+          📍 {report.location}
+          {report.latitude == null && <span className="ml-2 rounded-full bg-paper-2 px-2 py-0.5">not on the map</span>}
+        </p>
       </button>
     </li>
   );

@@ -4,13 +4,12 @@ import path from 'path';
 import { supabase, supabaseEnabled, ensureSupabaseAvailable } from './supabaseClient';
 import { extractCoordinates } from './locationUtils';
 
-// Simple in-memory storage for events (will be replaced with database)
 interface StoredEvent {
   id: string;
   type: string;
   severity: number;
   location: string;
-  summary: string;  // Using 'summary' instead of 'description' to match reports table
+  summary: string;
   timestamp: string;
   coordinates: [number, number] | null;
   from: string;
@@ -27,13 +26,10 @@ interface EventData {
   coordinates?: [number, number] | null;
 }
 
-// Path to the events file
 const EVENTS_FILE = path.join(process.cwd(), 'data', 'events.json');
 
-// In-memory storage (will persist during server runtime)
 let events: StoredEvent[] = [];
 
-// Load events from file on startup
 async function loadEventsFromFile(): Promise<StoredEvent[]> {
   try {
     const fileContent = await fs.readFile(EVENTS_FILE, 'utf8');
@@ -45,7 +41,6 @@ async function loadEventsFromFile(): Promise<StoredEvent[]> {
   }
 }
 
-// Save events to file
 async function saveEventsToFile(eventsToSave: StoredEvent[]): Promise<void> {
   try {
     await fs.mkdir(path.dirname(EVENTS_FILE), { recursive: true });
@@ -56,7 +51,6 @@ async function saveEventsToFile(eventsToSave: StoredEvent[]): Promise<void> {
   }
 }
 
-// Initialize events from file
 let eventsInitialized = false;
 async function initializeEvents(): Promise<void> {
   if (!eventsInitialized) {
@@ -66,20 +60,17 @@ async function initializeEvents(): Promise<void> {
   }
 }
 
-// Use Groq to rewrite a raw incident into a concise, professional, privacy-safe summary.
 async function rewriteDescriptionWithGroq(event: EventData): Promise<string> {
   const raw = (event.description || '').trim();
   const type = event.type || 'Incident';
   const when = event.timestamp || new Date().toISOString();
   const where = event.location || 'unspecified location';
 
-  // If no API key, fallback immediately
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return `${type} reported near ${where}. Approx time: ${when}. Summary: ${raw ? raw.slice(0, 180) : 'No details provided.'}`;
   }
 
-  // System prompt to ensure generalization and PII removal
   const systemPrompt = `You are a civic safety report formatter. Rewrite the input into a concise, professional, crowdsourced incident summary.
 
 Rules:
@@ -131,10 +122,8 @@ Return only the summary text.`;
 }
 
 export async function storeEvent(event: EventData, from: string, images?: string[]): Promise<StoredEvent> {
-  // Always sanitize and standardize the free-text description before saving
   const sanitizedDescription = await rewriteDescriptionWithGroq(event);
   
-  // If coordinates not provided but location is, MUST geocode it
   let coordinates = event.coordinates;
   if (!coordinates && event.location && event.location !== 'Unknown location' && event.location !== 'Location not specified') {
     debug(`🗺️  Geocoding location: "${event.location}"`);
@@ -146,14 +135,11 @@ export async function storeEvent(event: EventData, from: string, images?: string
     }
   }
   
-  // Try Supabase first
   try {
     const supabaseReady = await ensureSupabaseAvailable();
     if (!supabaseReady) {
       throw new Error('Supabase temporarily disabled by server (probe)');
     }
-    // If we've previously flagged Supabase as unavailable due to schema errors or other problems,
-    // only attempt again after backoff expires.
     const insertPayload = {
       type: event.type || 'Unknown',
       severity: event.severity || 1,
@@ -193,12 +179,9 @@ export async function storeEvent(event: EventData, from: string, images?: string
     debug('Event stored in Supabase:', storedEvent.id);
     return storedEvent;
   } catch (dbError) {
-    // `ensureSupabaseAvailable()` is responsible for detecting schema errors and
-    // toggling availability. Ensure we attempt another probe on the next call.
     try { /* noop - leaving for compatibility */ } catch (e) { /* noop */ }
 
     console.error('Supabase insert failed, falling back to file storage:', dbError);
-    // Fallback to file system path
     await initializeEvents();
     const storedEvent: StoredEvent = {
       id: generateId(),
@@ -219,13 +202,11 @@ export async function storeEvent(event: EventData, from: string, images?: string
 }
 
 export async function getEvents(): Promise<StoredEvent[]> {
-  // If Supabase is not configured, immediately use file fallback to avoid noisy errors.
   if (!supabaseEnabled || !supabase) {
     console.warn('Supabase not enabled - returning file-stored events');
     await initializeEvents();
     return events;
   }
-  // Check whether Supabase has the expected schema and is available right now.
   const supabaseReady = await ensureSupabaseAvailable();
   if (!supabaseReady) {
     console.warn('Supabase not enabled - returning file-stored events');
@@ -251,7 +232,6 @@ export async function getEvents(): Promise<StoredEvent[]> {
       images: row.images || []
     }));
   } catch (err) {
-    // Delegate schema detection to ensureSupabaseAvailable; log and fallback.
     console.error('Supabase fetch failed, using file fallback:', err);
     await initializeEvents();
     return events;

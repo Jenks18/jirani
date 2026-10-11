@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 
 const KEY = "jirani-notice-ack";
 
-/** Informational storage notice. We set no advertising or analytics cookies, so there is nothing to opt into. */
 export default function CookieNotice() {
   const [show, setShow] = useState(false);
 
@@ -30,16 +29,22 @@ export default function CookieNotice() {
     <div
       role="region"
       aria-label="Cookie and storage notice"
-      className="fixed inset-x-3 bottom-3 z-[1000] mx-auto max-w-xl rounded-lg border border-line bg-card p-4 text-sm text-ink-2 shadow-lift sm:inset-x-auto sm:left-4 sm:bottom-4"
+      className="fixed inset-x-3 top-3 z-[1000] mx-auto max-w-xl rounded-lg border border-line bg-card p-3 text-xs text-ink-2 shadow-lift sm:inset-x-auto sm:bottom-4 sm:left-4 sm:top-auto sm:p-4 sm:text-sm"
     >
       <p className="leading-relaxed">
-        We use no advertising or tracking cookies. Your browser may store a small note that you saw this message, a sign-in
-        cookie if you sign in to your account, and the live map uses a third-party mapping provider, which may store technical data to render the map.{" "}
+        <span className="sm:hidden">
+          No ads or tracking cookies. A sign-in cookie is used if you sign in, and our map provider may store technical data.{" "}
+        </span>
+        <span className="hidden sm:inline">
+          We use no advertising or tracking cookies. Your browser may store a small note that you saw this message, a sign-in
+          cookie if you sign in to your account, and the live map uses a third-party mapping provider, which may store
+          technical data to render the map.{" "}
+        </span>
         <a href="https://jirani.the625movement.com/cookies" className="font-medium text-forest-700 underline underline-offset-2">
           Cookie policy
         </a>
       </p>
-      <div className="mt-3 flex justify-end">
+      <div className="mt-2 flex justify-end sm:mt-3">
         <button
           onClick={dismiss}
           className="rounded-full bg-forest-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-forest-900"

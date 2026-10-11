@@ -8,7 +8,6 @@ export function db(): any {
   return supabase;
 }
 
-/** Run a query that may fail if the platform migration hasn't been applied; returns fallback instead of throwing. */
 export async function safely<T>(run: () => Promise<{ data: T | null; error: any }>, fallback: T): Promise<T> {
   try {
     const { data, error } = await run();
@@ -56,7 +55,6 @@ export async function findArea(slugOrName: string): Promise<Area | null> {
   return areas.find((a) => a.slug === q || a.name.toLowerCase() === q) ?? null;
 }
 
-/** Narrowest area whose circle contains the point. */
 export function areaForPoint(areas: Area[], lat: number, lng: number): Area | null {
   const rank = { neighborhood: 0, subcounty: 1, county: 2, country: 3 } as const;
   return (
@@ -87,7 +85,6 @@ export async function saveLocation(memberId: string, lat: number, lng: number): 
     .eq('id', memberId);
 }
 
-/** Last shared pin if it is recent enough to be trusted. */
 export function recentLocation(member: Member, maxAgeMin = 60): { lat: number; lng: number } | null {
   const l = member.last_location;
   if (!l) return null;
@@ -152,7 +149,6 @@ export async function mySubscriptions(memberId: string) {
   );
 }
 
-/** Phones that should hear about a new report, excluding the reporter. */
 export async function subscribersFor(event: { severity: number; lat: number; lng: number }, excludePhone?: string): Promise<string[]> {
   const subs = await safely<any[]>(
     () => db().from('alert_subscriptions').select('*, members(phone), areas(center_lat, center_lng, radius_m)').eq('active', true).lte('min_severity', event.severity),

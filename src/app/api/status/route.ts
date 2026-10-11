@@ -12,16 +12,13 @@ export async function GET(req: Request) {
     );
     const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-    // Perform a lightweight supabase probe but don't block too long
     let supabaseReady = supabaseAvailable;
     try {
-      // call probe but don't fail if it errors
       supabaseReady = await ensureSupabaseAvailable();
     } catch (e) {
       // ignore
     }
 
-    // Admin token gating to avoid exposing raw envs. Provide minimal info otherwise.
     const adminToken = process.env.ADMIN_API_TOKEN || '';
     const provided = req.headers.get('x-admin-token') || '';
 

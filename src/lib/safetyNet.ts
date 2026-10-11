@@ -7,7 +7,6 @@ import { notify } from './whatsappCloud';
 
 export const MAX_CONTACTS = 5;
 
-/** WhatsApp template parameters may not contain newlines. */
 const flat = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 const who = (m: Member) => m.display_name?.trim() || `a Jirani user (…${m.phone.slice(-3)})`;
@@ -36,8 +35,6 @@ export async function updateProfile(memberId: string, patch: Partial<Omit<Profil
 export async function setName(memberId: string, name: string) {
   await db().from('members').update({ display_name: name.slice(0, 60) }).eq('id', memberId);
 }
-
-// ── Contacts ─────────────────────────────────────────────────────────────────────────────────
 
 export async function listContacts(memberId: string) {
   return safely<any[]>(
@@ -99,7 +96,6 @@ export async function removeContact(memberId: string, index: number): Promise<st
   return c.contact_name as string;
 }
 
-/** A contact answers YES/NO to an invite. `index` picks among several pending invites. */
 export async function respondToInvite(
   contactPhone: string,
   accept: boolean,
@@ -139,7 +135,6 @@ export async function respondToInvite(
   };
 }
 
-/** A contact (or anyone) replies STOP: remove them from every safety net. */
 export async function stopAllForContact(contactPhone: string): Promise<number> {
   const { data } = await db()
     .from('trusted_contacts')
@@ -157,8 +152,6 @@ async function acceptedContacts(memberId: string, kind: 'sos' | 'checkin') {
     []
   );
 }
-
-// ── SOS ──────────────────────────────────────────────────────────────────────────────────────
 
 export async function triggerSos(member: Member, loc: { lat: number; lng: number } | null): Promise<{ contacts: number; delivered: number }> {
   const profile = await getProfile(member.id);
@@ -197,7 +190,6 @@ export async function activeSos(memberId: string) {
   return data as { id: string } | null;
 }
 
-/** Forward a fresh pin to contacts while an SOS is active. */
 export async function sosLocationUpdate(member: Member, loc: { lat: number; lng: number }): Promise<number> {
   const profile = await getProfile(member.id);
   if (!profile.share_location) return 0;
@@ -209,8 +201,6 @@ export async function sosLocationUpdate(member: Member, loc: { lat: number; lng:
   await db().from('sos_events').update({ lat: loc.lat, lng: loc.lng }).eq('member_id', member.id).eq('active', true);
   return n;
 }
-
-// ── Check-ins ────────────────────────────────────────────────────────────────────────────────
 
 export async function startCheckin(member: Member, minutes: number, note?: string) {
   await db().from('checkins').update({ status: 'cancelled', resolved_at: new Date().toISOString() }).eq('member_id', member.id).in('status', ['active', 'nudged']);
@@ -226,7 +216,6 @@ export async function startCheckin(member: Member, minutes: number, note?: strin
   return due;
 }
 
-/** User says they're safe: closes check-ins and any active SOS, telling contacts. */
 export async function markSafe(member: Member): Promise<{ checkins: number; sosEnded: boolean }> {
   const now = new Date().toISOString();
   const { data } = await db()
@@ -250,7 +239,6 @@ export async function activeCheckin(memberId: string) {
   return data as { id: string; due_at: string; status: string } | null;
 }
 
-/** Called by the scheduler (every few minutes). Nudges at the due time, alerts contacts after the grace period. */
 export async function processDueCheckins(): Promise<{ nudged: number; escalated: number }> {
   const now = Date.now();
   const rows = await safely<any[]>(

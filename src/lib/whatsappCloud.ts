@@ -33,7 +33,6 @@ interface WebhookPayload {
   }>;
 }
 
-/** Verify Meta's X-Hub-Signature-256 header against the raw request body. */
 export function verifySignature(rawBody: string, header: string | null, appSecret: string): boolean {
   if (!header?.startsWith('sha256=')) return false;
   const expected = createHmac('sha256', appSecret).update(rawBody).digest('hex');
@@ -43,7 +42,6 @@ export function verifySignature(rawBody: string, header: string | null, appSecre
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Flatten a webhook payload into the user messages it contains (status updates are ignored). */
 export function extractMessages(payload: WebhookPayload): InboundMessage[] {
   const out: InboundMessage[] = [];
   for (const entry of payload.entry ?? []) {
@@ -81,11 +79,9 @@ async function graphPost(path: string, body: unknown): Promise<Response> {
 
 export interface SendResult {
   ok: boolean;
-  /** Meta error code, e.g. 131047 = outside the 24h customer-service window (a template is required). */
   errorCode?: number;
 }
 
-/** Send a free-form text message with retry on transient (5xx / 429) failures. */
 export async function sendText(to: string, body: string): Promise<boolean> {
   return (await sendTextDetailed(to, body)).ok;
 }
@@ -118,7 +114,6 @@ export async function sendTextDetailed(to: string, body: string): Promise<SendRe
   return { ok: false };
 }
 
-/** Send an approved message template (required to start a conversation outside the 24h window). */
 export async function sendTemplate(to: string, name: string, params: string[], language = 'en'): Promise<SendResult> {
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!phoneId || !process.env.WHATSAPP_ACCESS_TOKEN) return { ok: false };
@@ -145,10 +140,6 @@ export async function sendTemplate(to: string, name: string, params: string[], l
   }
 }
 
-/**
- * Message someone who may not have written to us recently: try free-form text first (works inside
- * the 24h window), then fall back to the approved template.
- */
 export async function notify(
   to: string,
   text: string,
@@ -160,7 +151,6 @@ export async function notify(
   return false;
 }
 
-/** Mark an inbound message as read (shows blue ticks). Best effort. */
 export async function markRead(messageId: string): Promise<void> {
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!phoneId) return;

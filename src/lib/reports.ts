@@ -1,15 +1,11 @@
-/** Shared, client-safe report model for the live map and the list panel. */
 
 export interface Report {
   id: string;
   type: string;
-  /** 1 (low) … 5 (emergency) */
   severity: Severity;
   location: string;
   summary: string;
-  /** When the incident happened (ISO) */
   timestamp: string;
-  /** When it was reported (ISO) */
   createdAt: string;
   latitude: number | null;
   longitude: number | null;

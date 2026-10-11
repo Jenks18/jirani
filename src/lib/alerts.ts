@@ -5,7 +5,6 @@ import { notify } from './whatsappCloud';
 const MAX_RECIPIENTS = 200;
 const flat = (s: string) => s.replace(/\s+/g, ' ').trim();
 
-/** Tell opted-in subscribers near a newly stored report. Never includes the reporter's identity. */
 export async function dispatchAlerts(
   report: { type: string; severity: number; location: string; summary: string; coordinates: [number, number] | null },
   reporterPhone: string

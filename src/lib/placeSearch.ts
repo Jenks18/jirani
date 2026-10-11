@@ -77,7 +77,6 @@ export interface PlaceHit {
   lat: number;
 }
 
-/** Resolve a free-text Kenyan place description ("Mombasa City Mall", "near Aga Khan, Westlands") to a point. */
 export async function findPlace(text: string, opts: { areaFallback?: boolean } = {}): Promise<PlaceHit | null> {
   const { rows, areaNames } = await load();
   const words = norm(text).filter((w) => !STOP.has(w));

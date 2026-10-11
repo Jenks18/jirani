@@ -1,5 +1,4 @@
 import { debug, maskPhone } from './log';
-// Robust WhatsApp Conversation Management System with Supabase persistence
 import { supabase } from './supabaseClient';
 
 interface Message {
@@ -13,7 +12,7 @@ interface IncidentReport {
   type: string;
   description: string;
   location?: string;
-  coordinates?: [number, number]; // Direct coordinates from location pin
+  coordinates?: [number, number];
   timestamp: string;
   severity: number;
   confirmed: boolean;
@@ -26,7 +25,7 @@ interface ConversationState {
   awaitingConfirmation: boolean;
   conversationPhase: 'greeting' | 'collecting' | 'confirming' | 'completed';
   lastActivity: Date;
-  lastStoredAt?: Date; // Timestamp of last stored incident to prevent re-detection
+  lastStoredAt?: Date;
 }
 
 class WhatsAppConversationManager {
@@ -61,7 +60,6 @@ class WhatsAppConversationManager {
 
       if (!data) return null;
 
-      // Parse the stored data
       return {
         userId: data.user_id,
         messages: data.messages || [],
@@ -95,7 +93,6 @@ class WhatsAppConversationManager {
         phase: conversation.conversationPhase
       });
       
-      // Prepare data with optional last_stored_at
       const dataToSave: Record<string, string | Message[] | IncidentReport | boolean | undefined> = {
         user_id: conversation.userId,
         messages: conversation.messages,
@@ -105,7 +102,6 @@ class WhatsAppConversationManager {
         last_activity: conversation.lastActivity.toISOString()
       };
       
-      // Only include last_stored_at if it exists (column might not exist in old schema)
       if (conversation.lastStoredAt) {
         dataToSave.last_stored_at = conversation.lastStoredAt.toISOString();
       }
@@ -139,14 +135,12 @@ class WhatsAppConversationManager {
   }
 
   private async getConversation(userId: string): Promise<ConversationState> {
-    // Check memory cache first
     if (this.conversations.has(userId)) {
       const conversation = this.conversations.get(userId)!;
       conversation.lastActivity = new Date();
       return conversation;
     }
 
-    // Try to load from Supabase
     debug('🔍 Loading conversation from Supabase for', userId);
     const stored = await this.loadFromSupabase(userId);
     
@@ -162,7 +156,6 @@ class WhatsAppConversationManager {
       return stored;
     }
 
-    // Create new conversation
     debug('🆕 Creating new conversation for', userId);
     const newConversation: ConversationState = {
       userId,
@@ -187,12 +180,10 @@ class WhatsAppConversationManager {
 
     conversation.messages.push(message);
 
-    // Keep conversation window manageable
     if (conversation.messages.length > this.MAX_MESSAGES) {
       conversation.messages = conversation.messages.slice(-this.MAX_MESSAGES);
     }
     
-    // Save to Supabase
     await this.saveToSupabase(conversation);
   }
 
@@ -249,7 +240,6 @@ NOT_INCIDENT`
         return null;
       }
 
-      // Extract the pipe-separated line from potentially verbose response
       const lines = aiText.split('\n');
       const incidentLine = lines.find((line: string) => line.trim().startsWith('INCIDENT|'));
       
@@ -258,7 +248,6 @@ NOT_INCIDENT`
         return null;
       }
 
-      // Parse the response: INCIDENT|Type|Location|Severity
       const parts = incidentLine.trim().split('|');
       if (parts[0] !== 'INCIDENT' || parts.length < 4) {
         debug('❌ Invalid response format');
@@ -293,7 +282,6 @@ NOT_INCIDENT`
         return undefined;
       }
 
-      // Use Groq Compound (agentic AI) for intelligent location extraction
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -355,8 +343,6 @@ Return JSON: {"location": "exact location string" or null}`
       return undefined;
     }
   }
-
-
 
   private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
     try {
@@ -447,7 +433,6 @@ Respond now as Jirani:`;
       console.error('❌❌❌ AI CALL COMPLETELY FAILED ❌❌❌');
       console.error('Error details:', error);
       
-      // INTELLIGENT FALLBACK - brief, guarded, security-focused with Kenyan English
       const lowerMessage = userMessage.toLowerCase();
       debug('⚠️ Using fallback response for:', lowerMessage);
       if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name')) {
@@ -462,7 +447,6 @@ Respond now as Jirani:`;
       if (["hi", "hello", "hey", "ola", "hola", "jambo"].some(g => lowerMessage.trim() === g)) {
         return "Sawa! Una security concern ama incident ya ku-report?";
       }
-      // Off-topic or last resort
       return "Tuongee kuhusu security. How can I help?";
     }
   }
@@ -474,7 +458,6 @@ Respond now as Jirani:`;
     debug(`📱 Processing message from ${maskPhone(userId)} (${userMessage.length} chars)`);
     debug(`📊 Conversation phase: ${conversation.conversationPhase}`);
 
-    // Handle confirmation responses first (these need immediate action)
     debug('🔍 Checking confirmation:', {
       awaitingConfirmation: conversation.awaitingConfirmation,
       hasCurrentIncident: !!conversation.currentIncident,
@@ -499,29 +482,23 @@ Respond now as Jirani:`;
         await this.saveToSupabase(conversation);
         return "Sawa, canceled. Anything else I can help with?";
       } else {
-        // User said something else while we're waiting for confirmation
-        // Don't process it as a new message - just remind them
         debug('⚠️ User said something other than yes/no during confirmation');
         const summary = `${conversation.currentIncident.type} at ${conversation.currentIncident.location || 'provided location'}`;
         return `I'm waiting for your confirmation. ${summary}. Reply "yes" to file or "no" to cancel.`;
       }
     }
 
-    // Get full conversation context for AI
     const conversationHistory = conversation.messages
-      .slice(-8) // Last 8 messages for context
+      .slice(-8)
       .map(m => `${m.role === 'user' ? 'User' : 'Jirani'}: ${m.content}`)
       .join('\n');
 
     debug('📝 Conversation history:', conversationHistory);
 
-    // ALWAYS use AI for responses - no fallback to generic responses
     const aiResponse = await this.generateResponseWithAI(userId, userMessage, conversationHistory);
     
     debug('💭 Generated response:', aiResponse);
     
-    // Check if the message indicates an incident (Groq Compound AI detection)
-    // Prevent re-detection if incident was stored in last 60 seconds
     const recentlyStored = conversation.lastStoredAt && 
                            (Date.now() - conversation.lastStoredAt.getTime()) < 60000;
     
@@ -540,7 +517,6 @@ Respond now as Jirani:`;
       debug('⏭️ Skipping incident detection - current incident pending:', JSON.stringify(conversation.currentIncident));
     }
     
-    // Check if AI response asks for confirmation (indicates we have enough details)
     const lowerAI = aiResponse.toLowerCase();
     const asksForConfirmation = lowerAI.includes('should i file') || 
                                  lowerAI.includes('confirm') ||
@@ -552,7 +528,7 @@ Respond now as Jirani:`;
       debug('✋ Setting awaiting confirmation to true');
       conversation.awaitingConfirmation = true;
       conversation.conversationPhase = 'confirming';
-      await this.saveToSupabase(conversation); // Persist awaiting confirmation state
+      await this.saveToSupabase(conversation);
     }
     
     return aiResponse;
@@ -561,11 +537,10 @@ Respond now as Jirani:`;
   public async processMessage(userId: string, message: string, coordinates?: [number, number]): Promise<{ response: string; incident?: IncidentReport }> {
     const conversation = await this.getConversation(userId);
     
-    // Check if user sent a location pin
     if (coordinates && conversation.currentIncident && !conversation.currentIncident.confirmed) {
       debug('📍 Location pin received! Updating incident with coordinates:', coordinates);
       conversation.currentIncident.coordinates = coordinates;
-      conversation.currentIncident.location = `${coordinates[1]}, ${coordinates[0]}`; // lat, lng
+      conversation.currentIncident.location = `${coordinates[1]}, ${coordinates[0]}`;
       await this.saveToSupabase(conversation);
       
       return {
@@ -574,19 +549,14 @@ Respond now as Jirani:`;
       };
     }
     
-    // Add user message
     await this.addMessage(userId, 'user', message);
     
-    // Generate response (this may modify the conversation state, e.g., confirming incident)
     const response = await this.generateResponse(userId, message);
     
-    // Add assistant response
     await this.addMessage(userId, 'assistant', response);
     
-    // RE-FETCH conversation to get updated state after generateResponse modified it
     const updatedConversation = await this.getConversation(userId);
     
-    // SIMPLE: If incident is confirmed, return it
     const shouldReturnIncident = updatedConversation.currentIncident?.confirmed === true;
     
     debug('🔍🔍🔍 FINAL INCIDENT CHECK 🔍🔍🔍');
@@ -620,14 +590,13 @@ Respond now as Jirani:`;
     conversation.currentIncident = undefined;
     conversation.awaitingConfirmation = false;
     conversation.conversationPhase = 'greeting';
-    conversation.lastStoredAt = new Date(); // Prevent re-detection for 60 seconds
+    conversation.lastStoredAt = new Date();
     await this.saveToSupabase(conversation);
     debug('✅ Cleared incident from conversation (ready for new reports in 60s)');
   }
 
   public async clearConversation(userId: string): Promise<void> {
     this.conversations.delete(userId);
-    // Also delete from Supabase
     if (supabase) {
       try {
         await supabase
@@ -641,6 +610,5 @@ Respond now as Jirani:`;
   }
 }
 
-// Export singleton instance
 export const conversationManager = new WhatsAppConversationManager();
 export default conversationManager;

@@ -37,7 +37,6 @@ export function Button({
   );
 }
 
-/** Long-form page wrapper for policies and informational pages. */
 export function Prose({
   title,
   intro,

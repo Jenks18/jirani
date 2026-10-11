@@ -9,12 +9,9 @@ import { SEVERITIES, formatWhen, type Report } from '@/lib/reports';
 interface Props {
   reports: Report[];
   selectedId: string | null;
-  /** Bumps on every selection so re-selecting the same report recenters again. */
   selectSeq: number;
   onSelect: (id: string | null) => void;
-  /** Pixels covered by UI on each side; the camera keeps the selected point clear of them. */
   insets: { left: number; bottom: number };
-  /** Fly to a place (e.g. from the Areas page). `seq` re-triggers for the same place. */
   focus?: { lat: number; lng: number; zoom: number; seq: number } | null;
 }
 
@@ -43,7 +40,6 @@ function toGeoJSON(reports: Report[]): GeoJSON.FeatureCollection<GeoJSON.Point> 
   };
 }
 
-/** Popup content is built with DOM APIs (textContent), so report text can never inject markup. */
 function buildPopup(report: Report): HTMLElement {
   const root = document.createElement('div');
   root.className = 'jirani-popup';
@@ -74,7 +70,6 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Latest values for handlers that are registered once.
   const onSelectRef = useRef(onSelect);
   const reportsRef = useRef(reports);
   const insetsRef = useRef(insets);
@@ -86,7 +81,6 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
     insetsRef.current = insets;
   });
 
-  // Create the map once.
   useEffect(() => {
     if (!container.current) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -186,7 +180,6 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
         const id = e.features?.[0]?.properties?.id;
         if (id != null) onSelectRef.current(String(id));
       });
-      // Clicking empty map clears the selection.
       map.on('click', (e) => {
         const hit = map.queryRenderedFeatures(e.point, { layers: ['clusters', 'report-points'] });
         if (hit.length === 0) onSelectRef.current(null);
@@ -212,7 +205,6 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
     };
   }, []);
 
-  // Push data into the source; fit to the data once.
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
@@ -235,7 +227,6 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
     }
   }, [reports, ready]);
 
-  // Selection: feature-state, popup and camera.
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
@@ -273,11 +264,10 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, selectSeq, ready]);
 
-  // Fly to a requested place
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map || !focus) return;
-    fittedRef.current = true; // an explicit destination wins over auto-fitting to the data
+    fittedRef.current = true;
     map.stop();
     map.easeTo({
       center: [focus.lng, focus.lat],

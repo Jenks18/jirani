@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { communityMemberCounts, listAreas, listCommunities } from '@/lib/platform';
 
-/** Public list of communities. Member counts only: never member identities. */
 export async function GET() {
   const [communities, counts, areas] = await Promise.all([listCommunities(), communityMemberCounts(), listAreas()]);
   const areaById = new Map(areas.map((a) => [a.id, a]));

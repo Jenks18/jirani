@@ -1,8 +1,3 @@
-/**
- * Single source of truth for organization identity, used by the site, legal pages and metadata.
- * Fill in `address`, `ein` and `incorporationState` once confirmed; the legal pages render them
- * only when set.
- */
 export const org = {
   legalName: 'The 6.25 Movement',
   program: 'Majirani Wetu',

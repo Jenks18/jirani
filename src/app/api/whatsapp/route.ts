@@ -33,7 +33,6 @@ function alreadySeen(id: string): boolean {
   return false;
 }
 
-/** Webhook verification handshake (Meta calls this once when the webhook is configured). */
 export async function GET(req: NextRequest) {
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
   const params = req.nextUrl.searchParams;
@@ -73,7 +72,6 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
   }
   if (text.length > MAX_MESSAGE_LENGTH) text = text.slice(0, MAX_MESSAGE_LENGTH);
 
-  // Explicit commands (safety net, alerts, communities, news) are handled before the AI.
   try {
     const reply = await handleCommand({
       phone: from,
@@ -85,7 +83,6 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
       return;
     }
   } catch (err) {
-    // e.g. platform migration not applied yet: fall through to the normal reporting flow
     console.error('[whatsapp] command handling failed', err);
   }
 
@@ -132,7 +129,6 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
   }
 
   await sendText(from, result.response);
-  // Alert nearby subscribers after the reporter has their reply.
   if (alert) await dispatchAlerts(alert, from);
 }
 
@@ -159,7 +155,6 @@ export async function POST(req: NextRequest) {
 
   const messages = extractMessages(payload).filter((m) => !alreadySeen(m.id));
 
-  // Acknowledge right away so Meta does not retry; do the slow AI work after the response.
   if (messages.length > 0) {
     after(async () => {
       for (const msg of messages) {

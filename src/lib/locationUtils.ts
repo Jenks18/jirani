@@ -2,9 +2,6 @@ import { debug } from './log';
 import { MAPBOX_TOKEN } from './mapConfig';
 import { findPlace } from './placeSearch';
 
-// Dynamic geocoding using Mapbox - no hardcoded locations
-// This allows the system to handle ANY location in Kenya that users report
-
 const KENYA_BBOX = '33.9,-4.8,41.95,5.6';
 
 interface MapboxFeature {
@@ -59,8 +56,6 @@ export async function extractCoordinates(location: string): Promise<[number, num
   const cleanLocation = location.trim();
   debug(`🔍 Geocoding location from incident report: "${cleanLocation}"`);
   
-  // Always use Mapbox geocoding API - no cache, no hardcoded locations
-  // This ensures we get accurate coordinates for ANY location in Kenya
   const geocoded = await geocodeLocation(cleanLocation);
   
   if (geocoded) {
@@ -68,7 +63,6 @@ export async function extractCoordinates(location: string): Promise<[number, num
     return geocoded;
   }
   
-  // If geocoding fails, return null (incident will be saved without coordinates)
   console.error(`❌ FAILED to geocode location: "${cleanLocation}"`);
   return null;
 }

@@ -3,7 +3,6 @@ import { storeEvent } from '@/lib/eventStorage';
 import type { Database } from '@/lib/database.types';
 
 export async function POST(req: NextRequest) {
-  // Admin-only: this endpoint writes directly to the public map.
   const adminToken = process.env.ADMIN_API_TOKEN;
   if (!adminToken || req.headers.get('x-admin-token') !== adminToken) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -12,16 +11,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Normalize payload -> events Insert shape
     const maybeCoords: unknown = body.coordinates;
     let longitude: number | undefined; let latitude: number | undefined;
     if (Array.isArray(maybeCoords) && maybeCoords.length === 2 &&
         typeof maybeCoords[0] === 'number' && typeof maybeCoords[1] === 'number') {
-      // Heuristic: if absolute latitude value (< 2) then treat [lat,lng]; else assume [lng,lat]
       const first = maybeCoords[0]; const second = maybeCoords[1];
       if (Math.abs(first) <= 2 && Math.abs(second) > 2) {
-        latitude = first; longitude = second; // [lat,lng]
-      } else { longitude = first; latitude = second; } // [lng,lat]
+        latitude = first; longitude = second;
+      } else { longitude = first; latitude = second; }
     } else if (typeof body.longitude === 'number' && typeof body.latitude === 'number') {
       longitude = body.longitude; latitude = body.latitude;
     }
@@ -39,9 +36,7 @@ export async function POST(req: NextRequest) {
       source: body.source || 'api'
     };
 
-    // Temporary any cast to bypass Supabase typing mismatch - TODO: update Database types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // Use storeEvent's robust storage which falls back to file if Supabase is unavailable.
     try {
       const stored = await storeEvent({
         type: insertPayload.type,
@@ -62,5 +57,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
-
 

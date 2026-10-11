@@ -3,7 +3,6 @@ import { getPublicReports } from '@/lib/publicReports';
 import { listAreas } from '@/lib/platform';
 import { haversineM } from '@/lib/geo';
 
-/** Area hierarchy with report counts (last 30 days and all time). */
 export async function GET() {
   try {
     const [reports, areas] = await Promise.all([getPublicReports(), listAreas()]);

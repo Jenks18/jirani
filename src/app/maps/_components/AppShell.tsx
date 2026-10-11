@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Sidebar from "../../Sidebar";
 import MobileNav from "./MobileNav";
 
-/** Sidebar + scrollable content frame shared by the secondary map-app pages. */
 export default function AppShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [desktop, setDesktop] = useState(true);

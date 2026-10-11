@@ -54,7 +54,6 @@ export default function MapPage() {
     }
   }, []);
 
-  // Deep link: /#r=<id>
   const [deepLinked, setDeepLinked] = useState(false);
   useEffect(() => {
     if (deepLinked || status !== 'ready') return;
@@ -63,7 +62,6 @@ export default function MapPage() {
     if (id && reports.some((r) => r.id === id)) select(id);
   }, [status, reports, deepLinked, select]);
 
-  // Deep link to a place: /#ll=lat,lng,zoom (from the Areas page)
   const [focus, setFocus] = useState<{ lat: number; lng: number; zoom: number; seq: number } | null>(null);
   useEffect(() => {
     const read = () => {
@@ -75,7 +73,6 @@ export default function MapPage() {
     return () => window.removeEventListener('hashchange', read);
   }, []);
 
-  // Escape clears selection
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && select(null);
     window.addEventListener('keydown', onKey);
@@ -84,7 +81,7 @@ export default function MapPage() {
 
   const handleSelect = (id: string | null) => {
     select(id);
-    if (id && !desktop) setPanelOpen(false); // reveal the map on phones
+    if (id && !desktop) setPanelOpen(false);
   };
 
   const insets = {
@@ -142,7 +139,7 @@ export default function MapPage() {
         {!desktop && (
           <a
             href={whatsappLink}
-            className="absolute right-3 top-3 z-30 inline-flex items-center gap-2 rounded-full bg-card px-4 py-2.5 text-xs font-semibold text-forest-800 shadow-soft"
+            className="absolute left-[4.25rem] top-3 z-30 inline-flex h-11 items-center gap-2 rounded-full border border-line bg-card px-4 text-xs font-semibold text-forest-800 shadow-soft"
           >
             <FaWhatsapp className="text-base" /> Report
           </a>

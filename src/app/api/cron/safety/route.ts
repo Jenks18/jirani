@@ -4,7 +4,6 @@ import { processDueCheckins } from '@/lib/safetyNet';
 
 export const maxDuration = 60;
 
-/** Called every few minutes by the scheduler (see .github/workflows/safety-checkins.yml). */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const given = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');

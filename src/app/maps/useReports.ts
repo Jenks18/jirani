@@ -4,7 +4,6 @@ import type { Report } from '@/lib/reports';
 
 type Status = 'loading' | 'ready' | 'error';
 
-/** Fetches reports once, then polls while the tab is visible. */
 export function useReports(pollMs = 60_000) {
   const [reports, setReports] = useState<Report[]>([]);
   const [status, setStatus] = useState<Status>('loading');

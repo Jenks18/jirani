@@ -8,7 +8,6 @@ export const NAV = [
   { href: '/account', label: 'My account', icon: 'user' },
 ] as const;
 
-/** The maps host rewrites "/x" to "/maps/x"; usePathname may report either, so normalise. */
 export function normalizePath(p: string): string {
   const stripped = p.replace(/^\/maps(?=\/|$)/, '');
   return stripped === '' ? '/' : stripped;

@@ -41,15 +41,10 @@ export interface InboundCtx {
   location?: { lat: number; lng: number };
 }
 
-/**
- * Handle explicit commands. Returns the reply text, or null when the message is not a command and
- * should go to the conversational AI.
- */
 export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
   const member = await upsertMember(ctx.phone);
   const text = (ctx.text ?? '').trim();
 
-  // ── Pins ───────────────────────────────────────────────────────────────────────────────────
   if (ctx.location) {
     const { lat, lng } = ctx.location;
     await saveLocation(member.id, lat, lng);
@@ -62,7 +57,7 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
       await setPending(member.id, null);
       return finishSubscribe(member, lat, lng);
     }
-    return null; // a pin on its own is part of a report; let the AI handle it
+    return null;
   }
 
   if (!text) return null;
@@ -71,7 +66,6 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
   const arg = rest.join(' ').trim();
   const c = cmd.toUpperCase();
 
-  // ── Contact replies (YES/NO to an invite) ──────────────────────────────────────────────────
   if (c === 'YES' || c === 'NO') {
     const idx = /^\d+$/.test(arg) ? parseInt(arg, 10) : undefined;
     const r = await respondToInvite(ctx.phone, c === 'YES', idx);
@@ -93,7 +87,6 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
     return `Your Jirani sign-in code is *${code}*. It works for 10 minutes. Enter it with your phone number at maps.the625movement.com/account. Never share this code with anyone.`;
   }
 
-  // ── SOS ────────────────────────────────────────────────────────────────────────────────────
   if (SOS_RE.test(text)) {
     const loc = recentLocation(member, 30);
     const contacts = (await listContacts(member.id)).filter((x) => x.status === 'accepted');
@@ -104,7 +97,6 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
     return `🚨 I've alerted ${r.delivered} of ${r.contacts} trusted ${r.contacts === 1 ? 'contact' : 'contacts'}.\n\nIf you are in danger call 999 or 112 now. Share your location pin to keep them updated, and reply SAFE when you are OK.${loc ? '' : '\n(I had no recent location to send.)'}`;
   }
 
-  // ── Safe / check-in ────────────────────────────────────────────────────────────────────────
   if (/^(safe|i('?m| am) safe|ok|i('?m| am) ok)$/i.test(text)) {
     const [ci, sos] = await Promise.all([activeCheckin(member.id), activeSos(member.id)]);
     if (!ci && !sos) return /^safe$/i.test(text) ? 'Glad you are safe. 💚' : null;
@@ -128,7 +120,6 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
     return `⏱️ Check-in set for ${when} (in ${minutes} min). Reply SAFE when you're OK. If I don't hear from you I'll nudge you, and ${profile.grace_minutes} minutes later alert ${contacts.length ? `your ${contacts.length} trusted ${contacts.length === 1 ? 'contact' : 'contacts'}` : 'your trusted contacts (you have none yet — ADD <name> <number>)'}.`;
   }
 
-  // ── Contacts & settings ────────────────────────────────────────────────────────────────────
   if (c === 'NAME' && arg) {
     await setName(member.id, arg);
     return `Thanks, ${arg}. That's the name your trusted contacts will see.`;
@@ -136,7 +127,6 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
   if (c === 'ADD') {
     const m = /^(?:contact\s+)?(.+?)\s+(\+?[\d][\d\s-]{7,})$/i.exec(arg);
     if (!m) {
-      // "add that it happened near…" is a sentence in a report, not a command
       return /\d/.test(arg) || arg.split(/\s+/).filter(Boolean).length <= 2
         ? 'To add a trusted contact send: ADD <name> <number>\nExample: ADD Mum +254712345678'
         : null;
@@ -156,7 +146,6 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
   }
   if (c === 'SETTINGS' || c === 'SETTING') return handleSettings(member, arg);
 
-  // ── Alerts ─────────────────────────────────────────────────────────────────────────────────
   if (c === 'SUBSCRIBE') {
     if (arg) {
       const area = await findArea(arg);
@@ -178,7 +167,6 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
     return `Your alerts:\n${subs.map((s: any, i: number) => `${i + 1}. ${s.areas?.name ?? `within ${s.radius_m} m of your pin`} (severity ${s.min_severity}+)`).join('\n')}\n\nSTOP turns them all off.`;
   }
 
-  // ── Communities & news ─────────────────────────────────────────────────────────────────────
   if (c === 'COMMUNITIES') {
     const [all, mine] = await Promise.all([listCommunities(), myCommunities(member.id)]);
     if (!all.length) return 'There are no communities yet. Check back soon.';
