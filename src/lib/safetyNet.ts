@@ -2,6 +2,7 @@ import 'server-only';
 import { db, safely, type Member } from './platform';
 import { mapsUrl, normalizePhone } from './geo';
 import { notify } from './whatsappCloud';
+import { computeStreak, type Streak } from './streak';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -232,6 +233,22 @@ export async function markSafe(member: Member): Promise<{ checkins: number; sosE
     }
   }
   return { checkins: data?.length ?? 0, sosEnded: Boolean(sos) };
+}
+
+export async function checkinStreak(memberId: string): Promise<Streak> {
+  const rows = await safely<{ resolved_at: string }[]>(
+    () =>
+      db()
+        .from('checkins')
+        .select('resolved_at')
+        .eq('member_id', memberId)
+        .eq('status', 'safe')
+        .not('resolved_at', 'is', null)
+        .order('resolved_at', { ascending: false })
+        .limit(2000),
+    []
+  );
+  return computeStreak(rows.map((r) => r.resolved_at));
 }
 
 export async function activeCheckin(memberId: string) {

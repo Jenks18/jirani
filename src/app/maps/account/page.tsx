@@ -15,6 +15,7 @@ interface Account {
   areas: { slug: string; name: string }[];
   checkin: { dueAt: string; status: string } | null;
   sosActive: boolean;
+  streak: { current: number; longest: number; lastDay: string | null; doneToday: boolean };
 }
 
 const field = "mt-1 w-full rounded-md border border-line bg-white px-3 py-2.5 text-sm text-ink";
@@ -153,6 +154,19 @@ function Portal({ account, reload, onSignedOut }: { account: Account; reload: ()
         ) : (
           <p className="mb-3 text-sm text-ink-3">No check-in is running.</p>
         )}
+        <div className="mb-4 flex flex-wrap gap-x-6 gap-y-2 rounded-md bg-paper-2 p-3 text-sm">
+          <div>
+            <div className="text-2xl font-semibold text-ink">{account.streak.current} {account.streak.current === 1 ? "day" : "days"}</div>
+            <div className="text-ink-3">Current streak</div>
+          </div>
+          <div>
+            <div className="text-2xl font-semibold text-ink">{account.streak.longest} {account.streak.longest === 1 ? "day" : "days"}</div>
+            <div className="text-ink-3">Longest streak</div>
+          </div>
+          <p className="self-center text-ink-3">
+            {account.streak.doneToday ? "You checked in safe today." : account.streak.current > 0 ? "Check in safe today to keep it going." : "Check in and mark yourself safe to start a streak."}
+          </p>
+        </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm font-medium text-ink-2">
             Check in after (minutes)

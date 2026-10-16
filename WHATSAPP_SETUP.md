@@ -4,7 +4,7 @@ Jirani talks to WhatsApp directly through Meta's Cloud API. There is no Twilio d
 
 ## 1. Meta app
 1. In [Meta for Developers](https://developers.facebook.com/) create/open the app with the **WhatsApp** product.
-2. Add the Jirani phone number (+254 783 045226) under **WhatsApp → API Setup** and complete verification.
+2. Add the Jirani phone number (+1 555 143 7024) under **WhatsApp → API Setup** and complete verification.
 3. Create a **System User** token (Business Settings → Users → System users) with `whatsapp_business_messaging` and
    `whatsapp_business_management`. Use this permanent token, not the 24h test token.
 

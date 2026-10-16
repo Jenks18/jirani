@@ -1,14 +1,14 @@
 import { NextRequest } from 'next/server';
 import { authed, body, json, maskPhone } from '@/lib/accountApi';
 import { db, listAreas, listCommunities, myCommunities, mySubscriptions, safely } from '@/lib/platform';
-import { activeCheckin, activeSos, getProfile, listContacts, setName, updateProfile } from '@/lib/safetyNet';
+import { activeCheckin, activeSos, checkinStreak, getProfile, listContacts, setName, updateProfile } from '@/lib/safetyNet';
 import { clearSessionCookie } from '@/lib/session';
 
 export async function GET(req: NextRequest) {
   const a = await authed(req, false);
   if ('res' in a) return a.res;
   const { member } = a;
-  const [profile, contacts, subscriptions, mine, all, areas, checkin, sos] = await Promise.all([
+  const [profile, contacts, subscriptions, mine, all, areas, checkin, sos, streak] = await Promise.all([
     getProfile(member.id),
     listContacts(member.id),
     mySubscriptions(member.id),
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     listAreas(),
     activeCheckin(member.id),
     activeSos(member.id),
+    checkinStreak(member.id),
   ]);
   return json({
     member: { id: member.id, phone: maskPhone(member.phone), displayName: member.display_name },
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
     areas: areas.filter((x) => x.level !== 'country').map((x) => ({ slug: x.slug, name: x.name })),
     checkin: checkin ? { dueAt: checkin.due_at, status: checkin.status } : null,
     sosActive: Boolean(sos),
+    streak,
   });
 }
 
