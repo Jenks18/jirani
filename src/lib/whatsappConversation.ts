@@ -43,12 +43,24 @@ const SHORT_REPLY_CHARS = 30;
 const YES_RE = /^(y|yes|yep|yeah|yea|ndio|sawa|ok|okay|sure|confirm|confirmed|go ahead|file it|file|proceed|yes please)\b/i;
 const NO_RE = /^(n|no|nope|hapana|cancel|stop|don'?t|do not)\b/i;
 
+const SWAHILI_WORDS = new Set(
+  'habari nimeibiwa nimeibiwa niaje mambo sasa ndio hapana sawa pole asante tafadhali karibu simu yangu wangu wangu nimepoteza nimeibiwa jamaa walikuwa wawili kisu mtaa kwa na ya wa ni si hii huyu wale kuna nilikuwa nimeona nimeshambuliwa gari pesa nyumba usiku jana leo asubuhi jioni saa wapi lini nini je tukio ripoti polisi msaada haraka sijui naomba nataka nimefuatwa kuibiwa kuripoti hapa pale kule mimi wewe sisi wao ndani nje barabara stage mtu watu mwizi wezi'.split(/\s+/)
+);
+
+export function detectLanguage(text: string): 'English' | 'Kiswahili (Sheng is fine)' {
+  const words = text.toLowerCase().replace(/[^a-z\s']/g, ' ').split(/\s+/).filter(Boolean);
+  if (!words.length) return 'English';
+  const hits = words.filter((w) => SWAHILI_WORDS.has(w)).length;
+  const strong = words.filter((w) => w.length > 3 && SWAHILI_WORDS.has(w)).length;
+  return hits >= 2 && (hits / words.length >= 0.25 || strong >= 2) ? 'Kiswahili (Sheng is fine)' : 'English';
+}
+
 const FALLBACK_REPLY = "Sorry, I'm having a little trouble right now. Please send that again in a moment.";
 
 const SYSTEM_PROMPT = `You are Jirani, a warm, brief community safety assistant for Kenya, run by The 6.25 Movement. You help people report safety incidents that are shown anonymously on a community map.
 
 HOW TO TALK
-- Natural Kenyan English with light Kiswahili touches ("Pole sana", "Sawa"). Use full Kiswahili only if the user writes in Kiswahili or asks for it.
+- Reply in the language the user writes in. English gets natural Kenyan English with light Kiswahili touches ("Pole sana", "Sawa"). Kiswahili or Sheng gets Kiswahili. Never answer an English message in Kiswahili.
 - 1-3 short sentences. One question at a time.
 - You are in an ongoing WhatsApp chat. Read the whole conversation. Never greet or introduce yourself again once the chat has started. Never ask for something the user already told you. Build on their last message.
 - Stay on safety and incident reporting. Politely steer off-topic chat back. Do not discuss how you were built.
@@ -57,8 +69,10 @@ HOW TO TALK
 
 REPORTING
 - To file a report you need: what happened, where, and roughly when. If "when" is missing, assume it just happened.
+- As soon as the user describes anything that happened to them or near them, fill in incident, even if the location is still unknown. Take the place from their own words.
 - Ask for whatever is missing, one thing at a time. For location say they can share a location pin or type the place and town.
-- If the place name could be in several towns (for example Junction Mall, City Mall), ask which town.
+- If the place is a generic or chain name (a mall, market, stage, hospital, school, church, police station, roundabout, or names like Junction Mall or City Mall) and the user gave no town or neighborhood, your very next question MUST ask which town or neighborhood. Do this before anything else.
+- You decide the severity yourself from what happened. Never ask the user to rate or score how serious it was.
 - When you have what, where and when, set ask_confirmation to true and write a reply that summarizes the incident in one sentence and asks: Should I file this report? Reply "yes" to confirm.
 - Never say a report is filed. Filing happens only after the user confirms.
 - If the user is only chatting or asking something, set incident to null.
@@ -66,7 +80,11 @@ REPORTING
 OUTPUT
 Reply with ONLY a JSON object:
 {"reply": "<message to the user>", "incident": null | {"type": "Theft|Robbery|Burglary|Assault|Harassment|Vandalism|Suspicious Activity|Other", "severity": 1-5, "location": "<exact place text the user gave, or null>", "summary": "<neutral one-sentence description>"}, "ask_confirmation": true|false}
-Keep "incident" filled in on every turn once an incident has been described, updating it with new details.`;
+Keep "incident" filled in on every turn once an incident has been described, updating it with new details.
+
+EXAMPLE
+User: "Niaje, nimeibiwa simu Kasarani jana jioni, jamaa wawili"
+{"reply": "Pole sana kwa hilo. Ulikuwa karibu na wapi hasa Kasarani?", "incident": {"type": "Theft", "severity": 3, "location": "Kasarani", "summary": "Phone stolen by two people yesterday evening"}, "ask_confirmation": false}`;
 
 class SupabaseStore implements ConversationStore {
   async load(userId: string): Promise<ConversationState | null> {
@@ -146,6 +164,7 @@ function parseTurn(text: string): ModelTurn | null {
 }
 
 const CONFIRM_LINE = 'Should I file this report? Reply "yes" to confirm.';
+const CONFIRM_LINE_SW = 'Je, nifungue ripoti hii? Jibu "ndio" kuthibitisha.';
 
 export class WhatsAppConversationManager {
   constructor(
@@ -172,7 +191,9 @@ export class WhatsAppConversationManager {
       ? `Already collected for the current report: type=${c.currentIncident.type}; location=${c.currentIncident.location ?? 'unknown'}${c.currentIncident.coordinates ? ' (user shared a location pin)' : ''}; details=${c.currentIncident.description}.`
       : 'No incident has been described yet.';
     const turns: ChatMessage[] = recent.map((m) => ({ role: m.role, content: m.content }));
-    return [{ role: 'system', content: `${SYSTEM_PROMPT}\n\nSTATE\n${known}${recent.length <= 1 ? '\nThis is the very first message of the conversation.' : ''}` }, ...turns];
+    const lastUser = [...c.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+    const language = detectLanguage(lastUser);
+    return [{ role: 'system', content: `${SYSTEM_PROMPT}\n\nSTATE\n${known}\nThe user's latest message is in ${language}. Reply in ${language}.${recent.length <= 1 ? '\nThis is the very first message of the conversation.' : ''}` }, ...turns];
   }
 
   private applyTurn(c: ConversationState, turn: ModelTurn, userMessage: string): string {
@@ -198,7 +219,10 @@ export class WhatsAppConversationManager {
     if (turn.askConfirmation && c.currentIncident && hasWhere) {
       c.awaitingConfirmation = true;
       c.conversationPhase = 'confirming';
-      reply = `${reply.replace(/should i file this report\??\s*(reply\s+["“”']?yes["“”']?\s*(to confirm)?\.?)?/gi, '').replace(/\s{2,}/g, ' ').trim()} ${CONFIRM_LINE}`;
+      if (!/\b(yes|ndio)\b/i.test(reply)) {
+        const stripped = reply.replace(/should i file this report\??/gi, '').replace(/\s{2,}/g, ' ').trim();
+        reply = `${stripped} ${detectLanguage(userMessage).startsWith('Kiswahili') ? CONFIRM_LINE_SW : CONFIRM_LINE}`;
+      }
     } else {
       c.awaitingConfirmation = false;
       if (c.conversationPhase === 'confirming') c.conversationPhase = 'collecting';
@@ -208,7 +232,7 @@ export class WhatsAppConversationManager {
 
   private async modelTurn(c: ConversationState, userMessage: string): Promise<string> {
     try {
-      const text = await this.llm({ messages: this.promptMessages(c), json: true, maxTokens: 700, temperature: 0.5 });
+      const text = await this.llm({ messages: this.promptMessages(c), json: true, maxTokens: 700, temperature: 0.35 });
       const turn = parseTurn(text);
       if (!turn) {
         debug('Model reply was not valid JSON; using it as plain text');

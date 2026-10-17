@@ -19,6 +19,7 @@ interface Index {
 const STOP = new Set([
   'near', 'at', 'the', 'a', 'an', 'in', 'on', 'of', 'opposite', 'opp', 'next', 'to', 'along', 'off', 'around', 'behind',
   'by', 'beside', 'area', 'estate', 'town', 'county', 'kenya', 'and', 'for', 'from', 'side', 'close', 'ke', 'road', 'rd',
+  'karibu', 'na', 'kwa', 'wa', 'la', 'ya', 'pale', 'hapa', 'eneo', 'mtaa', 'mbele', 'nyuma', 'jirani',
 ]);
 
 const norm = (s: string): string[] =>
@@ -86,11 +87,13 @@ export async function findPlace(text: string, opts: { areaFallback?: boolean } =
   const counties = new Set<string>();
   const subcounties = new Set<string>();
   const content: string[] = [];
+  const hintWords: string[] = [];
   for (const w of words) {
     const a = areaNames.get(w);
     if (a?.subcounty) subcounties.add(a.subcounty.toLowerCase());
     if (a?.county) counties.add(a.county.toLowerCase());
-    if (!a) content.push(w);
+    if (a) hintWords.push(w);
+    else content.push(w);
   }
   const hasHint = counties.size > 0 || subcounties.size > 0;
   if (!content.length) {
@@ -131,6 +134,7 @@ export async function findPlace(text: string, opts: { areaFallback?: boolean } =
     let score = 50 - Math.min(extra, 10) * 3 + Math.min(r.buildings, 5);
     if (joined === content.join(' ')) score += 40;
     else if (joined.startsWith(content.join(' '))) score += 15;
+    if (hintWords.some((h) => r.tokens.includes(h))) score += 14;
     if (r.kind === 'landmark') score += 8;
     else if (r.kind === 'place') score += 4;
     if (!best || score > best.score) best = { row: r, score };
