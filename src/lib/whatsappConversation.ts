@@ -1,14 +1,15 @@
 import { debug, maskPhone } from './log';
 import { supabase } from './supabaseClient';
+import { chat as defaultChat, type ChatFn, type ChatMessage } from './llm';
 
 interface Message {
   id: string;
-  timestamp: Date;
+  timestamp: string;
   role: 'user' | 'assistant';
   content: string;
 }
 
-interface IncidentReport {
+export interface IncidentReport {
   type: string;
   description: string;
   location?: string;
@@ -18,7 +19,7 @@ interface IncidentReport {
   confirmed: boolean;
 }
 
-interface ConversationState {
+export interface ConversationState {
   userId: string;
   messages: Message[];
   currentIncident?: IncidentReport;
@@ -28,585 +29,264 @@ interface ConversationState {
   lastStoredAt?: Date;
 }
 
-class WhatsAppConversationManager {
-  private conversations = new Map<string, ConversationState>();
-  private readonly MAX_MESSAGES = 50;
-  private readonly CONVERSATION_TIMEOUT = 60 * 60 * 1000;
+export interface ConversationStore {
+  load(userId: string): Promise<ConversationState | null>;
+  save(state: ConversationState): Promise<void>;
+  remove(userId: string): Promise<void>;
+}
 
-  constructor() {
-    // Note: setInterval doesn't work reliably in serverless, rely on per-request cleanup
-  }
+const MAX_STORED_MESSAGES = 50;
+const PROMPT_MESSAGES = 14;
+const PROMPT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const SHORT_REPLY_CHARS = 30;
 
-  private async loadFromSupabase(userId: string): Promise<ConversationState | null> {
+const YES_RE = /^(y|yes|yep|yeah|yea|ndio|sawa|ok|okay|sure|confirm|confirmed|go ahead|file it|file|proceed|yes please)\b/i;
+const NO_RE = /^(n|no|nope|hapana|cancel|stop|don'?t|do not)\b/i;
+
+const FALLBACK_REPLY = "Sorry, I'm having a little trouble right now. Please send that again in a moment.";
+
+const SYSTEM_PROMPT = `You are Jirani, a warm, brief community safety assistant for Kenya, run by The 6.25 Movement. You help people report safety incidents that are shown anonymously on a community map.
+
+HOW TO TALK
+- Natural Kenyan English with light Kiswahili touches ("Pole sana", "Sawa"). Use full Kiswahili only if the user writes in Kiswahili or asks for it.
+- 1-3 short sentences. One question at a time.
+- You are in an ongoing WhatsApp chat. Read the whole conversation. Never greet or introduce yourself again once the chat has started. Never ask for something the user already told you. Build on their last message.
+- Stay on safety and incident reporting. Politely steer off-topic chat back. Do not discuss how you were built.
+- If someone is in immediate danger, tell them to call 999 or 112 first.
+- Do not ask for or repeat names, plate numbers, phone numbers or home addresses of people. Ask users to describe what happened, not to accuse individuals.
+
+REPORTING
+- To file a report you need: what happened, where, and roughly when. If "when" is missing, assume it just happened.
+- Ask for whatever is missing, one thing at a time. For location say they can share a location pin or type the place and town.
+- If the place name could be in several towns (for example Junction Mall, City Mall), ask which town.
+- When you have what, where and when, set ask_confirmation to true and write a reply that summarizes the incident in one sentence and asks: Should I file this report? Reply "yes" to confirm.
+- Never say a report is filed. Filing happens only after the user confirms.
+- If the user is only chatting or asking something, set incident to null.
+
+OUTPUT
+Reply with ONLY a JSON object:
+{"reply": "<message to the user>", "incident": null | {"type": "Theft|Robbery|Burglary|Assault|Harassment|Vandalism|Suspicious Activity|Other", "severity": 1-5, "location": "<exact place text the user gave, or null>", "summary": "<neutral one-sentence description>"}, "ask_confirmation": true|false}
+Keep "incident" filled in on every turn once an incident has been described, updating it with new details.`;
+
+class SupabaseStore implements ConversationStore {
+  async load(userId: string): Promise<ConversationState | null> {
     if (!supabase) {
-      console.error('❌ Supabase client not available');
+      console.error('Supabase client not available; conversation memory is disabled');
       return null;
     }
-    
-    try {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') { // Not found
-          return null;
-        }
-        console.error('❌ Error loading conversation from Supabase:', error);
-        return null;
-      }
-
-      if (!data) return null;
-
-      return {
-        userId: data.user_id,
-        messages: data.messages || [],
-        currentIncident: data.current_incident,
-        awaitingConfirmation: data.awaiting_confirmation || false,
-        conversationPhase: data.conversation_phase || 'greeting',
-        lastActivity: new Date(data.last_activity),
-        lastStoredAt: data.last_stored_at ? new Date(data.last_stored_at) : undefined
-      };
-    } catch (error) {
-      console.error('❌ Exception loading conversation:', error);
+    const { data, error } = await supabase.from('conversations').select('*').eq('user_id', userId).maybeSingle();
+    if (error) {
+      console.error('Error loading conversation:', error.code, error.message);
       return null;
     }
-  }
-
-  private async saveToSupabase(conversation: ConversationState): Promise<void> {
-    if (!supabase) {
-      console.error('❌❌❌ CRITICAL: Supabase client is NULL - cannot save conversation!');
-      console.error('Check env vars: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
-      return;
-    }
-    
-    try {
-      debug(`💾 Attempting to save conversation for ${conversation.userId}...`);
-      debug('📊 Data to save:', {
-        user_id: conversation.userId,
-        messageCount: conversation.messages.length,
-        hasIncident: !!conversation.currentIncident,
-        incidentConfirmed: conversation.currentIncident?.confirmed,
-        awaitingConfirmation: conversation.awaitingConfirmation,
-        phase: conversation.conversationPhase
-      });
-      
-      const dataToSave: Record<string, string | Message[] | IncidentReport | boolean | undefined> = {
-        user_id: conversation.userId,
-        messages: conversation.messages,
-        current_incident: conversation.currentIncident,
-        awaiting_confirmation: conversation.awaitingConfirmation,
-        conversation_phase: conversation.conversationPhase,
-        last_activity: conversation.lastActivity.toISOString()
-      };
-      
-      if (conversation.lastStoredAt) {
-        dataToSave.last_stored_at = conversation.lastStoredAt.toISOString();
-      }
-      
-      const { data, error } = await supabase
-        .from('conversations')
-        .upsert(dataToSave, {
-          onConflict: 'user_id'
-        })
-        .select();
-
-      if (error) {
-        console.error('❌❌❌ SAVE FAILED - Supabase error:', error);
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
-      } else {
-        debug('✅✅✅ Conversation SAVED successfully to Supabase!');
-        debug('Saved data:', data);
-      }
-    } catch (error) {
-      console.error('❌❌❌ EXCEPTION during save:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
-    }
-  }
-
-  private generateMessageId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
-
-  private async getConversation(userId: string): Promise<ConversationState> {
-    if (this.conversations.has(userId)) {
-      const conversation = this.conversations.get(userId)!;
-      conversation.lastActivity = new Date();
-      return conversation;
-    }
-
-    debug('🔍 Loading conversation from Supabase for', userId);
-    const stored = await this.loadFromSupabase(userId);
-    
-    if (stored) {
-      debug('✅ Found existing conversation:', {
-        phase: stored.conversationPhase,
-        hasIncident: !!stored.currentIncident,
-        awaitingConfirmation: stored.awaitingConfirmation,
-        messageCount: stored.messages.length
-      });
-      this.conversations.set(userId, stored);
-      stored.lastActivity = new Date();
-      return stored;
-    }
-
-    debug('🆕 Creating new conversation for', userId);
-    const newConversation: ConversationState = {
-      userId,
-      messages: [],
-      awaitingConfirmation: false,
-      conversationPhase: 'greeting',
-      lastActivity: new Date()
-    };
-    
-    this.conversations.set(userId, newConversation);
-    return newConversation;
-  }
-
-  private async addMessage(userId: string, role: 'user' | 'assistant', content: string): Promise<void> {
-    const conversation = await this.getConversation(userId);
-    const message: Message = {
-      id: this.generateMessageId(),
-      timestamp: new Date(),
-      role,
-      content
-    };
-
-    conversation.messages.push(message);
-
-    if (conversation.messages.length > this.MAX_MESSAGES) {
-      conversation.messages = conversation.messages.slice(-this.MAX_MESSAGES);
-    }
-    
-    await this.saveToSupabase(conversation);
-  }
-
-  private async detectIncident(message: string): Promise<IncidentReport | null> {
-    try {
-      const GROQ_API_KEY = process.env.GROQ_API_KEY;
-      if (!GROQ_API_KEY) {
-        debug('⚠️ No GROQ_API_KEY');
-        return null;
-      }
-
-      debug('🔍 Analyzing message for incident with Groq Compound...');
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'groq/compound',
-          messages: [{
-            role: 'user',
-            content: `Analyze this message: "${message}"
-
-Is this a safety incident (crime, theft, assault, etc)?
-If YES: Extract the EXACT FULL location name as stated (e.g., "Thika Road Mall", "Sarit Centre", "Junction Mall"), incident type (Theft/Robbery/Assault/Harassment/Other), and severity (1-5).
-If NO: Just say "NOT_INCIDENT"
-
-IMPORTANT: Keep the complete location name - do NOT shorten "Thika Road Mall" to "Thika Road" or "Sarit Centre" to "Sarit".
-
-Reply in this EXACT format:
-INCIDENT|Theft|Thika Road Mall|4
-OR
-NOT_INCIDENT`
-          }],
-          temperature: 0.3,
-          max_tokens: 100
-        })
-      });
-
-      if (!response.ok) {
-        console.error('❌ Groq API error:', response.status);
-        return null;
-      }
-
-      const data = await response.json();
-      const aiText = data.choices?.[0]?.message?.content?.trim();
-      
-      debug('🤖 Groq response:', aiText);
-
-      if (!aiText || aiText.includes('NOT_INCIDENT')) {
-        debug('❌ Not an incident');
-        return null;
-      }
-
-      const lines = aiText.split('\n');
-      const incidentLine = lines.find((line: string) => line.trim().startsWith('INCIDENT|'));
-      
-      if (!incidentLine) {
-        debug('❌ No INCIDENT line found in response');
-        return null;
-      }
-
-      const parts = incidentLine.trim().split('|');
-      if (parts[0] !== 'INCIDENT' || parts.length < 4) {
-        debug('❌ Invalid response format');
-        return null;
-      }
-
-      const type = parts[1] || 'General Incident';
-      const location = parts[2] !== 'null' && parts[2] ? parts[2] : undefined;
-      const severity = parseInt(parts[3]) || 3;
-
-      debug('✅ Incident detected:', { type, location, severity });
-
-      return {
-        type,
-        description: message,
-        location,
-        timestamp: new Date().toISOString(),
-        severity,
-        confirmed: false
-      };
-    } catch (error) {
-      console.error('❌ Incident detection error:', error);
-      return null;
-    }
-  }
-
-  private async extractLocationWithAI(message: string): Promise<string | undefined> {
-    try {
-      const GROQ_API_KEY = process.env.GROQ_API_KEY;
-      if (!GROQ_API_KEY) {
-        debug('⚠️  No GROQ_API_KEY, extraction failed');
-        return undefined;
-      }
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'groq/compound',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a location extraction expert for Kenya. Extract the EXACT location mentioned by the user, preserving original phrasing.
-
-Rules:
-- Extract location EXACTLY as stated (e.g., "CBD near Archives", "Westlands Mall", "Yaya Centre Kilimani")
-- Include landmarks and descriptors (e.g., "near", "outside", "at")
-- Keep Kenyan place names accurate
-- If NO location mentioned, return null
-
-Return JSON: {"location": "exact location string" or null}`
-            },
-            {
-              role: 'user',
-              content: message
-            }
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.0,
-          max_tokens: 100
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Groq location extraction failed:', response.statusText, errorText);
-        return undefined;
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content?.trim();
-      
-      if (!content) {
-        debug('⚠️  No response from AI');
-        return undefined;
-      }
-
-      const parsed = JSON.parse(content);
-      const extractedLocation = parsed.location;
-      
-      if (!extractedLocation || typeof extractedLocation !== 'string' || extractedLocation.length < 2) {
-        debug('⚠️  No location found in message');
-        return undefined;
-      }
-
-      debug(`🎯 AI extracted location: "${extractedLocation}"`);
-      return extractedLocation;
-    } catch (error) {
-      console.error('❌ Error in AI location extraction:', error);
-      return undefined;
-    }
-  }
-
-  private async generateResponseWithAI(userId: string, userMessage: string, conversationHistory: string): Promise<string> {
-    try {
-      debug('🤖 CALLING GROQ AI...');
-      debug('📝 User message:', userMessage);
-      debug('📚 Context:', conversationHistory);
-      
-      const GROQ_API_KEY = process.env.GROQ_API_KEY;
-      
-      if (!GROQ_API_KEY) {
-        console.error('❌ GROQ_API_KEY NOT FOUND!');
-        throw new Error('Groq API key not configured');
-      }
-
-  const systemPrompt = `You are Jirani, a brief, friendly, and security-focused community safety assistant in Kenya. Your job is to help people report safety incidents and answer questions about security in the community.
-
-PERSONALITY & RULES:
-- Always keep responses short, clear, and to the point (1-2 sentences max).
-- Speak in natural Kenyan English dialect (e.g., "Sawa", "Pole sana", "Uko sawa?", casual Kenyan expressions).
-- ONLY switch to full Kiswahili when the user explicitly asks for Kiswahili or says "Swahili" or "Kiswahili".
-- If this is the first message (greeting), you can ask: "Hi! Would you prefer English or Kiswahili?"
-- Stay focused on security, safety, and incident reporting. If the user goes off-topic, gently steer them back to security.
-- Never share information about your creators, how you were made, or any sensitive/internal details. If asked, politely say you can't discuss that and ask if they have a security concern.
-- If asked who you are: Say you are Jirani, a community safety assistant.
-- If asked about your origin, creators, or technical details: Do not answer, and redirect to security topics.
-- If greeted: Greet back briefly in Kenyan English and ask if they have a security concern (or offer language choice).
-- If they report an incident: Show empathy, ask for key details, and keep it brief.
-- LOCATION: When asking for location, say: "Where did this happen? You can share your location pin 📍 or type the place name."
-- CRITICAL: Once you have all incident details (what happened, location/pin, time), you MUST ask: "Should I file this report? Reply 'yes' to confirm." DO NOT say you've filed it until they confirm.
-- Never give long or repetitive answers. Never give generic filler. Never answer off-topic questions.
-
-CONVERSATION SO FAR:
-${conversationHistory || 'This is the start of the conversation.'}
-
-CURRENT USER MESSAGE: "${userMessage}"
-
-INSTRUCTIONS:
-- Respond as Jirani would, following the above rules.
-- Use Kenyan English dialect unless user explicitly requests Kiswahili.
-- If the user goes off-topic, gently bring the conversation back to security or safety.
-- Keep it brief, natural, and human.
-- REMEMBER: Always ask for explicit confirmation before filing a report!
-
-Respond now as Jirani:`;
-
-      debug('🌐 Calling Groq Compound AI...');
-      
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'groq/compound',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userMessage }
-          ],
-          temperature: 0.8,
-          max_tokens: 200,
-          top_p: 0.9
-        })
-      });
-
-      debug('📡 Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Groq API error:', errorText);
-        throw new Error(`Groq API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      debug('✅ Groq response received');
-      
-      const aiText = data.choices?.[0]?.message?.content;
-      
-      if (!aiText) {
-        console.error('❌ No text in Groq response');
-        throw new Error('No text in Groq response');
-      }
-
-      debug('💬 AI generated response:', aiText);
-      return aiText.trim();
-      
-    } catch (error) {
-      console.error('❌❌❌ AI CALL COMPLETELY FAILED ❌❌❌');
-      console.error('Error details:', error);
-      
-      const lowerMessage = userMessage.toLowerCase();
-      debug('⚠️ Using fallback response for:', lowerMessage);
-      if (lowerMessage.includes('who are you') || lowerMessage.includes('what is your name')) {
-        return "I'm Jirani, your community safety assistant. Uko na shida ya usalama?";
-      }
-      if (lowerMessage.includes('who made you') || lowerMessage.includes('creator') || lowerMessage.includes('how were you made')) {
-        return "Pole, I can't discuss that. Una security concern?";
-      }
-      if (lowerMessage.includes('what do you do') || lowerMessage.includes('what can you do')) {
-        return "I help people report safety incidents. How can I help you?";
-      }
-      if (["hi", "hello", "hey", "ola", "hola", "jambo"].some(g => lowerMessage.trim() === g)) {
-        return "Sawa! Una security concern ama incident ya ku-report?";
-      }
-      return "Tuongee kuhusu security. How can I help?";
-    }
-  }
-
-  private async generateResponse(userId: string, userMessage: string): Promise<string> {
-    const conversation = await this.getConversation(userId);
-    const lowerMessage = userMessage.toLowerCase();
-
-    debug(`📱 Processing message from ${maskPhone(userId)} (${userMessage.length} chars)`);
-    debug(`📊 Conversation phase: ${conversation.conversationPhase}`);
-
-    debug('🔍 Checking confirmation:', {
-      awaitingConfirmation: conversation.awaitingConfirmation,
-      hasCurrentIncident: !!conversation.currentIncident,
-      messageIsYes: lowerMessage.includes('yes')
-    });
-    
-    if (conversation.awaitingConfirmation && conversation.currentIncident) {
-      if (lowerMessage.includes('yes') || lowerMessage.includes('confirm') || lowerMessage === 'y' || 
-          lowerMessage.includes('okay') || lowerMessage.includes('ok') || lowerMessage.includes('sure') ||
-          lowerMessage.includes('ndio') || lowerMessage.includes('sawa')) {
-        debug('✅✅✅ USER CONFIRMED - FILING REPORT ✅✅✅');
-        conversation.currentIncident.confirmed = true;
-        conversation.awaitingConfirmation = false;
-        conversation.conversationPhase = 'completed';
-        await this.saveToSupabase(conversation);
-        return "✅ Report filed! Stay safe!";
-      } else if (lowerMessage.includes('no') || lowerMessage.includes('cancel') || lowerMessage === 'n' || 
-                 lowerMessage.includes('hapana')) {
-        conversation.currentIncident = undefined;
-        conversation.awaitingConfirmation = false;
-        conversation.conversationPhase = 'greeting';
-        await this.saveToSupabase(conversation);
-        return "Sawa, canceled. Anything else I can help with?";
-      } else {
-        debug('⚠️ User said something other than yes/no during confirmation');
-        const summary = `${conversation.currentIncident.type} at ${conversation.currentIncident.location || 'provided location'}`;
-        return `I'm waiting for your confirmation. ${summary}. Reply "yes" to file or "no" to cancel.`;
-      }
-    }
-
-    const conversationHistory = conversation.messages
-      .slice(-8)
-      .map(m => `${m.role === 'user' ? 'User' : 'Jirani'}: ${m.content}`)
-      .join('\n');
-
-    debug('📝 Conversation history:', conversationHistory);
-
-    const aiResponse = await this.generateResponseWithAI(userId, userMessage, conversationHistory);
-    
-    debug('💭 Generated response:', aiResponse);
-    
-    const recentlyStored = conversation.lastStoredAt && 
-                           (Date.now() - conversation.lastStoredAt.getTime()) < 60000;
-    
-    const shouldDetectNewIncident = !conversation.currentIncident && !recentlyStored;
-    
-    if (shouldDetectNewIncident) {
-      const detectedIncident = await this.detectIncident(userMessage);
-      if (detectedIncident) {
-        debug('🚨 New incident detected and saving:', JSON.stringify(detectedIncident));
-        conversation.currentIncident = detectedIncident;
-        conversation.conversationPhase = 'collecting';
-        await this.saveToSupabase(conversation);
-        debug('✅ Incident saved to Supabase');
-      }
-    } else {
-      debug('⏭️ Skipping incident detection - current incident pending:', JSON.stringify(conversation.currentIncident));
-    }
-    
-    const lowerAI = aiResponse.toLowerCase();
-    const asksForConfirmation = lowerAI.includes('should i file') || 
-                                 lowerAI.includes('confirm') ||
-                                 lowerAI.includes('proceed with') ||
-                                 lowerAI.includes('reply') && (lowerAI.includes('yes') || lowerAI.includes('"yes"') || lowerAI.includes("'yes'")) ||
-                                 lowerAI.includes('pole sana');
-    
-    if (conversation.currentIncident && asksForConfirmation && !conversation.awaitingConfirmation) {
-      debug('✋ Setting awaiting confirmation to true');
-      conversation.awaitingConfirmation = true;
-      conversation.conversationPhase = 'confirming';
-      await this.saveToSupabase(conversation);
-    }
-    
-    return aiResponse;
-  }
-
-  public async processMessage(userId: string, message: string, coordinates?: [number, number]): Promise<{ response: string; incident?: IncidentReport }> {
-    const conversation = await this.getConversation(userId);
-    
-    if (coordinates && conversation.currentIncident && !conversation.currentIncident.confirmed) {
-      debug('📍 Location pin received! Updating incident with coordinates:', coordinates);
-      conversation.currentIncident.coordinates = coordinates;
-      conversation.currentIncident.location = `${coordinates[1]}, ${coordinates[0]}`;
-      await this.saveToSupabase(conversation);
-      
-      return {
-        response: `📍 Sawa! Location received. Should I file this ${conversation.currentIncident.type} report? Reply "yes" to confirm.`,
-        incident: undefined
-      };
-    }
-    
-    await this.addMessage(userId, 'user', message);
-    
-    const response = await this.generateResponse(userId, message);
-    
-    await this.addMessage(userId, 'assistant', response);
-    
-    const updatedConversation = await this.getConversation(userId);
-    
-    const shouldReturnIncident = updatedConversation.currentIncident?.confirmed === true;
-    
-    debug('🔍🔍🔍 FINAL INCIDENT CHECK 🔍🔍🔍');
-    debug('Has incident:', !!updatedConversation.currentIncident);
-    debug('Incident details:', JSON.stringify(updatedConversation.currentIncident));
-    debug('Is confirmed:', updatedConversation.currentIncident?.confirmed);
-    debug('Has coordinates:', !!updatedConversation.currentIncident?.coordinates);
-    debug('Will return to webhook:', shouldReturnIncident);
-    
-    if (shouldReturnIncident) {
-      debug('✅✅✅ RETURNING CONFIRMED INCIDENT TO WEBHOOK ✅✅✅');
-    } else {
-      debug('❌ NOT returning incident - either not confirmed or no incident');
-    }
-    
+    if (!data) return null;
     return {
-      response,
-      incident: shouldReturnIncident ? updatedConversation.currentIncident : undefined
+      userId: data.user_id,
+      messages: Array.isArray(data.messages) ? data.messages : [],
+      currentIncident: data.current_incident ?? undefined,
+      awaitingConfirmation: Boolean(data.awaiting_confirmation),
+      conversationPhase: data.conversation_phase || 'greeting',
+      lastActivity: new Date(data.last_activity),
+      lastStoredAt: data.last_stored_at ? new Date(data.last_stored_at) : undefined,
     };
+  }
+
+  async save(c: ConversationState): Promise<void> {
+    if (!supabase) return;
+    const row: Record<string, unknown> = {
+      user_id: c.userId,
+      messages: c.messages,
+      current_incident: c.currentIncident ?? null,
+      awaiting_confirmation: c.awaitingConfirmation,
+      conversation_phase: c.conversationPhase,
+      last_activity: c.lastActivity.toISOString(),
+    };
+    if (c.lastStoredAt) row.last_stored_at = c.lastStoredAt.toISOString();
+    const { error } = await supabase.from('conversations').upsert(row, { onConflict: 'user_id' });
+    if (error) console.error('Conversation save failed:', error.code, error.message);
+  }
+
+  async remove(userId: string): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase.from('conversations').delete().eq('user_id', userId);
+    if (error) console.error('Conversation delete failed:', error.message);
+  }
+}
+
+interface ModelTurn {
+  reply: string;
+  incident: { type?: string; severity?: number; location?: string | null; summary?: string } | null;
+  askConfirmation: boolean;
+}
+
+function parseTurn(text: string): ModelTurn | null {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try {
+    const j = JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
+    const reply = typeof j.reply === 'string' ? j.reply.trim() : '';
+    if (!reply) return null;
+    const inc = j.incident && typeof j.incident === 'object' ? (j.incident as Record<string, unknown>) : null;
+    return {
+      reply,
+      incident: inc
+        ? {
+            type: typeof inc.type === 'string' ? inc.type : undefined,
+            severity: typeof inc.severity === 'number' ? inc.severity : Number.parseInt(String(inc.severity), 10) || undefined,
+            location: typeof inc.location === 'string' && inc.location.trim() && inc.location.trim().toLowerCase() !== 'null' ? inc.location.trim() : null,
+            summary: typeof inc.summary === 'string' ? inc.summary : undefined,
+          }
+        : null,
+      askConfirmation: j.ask_confirmation === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const CONFIRM_LINE = 'Should I file this report? Reply "yes" to confirm.';
+
+export class WhatsAppConversationManager {
+  constructor(
+    private readonly store: ConversationStore = new SupabaseStore(),
+    private readonly llm: ChatFn = defaultChat
+  ) {}
+
+  private async load(userId: string): Promise<ConversationState> {
+    const stored = await this.store.load(userId);
+    if (stored) return stored;
+    return { userId, messages: [], awaitingConfirmation: false, conversationPhase: 'greeting', lastActivity: new Date() };
+  }
+
+  private push(c: ConversationState, role: 'user' | 'assistant', content: string): void {
+    c.messages.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), timestamp: new Date().toISOString(), role, content });
+    if (c.messages.length > MAX_STORED_MESSAGES) c.messages = c.messages.slice(-MAX_STORED_MESSAGES);
+    c.lastActivity = new Date();
+  }
+
+  private promptMessages(c: ConversationState): ChatMessage[] {
+    const cutoff = Date.now() - PROMPT_WINDOW_MS;
+    const recent = c.messages.filter((m) => new Date(m.timestamp).getTime() >= cutoff).slice(-PROMPT_MESSAGES);
+    const known = c.currentIncident
+      ? `Already collected for the current report: type=${c.currentIncident.type}; location=${c.currentIncident.location ?? 'unknown'}${c.currentIncident.coordinates ? ' (user shared a location pin)' : ''}; details=${c.currentIncident.description}.`
+      : 'No incident has been described yet.';
+    const turns: ChatMessage[] = recent.map((m) => ({ role: m.role, content: m.content }));
+    return [{ role: 'system', content: `${SYSTEM_PROMPT}\n\nSTATE\n${known}${recent.length <= 1 ? '\nThis is the very first message of the conversation.' : ''}` }, ...turns];
+  }
+
+  private applyTurn(c: ConversationState, turn: ModelTurn, userMessage: string): string {
+    let reply = turn.reply;
+    if (turn.incident) {
+      const prev = c.currentIncident;
+      const type = turn.incident.type || prev?.type || 'Other';
+      const severity = Math.min(Math.max(Math.round(turn.incident.severity ?? prev?.severity ?? 3), 1), 5);
+      const description = [prev?.description, userMessage].filter(Boolean).join(' ').slice(0, 1200);
+      c.currentIncident = {
+        type,
+        severity,
+        description,
+        location: prev?.coordinates ? prev.location : turn.incident.location ?? prev?.location,
+        coordinates: prev?.coordinates,
+        timestamp: prev?.timestamp ?? new Date().toISOString(),
+        confirmed: false,
+      };
+      if (c.conversationPhase === 'greeting' || c.conversationPhase === 'completed') c.conversationPhase = 'collecting';
+    }
+
+    const hasWhere = Boolean(c.currentIncident?.location || c.currentIncident?.coordinates);
+    if (turn.askConfirmation && c.currentIncident && hasWhere) {
+      c.awaitingConfirmation = true;
+      c.conversationPhase = 'confirming';
+      reply = `${reply.replace(/should i file this report\??\s*(reply\s+["“”']?yes["“”']?\s*(to confirm)?\.?)?/gi, '').replace(/\s{2,}/g, ' ').trim()} ${CONFIRM_LINE}`;
+    } else {
+      c.awaitingConfirmation = false;
+      if (c.conversationPhase === 'confirming') c.conversationPhase = 'collecting';
+    }
+    return reply;
+  }
+
+  private async modelTurn(c: ConversationState, userMessage: string): Promise<string> {
+    try {
+      const text = await this.llm({ messages: this.promptMessages(c), json: true, maxTokens: 700, temperature: 0.5 });
+      const turn = parseTurn(text);
+      if (!turn) {
+        debug('Model reply was not valid JSON; using it as plain text');
+        return text.replace(/^\{[\s\S]*\}$/, '').trim() || FALLBACK_REPLY;
+      }
+      return this.applyTurn(c, turn, userMessage);
+    } catch (err) {
+      console.error('AI call failed:', err);
+      return FALLBACK_REPLY;
+    }
+  }
+
+  public async processMessage(
+    userId: string,
+    message: string,
+    coordinates?: [number, number]
+  ): Promise<{ response: string; incident?: IncidentReport }> {
+    const c = await this.load(userId);
+    const text = message.trim();
+    debug(`Message from ${maskPhone(userId)} (${text.length} chars), phase ${c.conversationPhase}`);
+
+    this.push(c, 'user', text);
+
+    if (coordinates && c.currentIncident && !c.currentIncident.confirmed) {
+      c.currentIncident.coordinates = coordinates;
+      c.currentIncident.location = `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`;
+      c.awaitingConfirmation = true;
+      c.conversationPhase = 'confirming';
+      const reply = `📍 Sawa, got your location. ${CONFIRM_LINE}`;
+      this.push(c, 'assistant', reply);
+      await this.store.save(c);
+      return { response: reply };
+    }
+
+    if (c.awaitingConfirmation && c.currentIncident) {
+      const short = text.length <= SHORT_REPLY_CHARS;
+      if (short && YES_RE.test(text)) {
+        c.currentIncident.confirmed = true;
+        c.awaitingConfirmation = false;
+        c.conversationPhase = 'completed';
+        const reply = '✅ Report filed. Thank you for looking out for your neighbors. Stay safe!';
+        this.push(c, 'assistant', reply);
+        await this.store.save(c);
+        return { response: reply, incident: c.currentIncident };
+      }
+      if (short && NO_RE.test(text)) {
+        c.currentIncident = undefined;
+        c.awaitingConfirmation = false;
+        c.conversationPhase = 'greeting';
+        const reply = 'Sawa, I have cancelled that. Anything else I can help with?';
+        this.push(c, 'assistant', reply);
+        await this.store.save(c);
+        return { response: reply };
+      }
+    }
+
+    const reply = await this.modelTurn(c, text);
+    this.push(c, 'assistant', reply);
+    await this.store.save(c);
+    return { response: reply };
   }
 
   public async getConversationHistory(userId: string): Promise<string> {
-    const conversation = await this.getConversation(userId);
-    return conversation.messages
-      .map(msg => `${msg.role}: ${msg.content}`)
-      .join('\n');
+    const c = await this.load(userId);
+    return c.messages.map((m) => `${m.role}: ${m.content}`).join('\n');
   }
 
   public async clearIncident(userId: string): Promise<void> {
-    const conversation = await this.getConversation(userId);
-    conversation.currentIncident = undefined;
-    conversation.awaitingConfirmation = false;
-    conversation.conversationPhase = 'greeting';
-    conversation.lastStoredAt = new Date();
-    await this.saveToSupabase(conversation);
-    debug('✅ Cleared incident from conversation (ready for new reports in 60s)');
+    const c = await this.load(userId);
+    c.currentIncident = undefined;
+    c.awaitingConfirmation = false;
+    c.conversationPhase = 'greeting';
+    c.lastStoredAt = new Date();
+    await this.store.save(c);
   }
 
   public async clearConversation(userId: string): Promise<void> {
-    this.conversations.delete(userId);
-    if (supabase) {
-      try {
-        await supabase
-          .from('conversations')
-          .delete()
-          .eq('user_id', userId);
-      } catch (error) {
-        console.error('Error clearing conversation from Supabase:', error);
-      }
-    }
+    await this.store.remove(userId);
   }
 }
 

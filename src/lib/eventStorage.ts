@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { supabase, supabaseEnabled, ensureSupabaseAvailable } from './supabaseClient';
 import { extractCoordinates } from './locationUtils';
+import { chat } from './llm';
 
 interface StoredEvent {
   id: string;
@@ -60,69 +61,43 @@ async function initializeEvents(): Promise<void> {
   }
 }
 
-async function rewriteDescriptionWithGroq(event: EventData): Promise<string> {
-  const raw = (event.description || '').trim();
-  const type = event.type || 'Incident';
-  const when = event.timestamp || new Date().toISOString();
-  const where = event.location || 'unspecified location';
-
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    return `${type} reported near ${where}. Approx time: ${when}. Summary: ${raw ? raw.slice(0, 180) : 'No details provided.'}`;
-  }
-
-  const systemPrompt = `You are a civic safety report formatter. Rewrite the input into a concise, professional, crowdsourced incident summary.
+const SUMMARY_PROMPT = `You are a civic safety report formatter. Rewrite the input into a concise, professional, crowdsourced incident summary.
 
 Rules:
-- 1–2 sentences, third-person, neutral tone.
+- 1-2 sentences, third-person, neutral tone.
 - Keep incident type, general area, and approximate time.
-- Remove or generalize PII and sensitive data: names, phone numbers, IMEI, exact addresses, plate numbers, exact shop names; replace with general terms (e.g., "a rider", "a shop", "near Kikuyu").
-- Avoid first person; no promises; no internal details.
+- Remove or generalize PII and sensitive data: names, phone numbers, IMEI, exact addresses, plate numbers, exact shop names; replace with general terms (for example "a rider", "a shop", "near Kikuyu").
+- Avoid first person. No promises. No internal details.
 - Do NOT invent facts. If unknown, omit.
-- Prefer phrases like: "reported near <area> around <time>".
+- Prefer phrases like "reported near <area> around <time>".
 
 Return only the summary text.`;
 
-  const userContent = `Raw Description: ${raw || 'n/a'}\nType: ${type}\nWhere: ${where}\nWhen: ${when}`;
+async function summarizeIncident(event: EventData): Promise<string> {
+  const type = event.type || 'Incident';
+  const where = event.location || 'an unspecified location';
+  const safeFallback = `${type} reported near ${where}.`;
+  const raw = (event.description || '').trim();
+  if (!raw) return safeFallback;
 
   try {
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'groq/compound',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent }
-        ],
-        temperature: 0.5,
-        max_tokens: 160,
-        top_p: 0.9
-      })
+    const text = await chat({
+      messages: [
+        { role: 'system', content: SUMMARY_PROMPT },
+        { role: 'user', content: `Raw description: ${raw}\nType: ${type}\nWhere: ${where}\nWhen: ${event.timestamp || new Date().toISOString()}` },
+      ],
+      temperature: 0.3,
+      maxTokens: 300,
     });
-
-    if (!resp.ok) {
-      const t = await resp.text();
-      console.error('Groq rewrite failed:', t);
-      return `${type} reported near ${where}. Approx time: ${when}. Summary: ${raw ? raw.slice(0, 180) : 'No details provided.'}`;
-    }
-    const data = await resp.json();
-    const text = data.choices?.[0]?.message?.content?.trim();
-    if (!text) {
-      return `${type} reported near ${where}. Approx time: ${when}. Summary: ${raw ? raw.slice(0, 180) : 'No details provided.'}`;
-    }
     return text;
   } catch (err) {
-    console.error('Groq rewrite exception:', err);
-    return `${type} reported near ${where}. Approx time: ${when}. Summary: ${raw ? raw.slice(0, 180) : 'No details provided.'}`;
+    console.error('Summary generation failed, using a safe generic summary:', err);
+    return safeFallback;
   }
 }
 
 export async function storeEvent(event: EventData, from: string, images?: string[]): Promise<StoredEvent> {
-  const sanitizedDescription = await rewriteDescriptionWithGroq(event);
+  const sanitizedDescription = await summarizeIncident(event);
   
   let coordinates = event.coordinates;
   if (!coordinates && event.location && event.location !== 'Unknown location' && event.location !== 'Location not specified') {
