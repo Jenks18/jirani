@@ -114,6 +114,15 @@ vercel deploy
 
 Make sure to configure all environment variables in your Vercel project settings.
 
+## Data protection
+
+- **Reports carry no reporter.** A stored report has no phone number, name or account id. Do not add one.
+- **Public data is blurred.** Coordinates snap to a ~330 m grid, times to the hour, pin text becomes an area name, and summaries are scrubbed of phones, emails, plates, IDs and links (`src/lib/anonymize.ts`). The feed re-applies this when serving.
+- **Encryption at rest.** With `DATA_ENCRYPTION_KEY` set (`openssl rand -hex 32`), phone numbers, names, last location, check-in notes and chat history are encrypted before they are stored (`src/lib/vault.ts`). Plaintext rows keep working and are upgraded when touched; `npx tsx scripts/seal-existing-data.ts --apply` converts the rest. Keep a copy of the key outside Vercel: without it the data cannot be read.
+- **Retention.** Chats are kept until the person asks for deletion. Nothing purges by age or size.
+- **Erasure.** Account deletion on the web removes the account, chats and contact rows. For an emailed request run `npx tsx scripts/erase-phone.ts <number>` (dry run), then add `--apply`.
+- **Checks.** `npm test` runs the anonymization and data-flow tests. `supabase/migrations/20261021000000_privacy_hardening.sql` ends with a query that must return no rows.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
