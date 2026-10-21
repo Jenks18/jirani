@@ -3,6 +3,7 @@ import { authed, body, json, maskPhone } from '@/lib/accountApi';
 import { db, listAreas, listCommunities, myCommunities, mySubscriptions, safely } from '@/lib/platform';
 import { activeCheckin, activeSos, checkinStreak, getProfile, listContacts, setName, updateProfile } from '@/lib/safetyNet';
 import { clearSessionCookie } from '@/lib/session';
+import { phoneKeys } from '@/lib/vault';
 
 export async function GET(req: NextRequest) {
   const a = await authed(req, false);
@@ -61,9 +62,9 @@ export async function DELETE(req: NextRequest) {
   const b = await body<{ confirm?: boolean }>(req);
   if (b.confirm !== true) return json({ error: 'Confirmation required' }, 400);
   const { member } = a;
-  await safely(() => db().from('reports').update({ from_phone: null }).eq('from_phone', member.phone).select('id'), []);
-  await safely(() => db().from('conversations').delete().eq('user_id', member.phone).select('id'), []);
-  await safely(() => db().from('trusted_contacts').update({ status: 'removed' }).eq('contact_phone', member.phone).select('id'), []);
+  const keys = phoneKeys(member.phone);
+  await safely(() => db().from('conversations').delete().in('user_id', keys).select('id'), []);
+  await safely(() => db().from('trusted_contacts').delete().in('contact_phone', keys).select('id'), []);
   const { error } = await db().from('members').delete().eq('id', member.id);
   if (error) return json({ error: 'Could not delete account' }, 500);
   await clearSessionCookie();

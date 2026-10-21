@@ -57,3 +57,6 @@ test_*.bat
 *.har
 site-app/node_modules/
 .env*.local
+
+# local fallback data
+/data/events.json

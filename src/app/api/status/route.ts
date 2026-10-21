@@ -1,41 +1,44 @@
 import { NextResponse } from 'next/server';
-import { ensureSupabaseAvailable, supabaseAvailable } from '@/lib/supabaseClient';
+import { ensureSupabaseAvailable } from '@/lib/supabaseClient';
+import { adminAuthorized } from '@/lib/adminAuth';
+import { vaultEnabled } from '@/lib/vault';
+
+const noStore = { 'Cache-Control': 'no-store' };
 
 export async function GET(req: Request) {
+  let databaseReady = false;
   try {
-    const groqConfigured = Boolean(process.env.GROQ_API_KEY);
-    const whatsappConfigured = Boolean(
-      process.env.WHATSAPP_ACCESS_TOKEN &&
-      process.env.WHATSAPP_PHONE_NUMBER_ID &&
-      process.env.WHATSAPP_VERIFY_TOKEN &&
-      process.env.WHATSAPP_APP_SECRET
-    );
-    const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
-    let supabaseReady = supabaseAvailable;
-    try {
-      supabaseReady = await ensureSupabaseAvailable();
-    } catch (e) {
-      // ignore
-    }
-
-    const adminToken = process.env.ADMIN_API_TOKEN || '';
-    const provided = req.headers.get('x-admin-token') || '';
-
-    const body: Record<string, unknown> = {
-      groqConfigured,
-      supabaseConfigured,
-      supabaseReady,
-      supabaseTable: 'reports'
-    };
-
-    if (adminToken && provided === adminToken) {
-      body['whatsappConfigured'] = whatsappConfigured;
-      body['groqKeyPresent'] = groqConfigured;
-    }
-
-    return NextResponse.json(body);
-  } catch (err) {
-    return NextResponse.json({ error: 'status check failed', details: String(err) }, { status: 500 });
+    databaseReady = await ensureSupabaseAvailable();
+  } catch {
+    databaseReady = false;
   }
+
+  if (!adminAuthorized(req)) {
+    return NextResponse.json({ ok: databaseReady }, { headers: noStore });
+  }
+
+  let encryptionKeyValid = true;
+  try {
+    vaultEnabled();
+  } catch {
+    encryptionKeyValid = false;
+  }
+
+  return NextResponse.json(
+    {
+      ok: databaseReady,
+      database: databaseReady,
+      ai: Boolean(process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY),
+      whatsapp: Boolean(
+        process.env.WHATSAPP_ACCESS_TOKEN &&
+          process.env.WHATSAPP_PHONE_NUMBER_ID &&
+          process.env.WHATSAPP_VERIFY_TOKEN &&
+          process.env.WHATSAPP_APP_SECRET
+      ),
+      serviceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+      sessionSecret: (process.env.SESSION_SECRET?.length ?? 0) >= 32 ? 'strong' : process.env.SESSION_SECRET ? 'too-short' : 'missing',
+      fieldEncryption: encryptionKeyValid ? (process.env.DATA_ENCRYPTION_KEY ? 'on' : 'off') : 'invalid-key',
+    },
+    { headers: noStore }
+  );
 }

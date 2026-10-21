@@ -1,6 +1,8 @@
 import { debug, maskPhone } from './log';
 import { supabase } from './supabaseClient';
 import { chat as defaultChat, type ChatFn, type ChatMessage } from './llm';
+import { openJson, phoneKeys, sealJson, sealPhone } from './vault';
+import { floorToHour } from './anonymize';
 
 interface Message {
   id: string;
@@ -35,7 +37,6 @@ export interface ConversationStore {
   remove(userId: string): Promise<void>;
 }
 
-const MAX_STORED_MESSAGES = 50;
 const PROMPT_MESSAGES = 14;
 const PROMPT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const SHORT_REPLY_CHARS = 30;
@@ -87,21 +88,25 @@ User: "Niaje, nimeibiwa simu Kasarani jana jioni, jamaa wawili"
 {"reply": "Pole sana kwa hilo. Ulikuwa karibu na wapi hasa Kasarani?", "incident": {"type": "Theft", "severity": 3, "location": "Kasarani", "summary": "Phone stolen by two people yesterday evening"}, "ask_confirmation": false}`;
 
 class SupabaseStore implements ConversationStore {
+  private readonly legacy = new Set<string>();
+
   async load(userId: string): Promise<ConversationState | null> {
     if (!supabase) {
       console.error('Supabase client not available; conversation memory is disabled');
       return null;
     }
-    const { data, error } = await supabase.from('conversations').select('*').eq('user_id', userId).maybeSingle();
+    const { data: rows, error } = await supabase.from('conversations').select('*').in('user_id', phoneKeys(userId)).limit(2);
     if (error) {
       console.error('Error loading conversation:', error.code, error.message);
       return null;
     }
+    const data = rows?.find((r) => r.user_id === sealPhone(userId)) ?? rows?.[0];
     if (!data) return null;
+    if (data.user_id !== sealPhone(userId)) this.legacy.add(userId);
     return {
-      userId: data.user_id,
-      messages: Array.isArray(data.messages) ? data.messages : [],
-      currentIncident: data.current_incident ?? undefined,
+      userId,
+      messages: openJson<Message[]>(data.messages, 'conversation') ?? [],
+      currentIncident: openJson<IncidentReport>(data.current_incident, 'conversation') ?? undefined,
       awaitingConfirmation: Boolean(data.awaiting_confirmation),
       conversationPhase: data.conversation_phase || 'greeting',
       lastActivity: new Date(data.last_activity),
@@ -112,21 +117,27 @@ class SupabaseStore implements ConversationStore {
   async save(c: ConversationState): Promise<void> {
     if (!supabase) return;
     const row: Record<string, unknown> = {
-      user_id: c.userId,
-      messages: c.messages,
-      current_incident: c.currentIncident ?? null,
+      user_id: sealPhone(c.userId),
+      messages: sealJson(c.messages, 'conversation'),
+      current_incident: sealJson(c.currentIncident, 'conversation'),
       awaiting_confirmation: c.awaitingConfirmation,
       conversation_phase: c.conversationPhase,
       last_activity: c.lastActivity.toISOString(),
     };
-    if (c.lastStoredAt) row.last_stored_at = c.lastStoredAt.toISOString();
+    if (c.lastStoredAt) row.last_stored_at = floorToHour(c.lastStoredAt);
     const { error } = await supabase.from('conversations').upsert(row, { onConflict: 'user_id' });
-    if (error) console.error('Conversation save failed:', error.code, error.message);
+    if (error) {
+      console.error('Conversation save failed:', error.code, error.message);
+      return;
+    }
+    if (this.legacy.delete(c.userId) && sealPhone(c.userId) !== c.userId) {
+      await supabase.from('conversations').delete().eq('user_id', c.userId);
+    }
   }
 
   async remove(userId: string): Promise<void> {
     if (!supabase) return;
-    const { error } = await supabase.from('conversations').delete().eq('user_id', userId);
+    const { error } = await supabase.from('conversations').delete().in('user_id', phoneKeys(userId));
     if (error) console.error('Conversation delete failed:', error.message);
   }
 }
@@ -180,7 +191,6 @@ export class WhatsAppConversationManager {
 
   private push(c: ConversationState, role: 'user' | 'assistant', content: string): void {
     c.messages.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), timestamp: new Date().toISOString(), role, content });
-    if (c.messages.length > MAX_STORED_MESSAGES) c.messages = c.messages.slice(-MAX_STORED_MESSAGES);
     c.lastActivity = new Date();
   }
 

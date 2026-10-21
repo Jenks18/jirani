@@ -36,7 +36,7 @@ export default function Page() {
           <tr>
             <td><strong>WhatsApp phone number</strong></td>
             <td>When you message Jirani</td>
-            <td>To reply to you, keep your conversation coherent, prevent abuse, and link your report to you so you can ask for deletion.</td>
+            <td>To reply to you, keep your conversation coherent and prevent abuse. It is never attached to the reports you file.</td>
           </tr>
           <tr>
             <td><strong>Message content</strong></td>
@@ -51,7 +51,7 @@ export default function Page() {
           <tr>
             <td><strong>Report details</strong></td>
             <td>After you confirm a report</td>
-            <td>Incident type, severity, summary, place, coordinates and time, shown anonymously on the public map.</td>
+            <td>Incident type, severity, summary, an approximate place and an approximate time, shown anonymously on the public map. A report is stored with no phone number, name or account attached to it.</td>
           </tr>
           <tr>
             <td><strong>Safety net data</strong></td>
@@ -94,11 +94,12 @@ export default function Page() {
         Confirmed reports appear on a public map at <a href={org.mapsUrl}>{org.mapsUrl.replace("https://", "")}</a>. The public
         view shows the incident type, severity, an AI-written summary that is designed to remove names, phone numbers, plate numbers
         and exact addresses, the place, the map coordinates and the approximate time. If you share a location pin, the point is
-        shown approximately (rounded to roughly 100 metres), so please only share a pin for where the incident happened, not your home.
+        shown approximately (blurred to an area of roughly 300 metres) and the time is shown only to the hour, so please only share a pin for where the incident happened, not your home.
       </p>
       <p>
-        <strong>We never publish your phone number, your WhatsApp profile name, or your original messages.</strong> AI-generated
-        summaries can occasionally miss identifying details; if you spot one, tell us and we will remove it.
+        <strong>We never publish your phone number, your WhatsApp profile name, or your original messages.</strong> Reports are stored without any link to the person who sent
+        them, so to remove one we need roughly when and where it happened. AI-generated summaries can occasionally miss
+        identifying details; if you spot one, tell us and we will remove it.
       </p>
 
       <h2>4. How we use data, and our legal bases</h2>

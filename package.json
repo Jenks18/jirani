@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "tsx scripts/test-privacy.ts && tsx --conditions=react-server scripts/test-data-flows.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

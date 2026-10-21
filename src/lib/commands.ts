@@ -8,7 +8,7 @@ import {
   respondToInvite, setName, sosLocationUpdate, startCheckin, stopAllForContact, triggerSos, updateProfile,
 } from './safetyNet';
 import { timeAgo } from './reports';
-import { issueLoginCode } from './session';
+import { issueLoginCode, sessionConfigured } from './session';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -83,6 +83,7 @@ export async function handleCommand(ctx: InboundCtx): Promise<string | null> {
   if (upper === 'MENU' || upper === 'COMMANDS') return HELP_TEXT;
 
   if (c === 'LOGIN' || upper === 'SIGN IN' || upper === 'SIGNIN') {
+    if (!sessionConfigured()) return 'Web sign-in is not available right now. Everything else on WhatsApp still works.';
     const code = await issueLoginCode(member);
     return `Your Jirani sign-in code is *${code}*. It works for 10 minutes. Enter it with your phone number at maps.the625movement.com/account. Never share this code with anyone.`;
   }

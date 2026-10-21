@@ -1,5 +1,6 @@
 import 'server-only';
-import { db, safely, type Member } from './platform';
+import { db, openMember, safely, type Member } from './platform';
+import { openPhone, openText, phoneKeys, sealPhone, sealText } from './vault';
 import { mapsUrl, normalizePhone } from './geo';
 import { notify } from './whatsappCloud';
 import { computeStreak, type Streak } from './streak';
@@ -34,11 +35,19 @@ export async function updateProfile(memberId: string, patch: Partial<Omit<Profil
 }
 
 export async function setName(memberId: string, name: string) {
-  await db().from('members').update({ display_name: name.slice(0, 60) }).eq('id', memberId);
+  await db().from('members').update({ display_name: sealText(name.slice(0, 60), 'name') }).eq('id', memberId);
+}
+
+export function openContact<T extends { contact_phone?: string; contact_name?: string }>(row: T): T {
+  return {
+    ...row,
+    contact_phone: row.contact_phone != null ? openPhone(row.contact_phone) : row.contact_phone,
+    contact_name: row.contact_name != null ? openText(row.contact_name, 'name') : row.contact_name,
+  };
 }
 
 export async function listContacts(memberId: string) {
-  return safely<any[]>(
+  const rows = await safely<any[]>(
     () =>
       db()
         .from('trusted_contacts')
@@ -48,6 +57,7 @@ export async function listContacts(memberId: string) {
         .order('invited_at'),
     []
   );
+  return rows.map(openContact);
 }
 
 export async function addContact(
@@ -64,19 +74,19 @@ export async function addContact(
   if (already?.status === 'accepted') return { ok: false, reason: `${already.contact_name} is already one of your trusted contacts.` };
   if (!already && existing.length >= MAX_CONTACTS) return { ok: false, reason: `You can have up to ${MAX_CONTACTS} trusted contacts. Remove one first (REMOVE <number>).` };
 
-  const { error } = await db().from('trusted_contacts').upsert(
-    {
-      member_id: member.id,
-      contact_phone: phone,
-      contact_name: name.slice(0, 60),
-      status: 'pending',
-      invited_at: new Date().toISOString(),
-      responded_at: null,
-    },
-    { onConflict: 'member_id,contact_phone' }
-  );
+  const fields = {
+    contact_phone: sealPhone(phone),
+    contact_name: sealText(name.slice(0, 60), 'name'),
+    status: 'pending',
+    invited_at: new Date().toISOString(),
+    responded_at: null,
+  };
+  const { data: prior } = await db().from('trusted_contacts').select('id').eq('member_id', member.id).in('contact_phone', phoneKeys(phone)).limit(1);
+  const { error } = prior?.[0]
+    ? await db().from('trusted_contacts').update(fields).eq('id', prior[0].id)
+    : await db().from('trusted_contacts').insert({ member_id: member.id, ...fields });
   if (error) {
-    console.error('[safety] addContact failed', error.message);
+    console.error('[safety] addContact failed', error.code);
     return { ok: false, reason: 'Something went wrong saving that contact. Please try again.' };
   }
 
@@ -102,16 +112,18 @@ export async function respondToInvite(
   accept: boolean,
   index?: number
 ): Promise<{ handled: boolean; reply: string }> {
-  const pending = await safely<any[]>(
-    () =>
-      db()
-        .from('trusted_contacts')
-        .select('*, members(display_name, phone)')
-        .eq('contact_phone', contactPhone)
-        .eq('status', 'pending')
-        .order('invited_at'),
-    []
-  );
+  const pending = (
+    await safely<any[]>(
+      () =>
+        db()
+          .from('trusted_contacts')
+          .select('*, members(display_name, phone)')
+          .in('contact_phone', phoneKeys(contactPhone))
+          .eq('status', 'pending')
+          .order('invited_at'),
+      []
+    )
+  ).map((row) => ({ ...openContact(row), members: row.members ? openMember(row.members) : null }));
   if (pending.length === 0) return { handled: false, reply: '' };
   if (pending.length > 1 && index == null) {
     const lines = pending.map((p, i) => `${i + 1}. ${p.members?.display_name || `a Jirani user (…${String(p.members?.phone).slice(-3)})`}`);
@@ -140,7 +152,7 @@ export async function stopAllForContact(contactPhone: string): Promise<number> {
   const { data } = await db()
     .from('trusted_contacts')
     .update({ status: 'removed', responded_at: new Date().toISOString() })
-    .eq('contact_phone', contactPhone)
+    .in('contact_phone', phoneKeys(contactPhone))
     .in('status', ['pending', 'accepted'])
     .select('id');
   return data?.length ?? 0;
@@ -148,10 +160,11 @@ export async function stopAllForContact(contactPhone: string): Promise<number> {
 
 async function acceptedContacts(memberId: string, kind: 'sos' | 'checkin') {
   const col = kind === 'sos' ? 'notify_sos' : 'notify_checkin';
-  return safely<any[]>(
+  const rows = await safely<any[]>(
     () => db().from('trusted_contacts').select('*').eq('member_id', memberId).eq('status', 'accepted').eq(col, true),
     []
   );
+  return rows.map(openContact);
 }
 
 export async function triggerSos(member: Member, loc: { lat: number; lng: number } | null): Promise<{ contacts: number; delivered: number }> {
@@ -210,7 +223,7 @@ export async function startCheckin(member: Member, minutes: number, note?: strin
   await db().from('checkins').insert({
     member_id: member.id,
     due_at: due.toISOString(),
-    note: note?.slice(0, 140) ?? null,
+    note: sealText(note?.slice(0, 140) ?? null, 'note'),
     lat: loc?.lat ?? null,
     lng: loc?.lng ?? null,
   });
@@ -265,8 +278,8 @@ export async function processDueCheckins(): Promise<{ nudged: number; escalated:
   let nudged = 0;
   let escalated = 0;
   for (const row of rows) {
-    const member = row.members as Member | null;
-    if (!member) continue;
+    if (!row.members) continue;
+    const member = openMember(row.members as Member);
     const profile = await getProfile(member.id);
     const dueMs = new Date(row.due_at).getTime();
 

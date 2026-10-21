@@ -16,7 +16,7 @@ export const org = {
   address: '' as string,
   ein: '' as string,
   incorporationState: '' as string,
-  legalUpdated: 'October 9, 2026',
+  legalUpdated: 'October 21, 2026',
 } as const;
 
 export const whatsappLink = `https://wa.me/${org.whatsappNumber}?text=${encodeURIComponent('Hello Jirani')}`;

@@ -31,7 +31,7 @@ export default function Page() {
             <td><code>jirani_session</code> (cookie)</td>
             <td>maps.the625movement.com, only after you sign in</td>
             <td>Keeps you signed in to your account. It is HttpOnly and signed, and it is strictly necessary for the account to work.</td>
-            <td>30 days, or until you sign out</td>
+            <td>14 days, or until you sign out</td>
           </tr>
         </tbody>
       </table>

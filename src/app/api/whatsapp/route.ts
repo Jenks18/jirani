@@ -102,18 +102,14 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
       if (!coordinates && result.incident.location) {
         coordinates = (await extractCoordinates(result.incident.location)) || undefined;
       }
-      const stored = await storeEvent(
-        {
-          type: result.incident.type,
-          severity: result.incident.severity,
-          location: result.incident.location || 'Location not specified',
-          description: result.incident.description,
-          timestamp: result.incident.timestamp,
-          coordinates,
-        },
-        from,
-        []
-      );
+      const stored = await storeEvent({
+        type: result.incident.type,
+        severity: result.incident.severity,
+        location: result.incident.location || 'Location not specified',
+        description: result.incident.description,
+        timestamp: result.incident.timestamp,
+        coordinates,
+      });
       log('incident stored', { eventId: stored.id });
       alert = {
         type: stored.type,

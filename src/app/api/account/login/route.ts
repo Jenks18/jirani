@@ -17,6 +17,6 @@ export async function POST(req: NextRequest) {
 
   const member = await verifyLoginCode(phone, code);
   if (!member) return json({ error: 'That code is wrong or has expired. Message LOGIN to Jirani for a new one.' }, 401);
-  await setSessionCookie(member.id, member.phone);
+  await setSessionCookie(member);
   return json({ ok: true });
 }

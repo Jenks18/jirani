@@ -4,7 +4,7 @@ import { org } from "@/config/org";
 
 export const metadata: Metadata = {
   title: "Delete my data",
-  description: "How to ask Jirani to delete your conversation history and unlink your phone number from your reports.",
+  description: "How to ask Jirani to delete your account, conversation history and safety-net data.",
   alternates: { canonical: "/data-deletion" },
 };
 
@@ -19,7 +19,7 @@ export default function Page() {
       <p>
         Sign in at <a href="https://maps.the625movement.com/account">maps.the625movement.com/account</a> with a code from WhatsApp
         and choose <strong>Delete my account</strong>. It removes your account, trusted contacts, check-ins, alerts and community
-        memberships straight away, and unlinks your phone number from your reports. You can also download your data there first.
+        memberships straight away, along with your conversation history. Reports you filed were never linked to your account, so they stay on the map unless you ask us to remove one. You can also download your data there first.
       </p>
 
       <h2>Or ask us</h2>
@@ -42,11 +42,10 @@ export default function Page() {
       <ul>
         <li>your conversation history with Jirani,</li>
         <li>your trusted contacts, check-ins, SOS history, alert subscriptions and community memberships,</li>
-        <li>the link between your phone number and any reports you made,</li>
         <li>any report you ask us to remove from the public map.</li>
       </ul>
       <p>
-        Anonymized reports you did not ask us to remove may remain on the map, since they no longer identify you. We may keep a
+        Reports you filed are published with no link to your phone number or account, so they cannot be matched to you and may remain on the map. To have a specific report removed, tell us roughly when and where it happened. We may keep a
         minimal record of your request as proof that we handled it, and anything we are legally required to keep.
       </p>
 

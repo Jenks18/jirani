@@ -42,7 +42,6 @@ async function testInsert() {
     event_timestamp: new Date().toISOString(),
     longitude: 36.8219,
     latitude: -1.2873,
-    from_phone: '+254TEST',
     images: null,
     source: 'test-script'
   };

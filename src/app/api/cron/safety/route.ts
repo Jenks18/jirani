@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
+import { safeEqual } from '@/lib/adminAuth';
 import { processDueCheckins } from '@/lib/safetyNet';
 
 export const maxDuration = 60;
@@ -7,7 +7,7 @@ export const maxDuration = 60;
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const given = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!secret || given.length !== secret.length || !timingSafeEqual(Buffer.from(given), Buffer.from(secret))) {
+  if (!secret || !safeEqual(given, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {

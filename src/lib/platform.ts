@@ -1,6 +1,7 @@
 import 'server-only';
 import { supabase } from './supabaseClient';
 import { haversineM } from './geo';
+import { openJson, openPhone, openText, phoneKeys, sealJson, sealPhone, sealText } from './vault';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function db(): any {
@@ -45,6 +46,16 @@ export interface Member {
   display_name: string | null;
   pending: { action: string; at: string; [k: string]: unknown } | null;
   last_location: { lat: number; lng: number; at: string } | null;
+  session_epoch?: number;
+}
+
+export function openMember<T extends Partial<Member>>(row: T): T {
+  return {
+    ...row,
+    phone: row.phone != null ? openPhone(row.phone) : row.phone,
+    display_name: row.display_name != null ? openText(row.display_name, 'name') : row.display_name,
+    last_location: row.last_location != null ? openJson(row.last_location, 'location') : row.last_location,
+  };
 }
 
 export const listAreas = () => safely<Area[]>(() => db().from('areas').select('*').order('level').order('name'), []);
@@ -64,14 +75,37 @@ export function areaForPoint(areas: Area[], lat: number, lng: number): Area | nu
   );
 }
 
+async function findRawMember(phone: string): Promise<Member | null> {
+  const { data } = await db().from('members').select('*').in('phone', phoneKeys(phone)).order('created_at').limit(1);
+  return (data as Member[] | null)?.[0] ?? null;
+}
+
+export async function findMemberByPhone(phone: string): Promise<Member | null> {
+  const raw = await findRawMember(phone);
+  return raw ? openMember(raw) : null;
+}
+
 export async function upsertMember(phone: string): Promise<Member> {
-  const { data, error } = await db()
-    .from('members')
-    .upsert({ phone, last_seen: new Date().toISOString() }, { onConflict: 'phone' })
-    .select('*')
-    .single();
+  const now = new Date().toISOString();
+  const raw = await findRawMember(phone);
+  if (raw) {
+    const member = openMember(raw);
+    const update: Record<string, unknown> = { last_seen: now };
+    if (raw.phone !== sealPhone(phone)) {
+      update.phone = sealPhone(phone);
+      if (raw.display_name != null) update.display_name = sealText(member.display_name, 'name');
+      if (raw.last_location != null) update.last_location = sealJson(member.last_location, 'location');
+    }
+    await db().from('members').update(update).eq('id', raw.id);
+    return member;
+  }
+  const { data, error } = await db().from('members').insert({ phone: sealPhone(phone), last_seen: now }).select('*').single();
+  if (error?.code === '23505') {
+    const raced = await findMemberByPhone(phone);
+    if (raced) return raced;
+  }
   if (error) throw error;
-  return data as Member;
+  return openMember(data as Member);
 }
 
 export async function setPending(memberId: string, pending: Member['pending']): Promise<void> {
@@ -81,7 +115,7 @@ export async function setPending(memberId: string, pending: Member['pending']): 
 export async function saveLocation(memberId: string, lat: number, lng: number): Promise<void> {
   await db()
     .from('members')
-    .update({ last_location: { lat, lng, at: new Date().toISOString() } })
+    .update({ last_location: sealJson({ lat, lng, at: new Date().toISOString() }, 'location') })
     .eq('id', memberId);
 }
 
@@ -156,7 +190,7 @@ export async function subscribersFor(event: { severity: number; lat: number; lng
   );
   const phones = new Set<string>();
   for (const s of subs) {
-    const phone = s.members?.phone as string | undefined;
+    const phone = s.members?.phone ? openPhone(s.members.phone as string) : undefined;
     if (!phone || phone === excludePhone) continue;
     const cLat = s.areas?.center_lat ?? s.lat;
     const cLng = s.areas?.center_lng ?? s.lng;

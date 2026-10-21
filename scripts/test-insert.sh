@@ -18,7 +18,6 @@ curl -X POST "${SUPABASE_URL}/rest/v1/reports" \
     "summary": "Test report from script",
     "location": "Westlands",
     "coordinates": "POINT(36.8084 -1.2675)",
-    "from_phone": "+254700000000",
     "source": "test"
   }' | python3 -m json.tool
 

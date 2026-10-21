@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
 import { db } from '@/lib/platform';
+import { adminAuthorized } from '@/lib/adminAuth';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-
-function authorized(req: NextRequest): boolean {
-  const expected = process.env.ADMIN_API_TOKEN;
-  const given = req.headers.get('x-admin-token') ?? '';
-  if (!expected || given.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(given), Buffer.from(expected));
-}
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : Number.parseFloat(String(v)));
@@ -57,7 +50,7 @@ const creators: Record<string, Handler> = {
 };
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ resource: string }> }) {
-  if (!authorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!adminAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { resource } = await params;
   const make = creators[resource];
   if (!make) return NextResponse.json({ error: 'Unknown resource' }, { status: 404 });
@@ -71,7 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ resource: string }> }) {
-  if (!authorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!adminAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { resource } = await params;
   const id = req.nextUrl.searchParams.get('id');
   if (!creators[resource] || !id) return NextResponse.json({ error: 'Bad request' }, { status: 400 });
