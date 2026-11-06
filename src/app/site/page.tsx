@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Button, Eyebrow } from "./_components/ui";
 import { org, whatsappLink } from "@/config/org";
 
@@ -74,7 +75,18 @@ export default function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <section className="bg-forest-800 text-white">
+      <section className="relative isolate overflow-hidden bg-rose-300 text-white">
+        <Image
+          src="/brand/hero-fist.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="-z-30 object-cover mix-blend-multiply grayscale contrast-125"
+          style={{ objectPosition: "56% 22%" }}
+        />
+        <div className="absolute inset-0 -z-20 bg-maroon-900 mix-blend-lighten" aria-hidden="true" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-maroon-900/90 via-maroon-900/55 to-maroon-900/10" aria-hidden="true" />
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 md:px-12 pb-20 pt-16 md:grid-cols-[1.4fr_1fr] md:pb-28 md:pt-24">
           <div>
             <p className="text-sm uppercase tracking-[0.18em] text-white/80">A Jirani program of The 6.25 Movement</p>
@@ -86,7 +98,7 @@ export default function HomePage() {
               what&apos;s happening around you on a live community map. No app to download and no password to remember.
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <Button href={whatsappLink} variant="light" external>
+              <Button href={whatsappLink} variant="primary" external>
                 Message Jirani on WhatsApp
               </Button>
               <Button href={org.mapsUrl} variant="outline-light" external>
@@ -101,7 +113,7 @@ export default function HomePage() {
       <section id="how" className="bg-paper py-24">
         <div className="mx-auto max-w-7xl px-6 md:px-12">
           <Eyebrow>How it works</Eyebrow>
-          <h2 className="mt-3 max-w-3xl font-serif text-5xl text-forest-800 md:text-7xl">
+          <h2 className="mt-3 max-w-3xl font-serif text-5xl text-ink md:text-7xl">
             From &ldquo;I saw something&rdquo; to a shared picture of your neighborhood.
           </h2>
           <ol className="mt-14 grid gap-10 md:grid-cols-3">
@@ -116,7 +128,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-clay-600 py-24 text-white">
+      <section className="bg-maroon-900 py-24 text-white">
         <div className="mx-auto max-w-7xl px-6 md:px-12">
           <Eyebrow light>Designed with care</Eyebrow>
           <h2 className="mt-3 max-w-4xl font-serif text-5xl md:text-7xl">
@@ -166,7 +178,7 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-7xl gap-12 px-6 md:px-12 md:grid-cols-2 md:items-start">
           <div>
             <Eyebrow>About Jirani</Eyebrow>
-            <h2 className="mt-3 font-serif text-5xl text-forest-800 md:text-7xl">Built by neighbors, for neighbors.</h2>
+            <h2 className="mt-3 font-serif text-5xl text-ink md:text-7xl">Built by neighbors, for neighbors.</h2>
             <p className="mt-6 text-[17px] leading-relaxed text-ink">
               Jirani is a way for residents to look out for each other with the technology already in their pockets, in everyday life
               and around the August 2027 election.
@@ -201,7 +213,7 @@ export default function HomePage() {
       <section className="border-t border-line bg-paper py-24">
         <div className="mx-auto max-w-4xl px-5">
           <Eyebrow>Questions</Eyebrow>
-          <h2 className="mt-3 font-serif text-5xl text-forest-800 md:text-7xl">Good to know</h2>
+          <h2 className="mt-3 font-serif text-5xl text-ink md:text-7xl">Good to know</h2>
           <div className="mt-10 divide-y divide-ink/20 border-y border-ink/20">
             {faqs.map((f) => (
               <details key={f.q} className="group py-5">

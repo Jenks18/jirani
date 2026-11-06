@@ -62,16 +62,16 @@ export default function SiteFooter() {
           </div>
           {cols.map((c) => (
             <nav key={c.title} aria-label={c.title}>
-              <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-white/60">{c.title}</h2>
+              <h2 className="font-serif text-2xl text-forest-600">{c.title}</h2>
               <ul className="mt-4 space-y-3 text-sm">
                 {c.links.map((l) => (
                   <li key={l.label}>
                     {"external" in l && l.external ? (
-                      <a href={l.href} className="text-white/85 transition hover:text-white">
+                      <a href={l.href} className="text-white underline underline-offset-4 transition hover:text-white/80">
                         {l.label}
                       </a>
                     ) : (
-                      <Link href={l.href} className="text-white/85 transition hover:text-white">
+                      <Link href={l.href} className="text-white underline underline-offset-4 transition hover:text-white/80">
                         {l.label}
                       </Link>
                     )}
@@ -81,10 +81,12 @@ export default function SiteFooter() {
             </nav>
           ))}
         </div>
-        <div className="mt-14 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-white/60 md:flex-row md:items-center md:justify-between">
-          <p>© 2025–{new Date().getFullYear()} {org.legalName}. All rights reserved.</p>
+      </div>
+      <div className="bg-forest-800">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-4 text-xs text-white md:flex-row md:items-center md:justify-between">
+          <p>© 2025–{new Date().getFullYear()} {org.legalName} | All Rights Reserved</p>
           <p>
-            <a href={`mailto:${org.email}`} className="hover:text-white">{org.email}</a>
+            <a href={`mailto:${org.email}`} className="underline underline-offset-2 hover:text-white/80">{org.email}</a>
           </p>
         </div>
       </div>

@@ -15,16 +15,17 @@ export function Button({
 }: {
   href: string;
   children: ReactNode;
-  variant?: "primary" | "secondary" | "light" | "outline-light" | "red";
+  variant?: "primary" | "secondary" | "light" | "outline-light" | "red" | "green";
   external?: boolean;
 }) {
   const base =
     "inline-flex items-center justify-center gap-2 rounded-full border-2 px-7 py-3.5 text-[15px] font-normal transition focus-visible:outline-offset-4";
   const styles = {
-    primary: "border-forest-800 bg-forest-800 text-white hover:border-forest-900 hover:bg-forest-900",
+    primary: "border-clay-600 bg-clay-600 text-white hover:border-clay-700 hover:bg-clay-700",
+    green: "border-forest-800 bg-forest-800 text-white hover:border-forest-900 hover:bg-forest-900",
     secondary: "border-ink bg-transparent text-ink hover:bg-ink hover:text-white",
-    light: "border-white bg-white text-forest-800 hover:bg-paper hover:border-paper",
-    "outline-light": "border-white bg-transparent text-white hover:bg-white hover:text-forest-800",
+    light: "border-white bg-white text-ink hover:bg-paper hover:border-paper",
+    "outline-light": "border-white bg-transparent text-white hover:bg-white hover:text-ink",
     red: "border-clay-600 bg-clay-600 text-white hover:border-clay-700 hover:bg-clay-700",
   }[variant];
   const cls = `${base} ${styles}`;

@@ -17,7 +17,7 @@ export default function Logo({ light = false }: { light?: boolean }) {
     <span className="inline-flex items-center gap-2.5">
       <LogoMark />
       <span className="leading-none">
-        <span className={`block font-serif text-3xl ${light ? "text-white" : "text-ink"}`}>Jirani</span>
+        <span className={`block font-serif text-3xl ${light ? "text-clay-500" : "text-ink"}`}>Jirani</span>
       </span>
     </span>
   );
