@@ -17,7 +17,7 @@ export default function Page() {
     >
       <h2>1. Who we are</h2>
       <p>
-        Jirani is a program of the Majirani Wetu initiative of <strong>{org.legalName}</strong>, a nonprofit organization based in
+        Jirani is a program of <strong>{org.legalName}</strong>, a nonprofit organization based in
         the United States (&ldquo;we&rdquo;, &ldquo;us&rdquo;). We are the data controller for personal data processed through
         Jirani.
         {org.ein && <> Our U.S. EIN is {org.ein}.</>}

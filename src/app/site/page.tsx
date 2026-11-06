@@ -5,7 +5,7 @@ import { org, whatsappLink } from "@/config/org";
 export const metadata: Metadata = {
   title: { absolute: "Jirani — community safety, by neighbors" },
   description:
-    "Report a safety incident over WhatsApp in under a minute and see what's happening on a live community map. No app to download. A Majirani Wetu program of The 6.25 Movement.",
+    "Report a safety incident over WhatsApp in under a minute and see what's happening on a live community map. No app to download. A program of The 6.25 Movement, built for safer elections in 2027.",
   alternates: { canonical: "/" },
 };
 
@@ -26,7 +26,8 @@ const faqs = [
   { q: "Is Jirani an emergency service?", a: "No. Jirani does not dispatch police, ambulance or fire services and reports are not monitored in real time. In an emergency in Kenya, call 999 or 112." },
   { q: "Who can see my report?", a: "Anyone can see the anonymized report on the public map: the type of incident, a general location and the time. Your phone number and the original messages are never published." },
   { q: "How do I delete my data?", a: "Sign in to your account and choose Delete my account, or email us. We remove your conversation history and unlink your phone number from your reports." },
-  { q: "Who runs Jirani?", a: "Jirani is a Majirani Wetu (“our neighbors”) program of The 6.25 Movement, a U.S.-based nonprofit founded by young Kenyans in the Washington D.C., Maryland and Virginia area." },
+  { q: "Who runs Jirani?", a: "Jirani is a program of The 6.25 Movement, a U.S.-based nonprofit founded by young Kenyans in the Washington D.C., Maryland and Virginia area. “Jirani” means “neighbor” in Kiswahili." },
+  { q: "Can I report election-related incidents?", a: "You can tell Jirani about safety concerns you see around the August 2027 election, such as intimidation or violence. Jirani does not verify reports and is not an election observer. To report an election offence, contact the police or the Independent Electoral and Boundaries Commission (IEBC)." },
 ];
 
 function PhoneMock() {
@@ -76,13 +77,13 @@ export default function HomePage() {
       <section className="bg-forest-800 text-white">
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 md:px-12 pb-20 pt-16 md:grid-cols-[1.4fr_1fr] md:pb-28 md:pt-24">
           <div>
-            <p className="text-sm uppercase tracking-[0.18em] text-white/80">A Majirani Wetu program of The 6.25 Movement</p>
+            <p className="text-sm uppercase tracking-[0.18em] text-white/80">A Jirani program of The 6.25 Movement</p>
             <h1 className="mt-5 font-serif text-[clamp(4rem,11vw,9.5rem)] leading-[0.9]">
-              Safer streets start with neighbors who speak up.
+              Safer elections start with neighbors who speak up.
             </h1>
             <p className="mt-8 max-w-xl text-xl leading-relaxed text-white/90">
-              Report an incident over WhatsApp in under a minute and see what&apos;s happening around you on a live community map.
-              No app to download and no password to remember.
+              Report intimidation, violence or any safety incident around the August 2027 election over WhatsApp in under a minute, and see
+              what&apos;s happening around you on a live community map. No app to download and no password to remember.
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <Button href={whatsappLink} variant="light" external>
@@ -164,11 +165,11 @@ export default function HomePage() {
       <section className="bg-paper py-24">
         <div className="mx-auto grid max-w-7xl gap-12 px-6 md:px-12 md:grid-cols-2 md:items-start">
           <div>
-            <Eyebrow>Majirani Wetu</Eyebrow>
-            <h2 className="mt-3 font-serif text-5xl text-forest-800 md:text-7xl">&ldquo;Our neighbors.&rdquo; Built by the community.</h2>
+            <Eyebrow>About Jirani</Eyebrow>
+            <h2 className="mt-3 font-serif text-5xl text-forest-800 md:text-7xl">Built by neighbors, for neighbors.</h2>
             <p className="mt-6 text-[17px] leading-relaxed text-ink">
-              Majirani Wetu is The 6.25 Movement&apos;s program for practical, community-led tools. Jirani is its first: a way for
-              residents to look out for each other with the technology already in their pockets.
+              Jirani is a way for residents to look out for each other with the technology already in their pockets, in everyday life
+              and around the August 2027 election.
             </p>
             <p className="mt-4 text-[17px] leading-relaxed text-ink">
               The 6.25 Movement is a U.S.-based nonprofit founded in January 2025 by young Kenyans in the DMV, advocating for the
@@ -176,7 +177,7 @@ export default function HomePage() {
             </p>
             <div className="mt-8">
               <Button href="/about" variant="secondary">
-                About the program
+                About Jirani
               </Button>
             </div>
           </div>

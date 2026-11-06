@@ -53,7 +53,6 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
         {!collapsed && (
           <span className="leading-none">
             <span className="block font-serif text-2xl  text-ink">Jirani</span>
-            <span className="mt-1 block text-[10px] font-medium uppercase tracking-[0.14em] text-ink-3">Majirani Wetu</span>
           </span>
         )}
         <button onClick={() => setCollapsed(!collapsed)} className="rounded-lg p-2 text-lg text-ink-2 hover:bg-paper-2" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>

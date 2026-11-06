@@ -22,9 +22,9 @@ export default function OpengraphImage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20, fontSize: 36 }}>
           <div style={{ width: 56, height: 56, borderRadius: 16, background: "#ebebe3", display: "flex" }} />
-          <span>Jirani · Majirani Wetu</span>
+          <span>Jirani</span>
         </div>
-        <div style={{ fontSize: 84, lineHeight: 1.05, display: "flex" }}>Safer streets start with neighbors who speak up.</div>
+        <div style={{ fontSize: 84, lineHeight: 1.05, display: "flex" }}>Safer elections start with neighbors who speak up.</div>
         <div style={{ fontSize: 28, color: "#ebebe3", display: "flex" }}>A program of The 6.25 Movement</div>
       </div>
     ),

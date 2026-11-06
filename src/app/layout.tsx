@@ -14,12 +14,12 @@ export const metadata: Metadata = {
     template: `%s · ${org.product}`,
   },
   description:
-    "Jirani lets neighbors report safety incidents over WhatsApp and see them on a live community map. A Majirani Wetu program of The 6.25 Movement.",
+    "Jirani lets neighbors report safety incidents over WhatsApp and see them on a live community map. A program of The 6.25 Movement, including around the August 2027 election.",
   applicationName: org.product,
   authors: [{ name: org.legalName, url: org.parentUrl }],
   openGraph: {
     type: "website",
-    siteName: `${org.product} · ${org.program}`,
+    siteName: org.product,
     locale: "en_KE",
     url: org.mainUrl,
   },

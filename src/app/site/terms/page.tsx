@@ -4,7 +4,7 @@ import { org } from "@/config/org";
 
 export const metadata: Metadata = {
   title: "Terms of service",
-  description: "The terms that apply when you use Jirani, a Majirani Wetu program of The 6.25 Movement.",
+  description: "The terms that apply when you use Jirani, a program of The 6.25 Movement.",
   alternates: { canonical: "/terms" },
 };
 
@@ -20,8 +20,7 @@ export default function Page() {
     >
       <h2>1. The service</h2>
       <p>
-        Jirani is a community safety service operated by {org.legalName} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) under its Majirani
-        Wetu program. It allows people to submit safety reports over WhatsApp and view anonymized reports on a public map (the
+        Jirani is a community safety service operated by {org.legalName} (&ldquo;we&rdquo;, &ldquo;us&rdquo;). It allows people to submit safety reports over WhatsApp and view anonymized reports on a public map (the
         &ldquo;Service&rdquo;). Jirani is provided free of charge.
       </p>
 
@@ -89,7 +88,7 @@ export default function Page() {
 
       <h2>10. Intellectual property</h2>
       <p>
-        The Jirani name, Majirani Wetu name, logos, site design and software are owned by or licensed to {org.legalName}. Nothing
+        The Jirani name, logos, site design and software are owned by or licensed to {org.legalName}. Nothing
         in these terms grants you rights to them except to use the Service as intended.
       </p>
 

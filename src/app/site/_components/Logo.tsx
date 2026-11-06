@@ -18,9 +18,6 @@ export default function Logo({ light = false }: { light?: boolean }) {
       <LogoMark />
       <span className="leading-none">
         <span className={`block font-serif text-3xl ${light ? "text-white" : "text-ink"}`}>Jirani</span>
-        <span className={`mt-0.5 block text-[10px] font-medium uppercase tracking-[0.16em] ${light ? "text-white/70" : "text-ink-3"}`}>
-          Majirani Wetu
-        </span>
       </span>
     </span>
   );

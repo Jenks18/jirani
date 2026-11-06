@@ -5,9 +5,9 @@
 🌐 **Website**: [jirani.the625movement.com](https://jirani.the625movement.com)  
 🗺️ **Live Map**: [maps.the625movement.com](https://maps.the625movement.com)
 
-## About Majirani Wetu 🇰🇪
+## About Jirani 🇰🇪
 
-**Jirani** is a program of the **Majirani Wetu** (“our neighbors”) initiative of [The 6.25 Movement](https://www.the625movement.com), a U.S.-based nonprofit.
+**Jirani** (Kiswahili for “neighbor”) is a program of [The 6.25 Movement](https://www.the625movement.com), a U.S.-based nonprofit.
 
 ## Domain Structure
 

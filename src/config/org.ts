@@ -1,6 +1,5 @@
 export const org = {
   legalName: 'The 6.25 Movement',
-  program: 'Majirani Wetu',
   product: 'Jirani',
   tagline: 'Your neighbors, looking out for each other.',
   email: '6.25movement@gmail.com',

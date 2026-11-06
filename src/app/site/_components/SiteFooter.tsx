@@ -45,7 +45,7 @@ export default function SiteFooter() {
               <span className="text-xs font-medium leading-tight text-ink">A program of<br />The 6.25 Movement</span>
             </a>
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/75">
-              Jirani is a Majirani Wetu program of {org.legalName}, a U.S. nonprofit advocating for the dignity and wellbeing of
+              Jirani is a program of {org.legalName}, a U.S. nonprofit advocating for the dignity and wellbeing of
               Kenyans and the African diaspora. Reclaiming our future.
             </p>
             <p className="mt-5 max-w-xs rounded-lg border border-white/10 bg-white/5 p-3 text-xs leading-relaxed text-white/80">

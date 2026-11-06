@@ -27,7 +27,6 @@ export default function SiteHeader() {
           <span className="hidden h-8 w-px bg-ink/25 sm:block" aria-hidden="true" />
           <Link href="/" aria-label="Jirani home" className="leading-none">
             <span className="block font-serif text-4xl text-ink">Jirani</span>
-            <span className="mt-0.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-ink-3">Majirani Wetu</span>
           </Link>
         </div>
         <nav aria-label="Primary" className="hidden items-center gap-7 lg:flex">

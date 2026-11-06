@@ -4,15 +4,15 @@ import { org } from "@/config/org";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Jirani is a Majirani Wetu program of The 6.25 Movement, a U.S.-based nonprofit.",
+  description: "Jirani is a program of The 6.25 Movement, a U.S.-based nonprofit, built to help neighbors look out for each other, including around the 2027 election.",
   alternates: { canonical: "/about" },
 };
 
 export default function Page() {
   return (
     <Prose
-      title="About Jirani and Majirani Wetu"
-      intro="Jirani (Kiswahili for “neighbor”) is a community safety tool built by The 6.25 Movement as part of its Majirani Wetu program."
+      title="About Jirani"
+      intro="Jirani (Kiswahili for “neighbor”) is a community safety tool built by The 6.25 Movement as a program of the movement."
     >
       <h2>The 6.25 Movement</h2>
       <p>
@@ -25,10 +25,12 @@ export default function Page() {
         Learn more at <a href={org.parentUrl}>{org.parentUrl.replace("https://", "")}</a>.
       </p>
 
-      <h2>Majirani Wetu</h2>
+      <h2>Jirani and the 2027 election</h2>
       <p>
-        <strong>Majirani Wetu</strong> means &ldquo;our neighbors.&rdquo; It is the program under which The 6.25 Movement builds
-        practical, community-led tools. Jirani is the program&apos;s first product.
+        Kenya holds its general election in August 2027. Jirani gives neighbors a calm way to report intimidation, violence and
+        other safety concerns in their area, and to see what others are reporting. Jirani does not verify reports, is not an
+        election observer and does not take sides. To report an election offence, contact the police or the Independent Electoral
+        and Boundaries Commission (IEBC).
       </p>
 
       <h2>What Jirani does</h2>
