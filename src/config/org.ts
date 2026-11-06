@@ -19,3 +19,32 @@ export const org = {
 } as const;
 
 export const whatsappLink = `https://wa.me/${org.whatsappNumber}?text=${encodeURIComponent('Hello Jirani')}`;
+
+const p = (path: string) => `${org.parentUrl}${path}`;
+
+export const parentNav = [
+  { label: 'Home', href: p('/') },
+  { label: 'Jirani', href: org.mainUrl, current: true },
+  { label: 'Our Work', href: p('/our-work') },
+  { label: 'Events', href: p('/events') },
+  { label: 'Resources', href: p('/resources') },
+  {
+    label: 'Get Involved',
+    children: [
+      { label: 'Become a Partner', href: p('/become-a-partner') },
+      { label: 'Become a Member', href: p('/become-a-member') },
+      { label: 'Volunteer Sign Up', href: p('/volunteer-sign-up') },
+      { label: 'Donations', href: p('/donate') },
+    ],
+  },
+  {
+    label: 'About 6.25',
+    children: [
+      { label: 'Our Story', href: p('/our-story') },
+      { label: 'Our Team', href: p('/our-team') },
+      { label: 'Contact Us', href: p('/contact') },
+    ],
+  },
+] as const;
+
+export const parentContact = { label: 'Contact Us', href: p('/contact') };
