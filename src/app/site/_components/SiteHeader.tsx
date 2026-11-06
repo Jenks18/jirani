@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { org, parentNav, parentContact } from "@/config/org";
+import MobileMenu from "./MobileMenu";
 
 const productNav = [
   { href: "/how-it-works", label: "How it works" },
@@ -63,7 +64,7 @@ export default function SiteHeader() {
             {parentContact.label}
           </a>
         </nav>
-        <details className="group relative xl:hidden">
+        <MobileMenu>
           <summary
             className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full border-2 border-ink bg-transparent [&::-webkit-details-marker]:hidden"
             aria-label="Menu"
@@ -73,7 +74,16 @@ export default function SiteHeader() {
             </svg>
           </summary>
           <div className="absolute right-0 top-14 max-h-[80vh] w-72 overflow-y-auto rounded-lg border border-line bg-card p-3 shadow-lift">
-            <p className="px-4 pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">The 6.25 Movement</p>
+            <p className="px-4 pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">Jirani</p>
+            {productNav.map((n) => (
+              <Link key={n.href} href={n.href} className="block rounded-md px-4 py-2.5 text-base text-ink hover:bg-paper-2">
+                {n.label}
+              </Link>
+            ))}
+            <a href={org.mapsUrl} className="mt-2 mb-1 block rounded-full bg-clay-600 px-4 py-3 text-center text-[15px] text-white">
+              Open live map
+            </a>
+            <p className="mt-2 border-t border-line px-4 pb-1 pt-4 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">The 6.25 Movement</p>
             {parentNav.map((n) =>
               "children" in n ? (
                 <div key={n.label}>
@@ -90,17 +100,11 @@ export default function SiteHeader() {
                 </a>
               )
             )}
-            <p className="mt-2 border-t border-line px-4 pb-1 pt-4 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">Jirani</p>
-            {productNav.map((n) => (
-              <Link key={n.href} href={n.href} className="block rounded-md px-4 py-2.5 text-base text-ink hover:bg-paper-2">
-                {n.label}
-              </Link>
-            ))}
-            <a href={org.mapsUrl} className="mt-2 block rounded-full bg-forest-800 px-4 py-3 text-center text-[15px] text-white">
-              Open live map
+            <a href={parentContact.href} className="mt-3 block rounded-full bg-forest-800 px-4 py-3 text-center text-[15px] text-white">
+              {parentContact.label}
             </a>
           </div>
-        </details>
+        </MobileMenu>
       </div>
       <div className="hidden border-y border-line bg-paper-2 lg:block">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-6 px-6 md:px-12">

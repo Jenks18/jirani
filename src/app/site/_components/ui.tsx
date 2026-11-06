@@ -64,7 +64,7 @@ export function Prose({
           [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-6
           [&_a]:font-medium [&_a]:text-forest-700 [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-forest-900
           [&_strong]:text-ink
-          [&_table]:w-full [&_table]:text-left [&_table]:text-sm [&_th]:border-b [&_th]:border-line [&_th]:py-2 [&_th]:pr-4 [&_th]:font-semibold [&_th]:text-ink
+          [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:w-full [&_table]:text-left [&_table]:text-sm [&_th]:border-b [&_th]:border-line [&_th]:py-2 [&_th]:pr-4 [&_th]:font-semibold [&_th]:text-ink
           [&_td]:border-b [&_td]:border-line/70 [&_td]:py-3 [&_td]:pr-4 [&_td]:align-top"
         >
           {children}

@@ -69,6 +69,7 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const onSelectRef = useRef(onSelect);
   const reportsRef = useRef(reports);
@@ -85,18 +86,24 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
     if (!container.current) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    const map = new mapboxgl.Map({
-      container: container.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: NAIROBI,
-      zoom: 10,
-      maxBounds: [
-        [KENYA_BOUNDS[0][0] - 8, KENYA_BOUNDS[0][1] - 8],
-        [KENYA_BOUNDS[1][0] + 8, KENYA_BOUNDS[1][1] + 8],
-      ],
-      attributionControl: false,
-      cooperativeGestures: false,
-    });
+    let map: mapboxgl.Map;
+    try {
+      map = new mapboxgl.Map({
+        container: container.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: NAIROBI,
+        zoom: 10,
+        maxBounds: [
+          [KENYA_BOUNDS[0][0] - 8, KENYA_BOUNDS[0][1] - 8],
+          [KENYA_BOUNDS[1][0] + 8, KENYA_BOUNDS[1][1] + 8],
+        ],
+        attributionControl: false,
+        cooperativeGestures: false,
+      });
+    } catch {
+      setFailed(true);
+      return;
+    }
     mapRef.current = map;
 
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
@@ -281,6 +288,12 @@ export default function MapComponent({ reports, selectedId, selectSeq, onSelect,
   return (
     <div className="absolute inset-0">
       <div ref={container} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }} role="application" aria-label="Interactive map of community reports" />
+      {failed && (
+        <div role="status" className="absolute inset-x-4 top-44 mx-auto max-w-sm rounded-lg border border-line bg-card p-4 text-center text-sm text-ink-2 shadow-soft">
+          <p className="font-semibold text-ink">The map can&apos;t load on this device or browser.</p>
+          <p className="mt-1">You can still browse and search every report in the list.</p>
+        </div>
+      )}
       <Legend />
     </div>
   );

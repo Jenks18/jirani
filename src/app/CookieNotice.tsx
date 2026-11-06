@@ -5,8 +5,10 @@ const KEY = "jirani-notice-ack";
 
 export default function CookieNotice() {
   const [show, setShow] = useState(false);
+  const [onMap, setOnMap] = useState(false);
 
   useEffect(() => {
+    setOnMap(window.location.hostname.startsWith("maps."));
     try {
       if (!localStorage.getItem(KEY)) setShow(true);
     } catch {
@@ -29,7 +31,7 @@ export default function CookieNotice() {
     <div
       role="region"
       aria-label="Cookie and storage notice"
-      className="fixed inset-x-3 top-3 z-[1000] mx-auto max-w-xl rounded-lg border border-line bg-card p-3 text-xs text-ink-2 shadow-lift sm:inset-x-auto sm:bottom-4 sm:left-4 sm:top-auto sm:p-4 sm:text-sm"
+      className={`fixed inset-x-3 ${onMap ? "top-3" : "bottom-3"} z-[1000] mx-auto max-w-xl rounded-lg border border-line bg-card p-3 text-xs text-ink-2 shadow-lift sm:inset-x-auto sm:bottom-4 sm:left-4 sm:top-auto sm:p-4 sm:text-sm`}
     >
       <p className="leading-relaxed">
         <span className="sm:hidden">

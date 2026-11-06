@@ -86,7 +86,7 @@ export default function HomePage() {
           style={{ objectPosition: "56% 22%" }}
         />
         <div className="absolute inset-0 -z-20 bg-maroon-900 mix-blend-lighten" aria-hidden="true" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-maroon-900/90 via-maroon-900/55 to-maroon-900/10" aria-hidden="true" />
+        <div className="absolute inset-0 -z-10 bg-maroon-900/75 md:bg-transparent md:bg-gradient-to-r md:from-maroon-900/90 md:via-maroon-900/55 md:to-maroon-900/10" aria-hidden="true" />
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 md:px-12 pb-20 pt-16 md:grid-cols-[1.4fr_1fr] md:pb-28 md:pt-24">
           <div>
             <p className="text-sm uppercase tracking-[0.18em] text-white/80">A Jirani program of The 6.25 Movement</p>
