@@ -11,47 +11,49 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Check site routing
         run: |
           set -euo pipefail
-          timeout=15
 
-          # helper to perform a request with retries
-          retry() {
-            local tries=0
-            local max=3
-            local delay=2
-            while true; do
-              if "$@"; then
-                return 0
-              fi
-              tries=$((tries+1))
-              if [ "$tries" -ge "$max" ]; then
-                return 1
-              fi
-              sleep "$delay"
-            done
+          # One request, redirects NOT followed. Prints "<status> <redirect target>".
+          probe() {
+            curl -sS -o /dev/null --max-time 15 -H "Cache-Control: no-cache" \
+              -w '%{http_code} %{redirect_url}' "$1"
           }
 
-          echo "Checking https://jirani.the625movement.com ..."
-          retry bash -c 'status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$timeout" -H "Cache-Control: no-cache" https://jirani.the625movement.com) && [ "$status" = "200" ]'
+          # Retry up to 3 times until the status matches the pattern. Leaves the
+          # redirect target (if any) in $LOCATION. Reading the status and target from
+          # curl's own -w output, not from header text, so HTTP/2's lowercase
+          # "location:" and any 301/302/303/307/308 are all handled.
+          LOCATION=""
+          expect_status() {
+            local url=$1 pattern=$2 tries=0 out="" status="none"
+            echo "Checking $url (want $pattern) ..."
+            while [ "$tries" -lt 3 ]; do
+              out=$(probe "$url" || true)
+              status=${out%% *}
+              if [[ "$status" =~ ^($pattern)$ ]]; then
+                LOCATION=${out#* }
+                echo "  ok: $status ${LOCATION}"
+                return 0
+              fi
+              tries=$((tries + 1))
+              [ "$tries" -lt 3 ] && sleep 2
+            done
+            echo "  FAIL: wanted $pattern, got '${status:-none}'"
+            return 1
+          }
 
-          echo "Checking https://jirani.the625movement.com/maps ..."
-          resp=$(curl -sS -I --max-time "$timeout" -H "Cache-Control: no-cache" -o - https://jirani.the625movement.com/maps)
-          echo "$resp"
-          status=$(echo "$resp" | awk 'NR==1{print $2}')
-          location=$(echo "$resp" | awk -F': ' '/^Location:/ {print $2}' | tr -d '\r\n' || true)
-          if [[ "$status" != "301" && "$status" != "302" && "$status" != "308" ]]; then
-            echo "/maps did not return a redirect status; got: $status"
+          expect_status https://jirani.the625movement.com 200
+
+          expect_status https://jirani.the625movement.com/maps '301|302|303|307|308'
+          if [[ "$LOCATION" != https://maps.the625movement.com* ]]; then
+            echo "  FAIL: /maps redirects to '$LOCATION', expected https://maps.the625movement.com…"
             exit 1
           fi
-          if [[ -z "$location" || "$location" != https://maps.the625movement.com* ]]; then
-            echo "Unexpected Location header for /maps: $location"
-            exit 1
-          fi
 
-          echo "Checking https://maps.the625movement.com ..."
-          retry bash -c 'status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$timeout" -H "Cache-Control: no-cache" https://maps.the625movement.com) && [ "$status" = "200" ]'
+          expect_status https://maps.the625movement.com 200
 
           echo "Smoke tests passed."
