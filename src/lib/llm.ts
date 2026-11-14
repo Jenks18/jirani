@@ -56,7 +56,8 @@ function geminiKeys(): string[] {
 }
 
 function engines(): Engine[] {
-  const order = list(process.env.AI_PROVIDER_ORDER, ['gemini', 'groq']).map((p) => p.toLowerCase());
+  // Gemini is paused: Groq (free tier) only unless AI_PROVIDER_ORDER says otherwise, e.g. "gemini,groq" to turn it back on.
+  const order = list(process.env.AI_PROVIDER_ORDER, ['groq']).map((p) => p.toLowerCase());
   const out: Engine[] = [];
   for (const p of order) {
     if (p === 'gemini') {
@@ -161,5 +162,5 @@ export const chat: ChatFn = async (opts) => {
       coolingUntil.set(e.id, Date.now() + cooldownFor(err));
     }
   }
-  throw new LlmError(errors.length ? errors.join(' | ') : 'No AI provider is configured (set GEMINI_API_KEY or GROQ_API_KEY)');
+  throw new LlmError(errors.length ? errors.join(' | ') : 'No AI provider is configured (set GROQ_API_KEY; Gemini is only used when AI_PROVIDER_ORDER includes it)');
 };
