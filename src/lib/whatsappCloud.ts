@@ -49,13 +49,49 @@ interface WebhookPayload {
   }>;
 }
 
-export function verifySignature(rawBody: string, header: string | null, appSecret: string): boolean {
+/** WHATSAPP_APP_SECRET may hold several comma-separated secrets (e.g. while moving between Meta apps). */
+export function parseAppSecrets(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean);
+}
+
+export function verifySignature(rawBody: string, header: string | null, appSecret: string | string[]): boolean {
   if (!header?.startsWith('sha256=')) return false;
-  const expected = createHmac('sha256', appSecret).update(rawBody).digest('hex');
-  const provided = header.slice('sha256='.length);
-  const a = Buffer.from(expected, 'hex');
-  const b = Buffer.from(provided, 'hex');
-  return a.length === b.length && timingSafeEqual(a, b);
+  const provided = Buffer.from(header.slice('sha256='.length).trim().toLowerCase(), 'hex');
+  const secrets = Array.isArray(appSecret) ? appSecret : parseAppSecrets(appSecret);
+  return secrets.some((secret) => {
+    const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest();
+    return expected.length === provided.length && timingSafeEqual(expected, provided);
+  });
+}
+
+/** Explains a signature failure without revealing the secret or any user data. */
+export function describeSignatureFailure(rawBody: string, header: string | null, secrets: string[]): string {
+  const hints: string[] = [];
+  if (!header) hints.push('no X-Hub-Signature-256 header (request did not come from Meta, or a proxy stripped it)');
+  else if (!header.startsWith('sha256=')) hints.push('signature header is not sha256=...');
+  for (const [i, s] of secrets.entries()) {
+    if (!/^[0-9a-f]{32}$/i.test(s)) {
+      hints.push(`secret #${i + 1} is ${s.length} chars and not 32 hex chars, so it is probably not an App secret (an access token or verify token pasted by mistake?)`);
+    }
+  }
+  let source = '';
+  try {
+    const p = JSON.parse(rawBody) as WebhookPayload & { entry?: Array<{ id?: string }> };
+    const waba = p.entry?.[0]?.id;
+    const phoneId = p.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+    source = ` Sent for WABA ${waba ?? '?'}, phone number ID ${phoneId ?? '?'}.`;
+  } catch {
+    /* ignore */
+  }
+  if (!hints.length) {
+    hints.push(
+      'the secret is well-formed but belongs to a different Meta app than the one whose webhook calls this URL (or it was reset). Copy App settings -> Basic -> App secret from the app that has this callback URL, then redeploy'
+    );
+  }
+  return `invalid signature: ${hints.join('; ')}.${source}`;
 }
 
 export function extractMessages(payload: WebhookPayload): InboundMessage[] {

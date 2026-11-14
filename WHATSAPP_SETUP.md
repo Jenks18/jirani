@@ -53,4 +53,8 @@ When the number changes (as it did from +1 555 143 7024 to +1 202 509 4959), all
 Other symptoms:
 - Webhook verification 403 → verify token mismatch.
 - Messages arrive but no reply → check `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` and Vercel function logs.
-- 403 on POST in logs → `WHATSAPP_APP_SECRET` is wrong. In production the webhook refuses unsigned requests.
+- `[whatsapp] invalid signature` / 403 on POST → `WHATSAPP_APP_SECRET` doesn't match the Meta app that sends the
+  webhook, so **every incoming message is dropped**. Copy **App settings → Basic → App secret** from the same app whose
+  WhatsApp → Configuration has the callback URL (not the access token, not the verify token), save it in Vercel and
+  **redeploy**. The log line says which WABA and phone number ID sent it, and whether the secret looks malformed. During
+  a move between apps you can set both secrets separated by a comma.

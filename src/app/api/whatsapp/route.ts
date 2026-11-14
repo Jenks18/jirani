@@ -5,7 +5,16 @@ import conversationManager from '@/lib/whatsappConversation';
 import { webhookRateLimiter } from '@/lib/rateLimiter';
 import { handleCommand } from '@/lib/commands';
 import { dispatchAlerts } from '@/lib/alerts';
-import { extractFailures, extractMessages, markRead, sendText as sendFrom, verifySignature, type InboundMessage } from '@/lib/whatsappCloud';
+import {
+  describeSignatureFailure,
+  extractFailures,
+  extractMessages,
+  markRead,
+  parseAppSecrets,
+  sendText as sendFrom,
+  verifySignature,
+  type InboundMessage,
+} from '@/lib/whatsappCloud';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -138,10 +147,11 @@ async function handleMessage(msg: InboundMessage): Promise<void> {
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
-  const appSecret = process.env.WHATSAPP_APP_SECRET;
-  if (appSecret) {
-    if (!verifySignature(rawBody, req.headers.get('x-hub-signature-256'), appSecret)) {
-      console.error('[whatsapp] invalid signature');
+  const appSecrets = parseAppSecrets(process.env.WHATSAPP_APP_SECRET);
+  if (appSecrets.length) {
+    const signature = req.headers.get('x-hub-signature-256');
+    if (!verifySignature(rawBody, signature, appSecrets)) {
+      console.error(`[whatsapp] ${describeSignatureFailure(rawBody, signature, appSecrets)}`);
       return new NextResponse('Forbidden', { status: 403 });
     }
   } else if (process.env.NODE_ENV === 'production') {
