@@ -5,7 +5,7 @@ import conversationManager from '@/lib/whatsappConversation';
 import { webhookRateLimiter } from '@/lib/rateLimiter';
 import { handleCommand } from '@/lib/commands';
 import { dispatchAlerts } from '@/lib/alerts';
-import { extractMessages, markRead, sendText, verifySignature, type InboundMessage } from '@/lib/whatsappCloud';
+import { extractFailures, extractMessages, markRead, sendText as sendFrom, verifySignature, type InboundMessage } from '@/lib/whatsappCloud';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -48,7 +48,14 @@ export async function GET(req: NextRequest) {
 
 async function handleMessage(msg: InboundMessage): Promise<void> {
   const { from } = msg;
-  void markRead(msg.id);
+  // Reply from the Jirani number the user actually messaged, not whatever WHATSAPP_PHONE_NUMBER_ID says.
+  const sendText = (to: string, body: string) => sendFrom(to, body, msg.phoneNumberId);
+  if (msg.phoneNumberId && process.env.WHATSAPP_PHONE_NUMBER_ID && msg.phoneNumberId !== process.env.WHATSAPP_PHONE_NUMBER_ID) {
+    console.warn(
+      `[whatsapp] message arrived on phone number ID ${msg.phoneNumberId} but WHATSAPP_PHONE_NUMBER_ID is ${process.env.WHATSAPP_PHONE_NUMBER_ID}; update the env var so alerts and safety-net messages use the same number`
+    );
+  }
+  void markRead(msg.id, msg.phoneNumberId);
 
   const limit = webhookRateLimiter.checkLimit(from);
   if (!limit.allowed) {
@@ -147,6 +154,11 @@ export async function POST(req: NextRequest) {
     payload = JSON.parse(rawBody);
   } catch {
     return new NextResponse('Bad Request', { status: 400 });
+  }
+
+  for (const f of extractFailures(payload)) {
+    const errs = f.errors.map((e) => `${e.code}: ${e.title ?? ''} ${e.message ?? ''}`.trim()).join('; ');
+    console.error(`[whatsapp] delivery FAILED for message ${f.messageId} from phone number ID ${f.phoneNumberId}: ${errs || 'no detail'}`);
   }
 
   const messages = extractMessages(payload).filter((m) => !alreadySeen(m.id));

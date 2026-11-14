@@ -7,8 +7,17 @@ export interface InboundMessage {
   id: string;
   from: string;
   type: string;
+  /** Phone number ID of the Jirani number that received this message (reply from the same one). */
+  phoneNumberId?: string;
   text?: string;
   location?: { latitude: number; longitude: number };
+}
+
+export interface DeliveryFailure {
+  messageId: string;
+  recipient?: string;
+  phoneNumberId?: string;
+  errors: Array<{ code?: number; title?: string; message?: string }>;
 }
 
 interface WebhookPayload {
@@ -16,6 +25,13 @@ interface WebhookPayload {
   entry?: Array<{
     changes?: Array<{
       value?: {
+        metadata?: { phone_number_id?: string; display_phone_number?: string };
+        statuses?: Array<{
+          id: string;
+          status: string;
+          recipient_id?: string;
+          errors?: Array<{ code?: number; title?: string; message?: string }>;
+        }>;
         messages?: Array<{
           id: string;
           from: string;
@@ -46,8 +62,9 @@ export function extractMessages(payload: WebhookPayload): InboundMessage[] {
   const out: InboundMessage[] = [];
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
+      const phoneNumberId = change.value?.metadata?.phone_number_id;
       for (const m of change.value?.messages ?? []) {
-        const msg: InboundMessage = { id: m.id, from: m.from, type: m.type };
+        const msg: InboundMessage = { id: m.id, from: m.from, type: m.type, phoneNumberId };
         if (m.type === 'text') msg.text = m.text?.body;
         else if (m.type === 'button') msg.text = m.button?.text;
         else if (m.type === 'interactive') {
@@ -60,6 +77,25 @@ export function extractMessages(payload: WebhookPayload): InboundMessage[] {
           msg.location = { latitude: m.location.latitude, longitude: m.location.longitude };
         }
         out.push(msg);
+      }
+    }
+  }
+  return out;
+}
+
+/** Messages Meta accepted but then failed to deliver; these arrive only as webhook status events. */
+export function extractFailures(payload: WebhookPayload): DeliveryFailure[] {
+  const out: DeliveryFailure[] = [];
+  for (const entry of payload.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      for (const st of change.value?.statuses ?? []) {
+        if (st.status !== 'failed') continue;
+        out.push({
+          messageId: st.id,
+          recipient: st.recipient_id,
+          phoneNumberId: change.value?.metadata?.phone_number_id,
+          errors: st.errors ?? [],
+        });
       }
     }
   }
@@ -82,12 +118,12 @@ export interface SendResult {
   errorCode?: number;
 }
 
-export async function sendText(to: string, body: string): Promise<boolean> {
-  return (await sendTextDetailed(to, body)).ok;
+export async function sendText(to: string, body: string, fromPhoneNumberId?: string): Promise<boolean> {
+  return (await sendTextDetailed(to, body, fromPhoneNumberId)).ok;
 }
 
-export async function sendTextDetailed(to: string, body: string): Promise<SendResult> {
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+export async function sendTextDetailed(to: string, body: string, fromPhoneNumberId?: string): Promise<SendResult> {
+  const phoneId = fromPhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!phoneId || !process.env.WHATSAPP_ACCESS_TOKEN) {
     console.error('[whatsapp] WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN not configured');
     return { ok: false };
@@ -102,9 +138,11 @@ export async function sendTextDetailed(to: string, body: string): Promise<SendRe
         text: { body: body.slice(0, 4096), preview_url: false },
       });
       if (res.ok) return { ok: true };
-      const detail = (await res.json().catch(() => ({}))) as { error?: { code?: number } };
+      const detail = (await res.json().catch(() => ({}))) as { error?: { code?: number; message?: string } };
       const errorCode = detail.error?.code;
-      console.error(`[whatsapp] send failed (${res.status}, code ${errorCode}) attempt ${attempt}`);
+      console.error(
+        `[whatsapp] send failed from ${phoneId} (${res.status}, code ${errorCode}: ${detail.error?.message ?? 'no message'}) attempt ${attempt}`
+      );
       if (res.status < 500 && res.status !== 429) return { ok: false, errorCode };
     } catch (err) {
       console.error(`[whatsapp] send error attempt ${attempt}`, err);
@@ -131,8 +169,8 @@ export async function sendTemplate(to: string, name: string, params: string[], l
       },
     });
     if (res.ok) return { ok: true };
-    const detail = (await res.json().catch(() => ({}))) as { error?: { code?: number } };
-    console.error(`[whatsapp] template ${name} failed (${res.status}, code ${detail.error?.code})`);
+    const detail = (await res.json().catch(() => ({}))) as { error?: { code?: number; message?: string } };
+    console.error(`[whatsapp] template ${name} failed (${res.status}, code ${detail.error?.code}: ${detail.error?.message ?? 'no message'})`);
     return { ok: false, errorCode: detail.error?.code };
   } catch (err) {
     console.error('[whatsapp] template error', err);
@@ -151,8 +189,8 @@ export async function notify(
   return false;
 }
 
-export async function markRead(messageId: string): Promise<void> {
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+export async function markRead(messageId: string, fromPhoneNumberId?: string): Promise<void> {
+  const phoneId = fromPhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!phoneId) return;
   try {
     await graphPost(`${phoneId}/messages`, {

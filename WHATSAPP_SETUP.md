@@ -33,6 +33,24 @@ Set `SUPABASE_SERVICE_ROLE_KEY` and redeploy first, then apply
 `supabase/migrations/20261009000000_lock_down_personal_data.sql`.
 
 ## Troubleshooting
+Start with the checker. It asks Meta directly and tells you exactly what is wrong:
+
+```
+WHATSAPP_ACCESS_TOKEN=... WHATSAPP_PHONE_NUMBER_ID=... node scripts/check-whatsapp.mjs [WABA_ID]
+```
+
+It can also fix the two most common problems with a new number: `--subscribe` (no inbound messages) and
+`--register <PIN>` (number not registered with Cloud API). `--send-test <number>` sends a test message.
+
+When the number changes (as it did from +1 555 143 7024 to +1 202 509 4959), all of these must be redone:
+- `WHATSAPP_PHONE_NUMBER_ID` in Vercel must be the **new** number's ID (each number has its own ID), then redeploy.
+- The new number must be **registered** with Cloud API (two-step PIN), not just added and verified.
+- If the new number is in a different WhatsApp Business Account, the app must be **subscribed** to that account,
+  and the System User must be assigned that account with full control.
+- The app must be in **Live** mode, or Meta only sends webhooks for test numbers.
+- The number must not still be signed in to the WhatsApp or WhatsApp Business phone app.
+
+Other symptoms:
 - Webhook verification 403 → verify token mismatch.
 - Messages arrive but no reply → check `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` and Vercel function logs.
 - 403 on POST in logs → `WHATSAPP_APP_SECRET` is wrong. In production the webhook refuses unsigned requests.
