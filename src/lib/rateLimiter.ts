@@ -13,6 +13,8 @@ class RateLimiter {
     private readonly windowMs: number = 60000
   ) {
     this.cleanupInterval = setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    // Housekeeping must never be the reason a process stays alive (tests, scripts, a draining server).
+    this.cleanupInterval.unref?.();
   }
 
   public checkLimit(identifier: string): { allowed: boolean; remaining: number; resetIn: number } {
@@ -68,6 +70,11 @@ class RateLimiter {
 
 export const webhookRateLimiter = new RateLimiter(20, 60000);
 export const testEndpointRateLimiter = new RateLimiter(5, 60000);
+
+// Mesh gateways: a gateway may flush a backlog, so the per-address allowance is generous;
+// the per-author one is what stops a single key flooding the map.
+export const meshIpRateLimiter = new RateLimiter(60, 60000);
+export const meshAuthorRateLimiter = new RateLimiter(20, 3600000);
 
 export const loginRateLimiter = new RateLimiter(10, 15 * 60000);
 

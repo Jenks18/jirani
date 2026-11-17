@@ -14,7 +14,11 @@ const unique: Record<string, string[]> = {
   members: ['phone'],
   conversations: ['user_id'],
   trusted_contacts: ['member_id|contact_phone'],
+  // Partial unique index: rows without a client_id never clash (see 20261117000000_reports_client_id.sql).
+  reports: ['client_id'],
 };
+// Columns the fake database pretends do not exist yet, to model a migration that has not been applied.
+const missingColumns = new Set<string>();
 const fks: Record<string, Record<string, string>> = { trusted_contacts: { members: 'member_id' } };
 
 class Query {
@@ -94,7 +98,7 @@ class Query {
   }
 
   private clash(row: Row): Row | undefined {
-    return tables[this.table].find((r) => (unique[this.table] ?? []).some((u) => u.split('|').every((c) => r[c] === row[c])));
+    return tables[this.table].find((r) => (unique[this.table] ?? []).some((u) => u.split('|').every((c) => row[c] != null && r[c] === row[c])));
   }
 
   private run(): { data: any; error: any } {
@@ -102,7 +106,8 @@ class Query {
     let affected: Row[] = [];
     if (this.op === 'insert' || this.op === 'upsert') {
       for (const p of [].concat(this.payload)) {
-        const row = { id: randomUUID(), created_at: new Date().toISOString(), ...(p as Row) };
+        if (Object.keys(p as Row).some((k) => missingColumns.has(k))) return { data: null, error: { code: '42703', message: 'column does not exist' } };
+        const row ={ id: randomUUID(), created_at: new Date().toISOString(), ...(p as Row) };
         const existing = this.clash(row);
         if (existing && this.op === 'insert') return { data: null, error: { code: '23505', message: 'duplicate key' } };
         if (existing) {
@@ -253,6 +258,80 @@ async function main() {
     assert.ok(!JSON.stringify(row).includes('0712345678') && !JSON.stringify(row).includes('KCB'));
     assert.deepEqual(stored.coordinates, [36.81, -1.269]);
     assert.ok(!JSON.stringify(stored).includes('254'));
+  });
+
+  await test('a mesh report is stored once however many phones carry it, and a repeat is reported, not re-filed', async () => {
+    const { DuplicateEventError } = await import('../src/lib/eventStorage');
+    const before = tables.reports.length;
+    const id = randomUUID();
+    const report = { type: 'Fire', severity: 4, location: 'Gikomba', description: 'Stalls on fire', timestamp: new Date().toISOString(), source: 'mesh' as const, clientId: id };
+    await storeEvent(report);
+    assert.equal(tables.reports.length, before + 1);
+    assert.equal(tables.reports[tables.reports.length - 1].client_id, id);
+    assert.equal(tables.reports[tables.reports.length - 1].source, 'mesh');
+    await assert.rejects(() => storeEvent(report), (e) => e instanceof DuplicateEventError);
+    assert.equal(tables.reports.length, before + 1, 'the repeat must not add a row, in the database or the fallback store');
+  });
+
+  await test('without the client_id column the report is still stored, once, instead of lost', async () => {
+    const before = tables.reports.length;
+    missingColumns.add('client_id');
+    try {
+      await storeEvent({ type: 'Fire', severity: 4, location: 'Kibera', description: 'Smoke over the estate', timestamp: new Date().toISOString(), source: 'mesh', clientId: randomUUID() });
+    } finally {
+      missingColumns.delete('client_id');
+    }
+    assert.equal(tables.reports.length, before + 1);
+    assert.equal('client_id' in tables.reports[tables.reports.length - 1], false);
+  });
+
+  await test('reports with no client_id (WhatsApp) never clash with each other', async () => {
+    const before = tables.reports.length;
+    for (const d of ['one', 'two', 'three']) await storeEvent({ type: 'theft', severity: 2, location: 'Westlands', description: d, timestamp: new Date().toISOString() });
+    assert.equal(tables.reports.length, before + 3);
+  });
+
+  await test('POST /api/mesh/ingest: stores a signed report once, repeats are duplicates, dry run stores nothing', async () => {
+    const { NextRequest } = await import('next/server');
+    const { generateKeyPairSync, sign } = await import('node:crypto');
+    const { canonicalReport } = await import('../src/lib/meshIngest');
+    const { POST } = await import('../src/app/api/mesh/ingest/route');
+
+    const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+    const rawKey = publicKey.export({ format: 'der', type: 'spki' }).subarray(-32).toString('hex');
+    const report = { id: randomUUID(), type: 'Fire', severity: 4, location: 'Gikomba market', summary: 'Stalls on fire near the east gate', latitude: -1.2833, longitude: 36.8333, observedAt: Date.now() - 60_000 };
+    const signature = sign(null, Buffer.from(canonicalReport(report), 'utf8'), privateKey).toString('hex');
+    const post = (body: unknown) =>
+      POST(new NextRequest('http://localhost/api/mesh/ingest', { method: 'POST', body: typeof body === 'string' ? body : JSON.stringify(body), headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9' } }));
+    const rows = () => tables.reports.length;
+
+    const before = rows();
+    const dry = await post({ report, publicKey: rawKey, signature, dryRun: true });
+    assert.equal(dry.status, 200);
+    assert.equal((await dry.json()).status, 'verified');
+    assert.equal(rows(), before, 'a dry run must not store anything');
+
+    const badDry = await post({ report: { ...report, summary: 'changed after signing' }, publicKey: rawKey, signature, dryRun: true });
+    assert.equal(badDry.status, 400, 'a dry run checks the signature exactly as a real post does');
+    assert.equal(rows(), before);
+
+    const first = await post({ report, publicKey: rawKey, signature });
+    assert.equal(first.status, 200);
+    assert.equal((await first.json()).status, 'stored');
+    assert.equal(rows(), before + 1);
+    const row = tables.reports[tables.reports.length - 1];
+    assert.equal(row.source, 'mesh');
+    assert.equal(row.client_id, report.id);
+    assert.ok(!JSON.stringify(row).includes(rawKey), 'the author key is never stored');
+    assert.ok(!JSON.stringify(row).includes(signature));
+
+    const again = await post({ report, publicKey: rawKey, signature });
+    assert.equal(again.status, 200);
+    assert.equal((await again.json()).status, 'duplicate');
+    assert.equal(rows(), before + 1);
+
+    assert.equal((await post('{ not json')).status, 400);
+    assert.equal((await post({ report, publicKey: rawKey, signature: 'ab'.repeat(64) })).status, 400);
   });
 
   await test('the public report feed re-blurs old precise rows and never exposes a phone', async () => {

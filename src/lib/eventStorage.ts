@@ -26,6 +26,18 @@ interface EventData {
   description?: string;
   timestamp?: string;
   coordinates?: [number, number] | null;
+  /** Where the report came from. Defaults to 'whatsapp'. */
+  source?: 'whatsapp' | 'mesh';
+  /** Idempotency key supplied by the sender. A second insert with the same key throws DuplicateEventError. */
+  clientId?: string;
+}
+
+/** Thrown when a report with the same clientId is already stored. */
+export class DuplicateEventError extends Error {
+  constructor() {
+    super('duplicate report');
+    this.name = 'DuplicateEventError';
+  }
 }
 
 const PUBLIC_COLUMNS = 'id, type, severity, location, summary, event_timestamp, latitude, longitude, created_at';
@@ -122,28 +134,37 @@ export async function storeEvent(event: EventData): Promise<StoredEvent> {
     const supabaseReady = await ensureSupabaseAvailable();
     if (!supabaseReady || !supabase) throw new Error('database unavailable');
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from('reports')
-      .insert({
-        type,
-        severity,
-        location,
-        summary,
-        event_timestamp: eventTime,
-        created_at: recordedAt,
-        longitude: point ? point[0] : null,
-        latitude: point ? point[1] : null,
-        source: 'whatsapp',
-      })
-      .select(PUBLIC_COLUMNS)
-      .single();
+    const row = {
+      type,
+      severity,
+      location,
+      summary,
+      event_timestamp: eventTime,
+      created_at: recordedAt,
+      longitude: point ? point[0] : null,
+      latitude: point ? point[1] : null,
+      source: event.source ?? 'whatsapp',
+    };
+    const insert = (values: Record<string, unknown>) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any).from('reports').insert(values).select(PUBLIC_COLUMNS).single();
+
+    // A caller-supplied id makes the write idempotent (a unique index on client_id turns a repeat into a no-op).
+    let { data, error } = await insert(event.clientId ? { ...row, client_id: event.clientId } : row);
+    if (error && event.clientId && error.code === '42703') {
+      // The client_id migration has not been applied yet. Store without it rather than lose the report;
+      // the in-memory check in the route still covers the common repeat.
+      ({ data, error } = await insert(row));
+    }
     if (error) {
+      if (error.code === '23505' && event.clientId) throw new DuplicateEventError();
       console.error('Report insert failed:', error.code, error.message);
       throw new Error('insert failed');
     }
     return fromRow(data);
   } catch (dbError) {
+    // A repeat is not a database failure: do not file it into the temporary store as a new report.
+    if (dbError instanceof DuplicateEventError) throw dbError;
     console.error('Database write failed, falling back to temporary storage:', dbError instanceof Error ? dbError.message : 'unknown');
     await initializeEvents();
     const stored: StoredEvent = {
